@@ -19,6 +19,7 @@ import {
   extractChoices,
 } from './args';
 import { createRunner, AbortError } from './runner';
+import { generateHelp, generateRootHelp, hasHelpFlag } from './help';
 import type { Prompter } from '../prompter';
 import type { TabsAdapter } from '../tabs';
 import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
@@ -1000,14 +1001,54 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     // Build command tree
     const tree = await buildCommandTree(commandsDir);
 
-    // No arguments - show interactive menu
-    if (args.length === 0) {
-      await runMenu(tree, appName ?? path.basename(projectRoot));
+    const resolvedAppName = appName ?? path.basename(projectRoot);
+
+    // Check for --help or -h flag at root level (before any command)
+    if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
+      // No command specified, just --help - show root help
+      if (hasHelpFlag(args)) {
+        const topLevelCommands = Array.from(tree.values());
+        const helpText = generateRootHelp({
+          appName: resolvedAppName,
+          commands: topLevelCommands,
+        });
+        console.log(helpText);
+        return;
+      }
+      // No arguments - show interactive menu
+      await runMenu(tree, resolvedAppName);
       return;
     }
 
-    // Find command by path
-    const match = findNode(tree, args);
+    // Find command by path (filtering out help flags for matching)
+    const argsWithoutHelp = args.filter((a) => a !== '--help' && a !== '-h');
+    const match = findNode(tree, argsWithoutHelp);
+
+    // Check for help flag - intercept before normal execution
+    if (hasHelpFlag(args)) {
+      if (!match) {
+        // Unknown command with --help - show root help
+        const topLevelCommands = Array.from(tree.values());
+        const helpText = generateRootHelp({
+          appName: resolvedAppName,
+          commands: topLevelCommands,
+        });
+        console.log(helpText);
+        return;
+      }
+
+      // Show help for the matched command
+      const children = Array.from(match.node.children.values());
+      const commandPath = match.node.path.split('.');
+      const helpText = generateHelp({
+        commandPath,
+        command: match.node.config,
+        children: children.length > 0 ? children : undefined,
+        appName: resolvedAppName,
+      });
+      console.log(helpText);
+      return;
+    }
 
     if (!match) {
       reporter.error(`Unknown command: ${args[0]}`);

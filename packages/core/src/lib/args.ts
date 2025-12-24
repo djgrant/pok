@@ -26,7 +26,7 @@ export type ParsedArgs<C extends ContextDef> = {
 /**
  * Get info about a Zod schema for flag parsing
  */
-type SchemaInfo = {
+export type SchemaInfo = {
   type: 'string' | 'boolean' | 'enum';
   choices?: string[];
   default?: unknown;
@@ -38,7 +38,7 @@ type SchemaInfo = {
  *
  * Uses safeParse to probe the schema behavior rather than internal APIs.
  */
-function getSchemaInfo(schema: z.ZodType): SchemaInfo {
+export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
   // Check if it has a default by parsing undefined
   const undefinedResult = schema.safeParse(undefined);
   const hasDefault = undefinedResult.success && undefinedResult.data !== undefined;
@@ -89,9 +89,15 @@ function getSchemaInfo(schema: z.ZodType): SchemaInfo {
 /**
  * Try to extract enum choices from a schema
  *
- * This is a heuristic approach since we can't reliably access internal Zod structures.
+ * Uses Zod's internal _def structure to get exact enum values when possible,
+ * with fallback to heuristic probing for wrapped schemas.
  */
 function extractEnumChoices(schema: z.ZodType): string[] | undefined {
+  // Try to access Zod internal structure for enum values
+  const choices = getEnumChoicesFromSchema(schema);
+  if (choices) return choices;
+
+  // Fallback: heuristic approach for wrapped or complex schemas
   // Common environment values to test
   const testValues = ['dev', 'staging', 'prod', 'production', 'development', 'test', 'local'];
 
@@ -112,6 +118,45 @@ function extractEnumChoices(schema: z.ZodType): string[] | undefined {
   const randomResult = schema.safeParse('__random_unlikely_value_xyz__');
   if (hasStringRestriction && validValues.length > 0 && !randomResult.success) {
     return validValues;
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract enum choices directly from Zod schema internal structure
+ *
+ * This is more reliable than heuristic probing but requires accessing
+ * Zod internals, which may change between versions.
+ */
+export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefined {
+  // Unwrap through layers: ZodDefault, ZodOptional, ZodNullable
+  let current: z.ZodType = schema;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const def = (current as any)._def;
+  if (!def) return undefined;
+
+  // Follow the chain of wrappers
+  if (def.typeName === 'ZodDefault' && def.innerType) {
+    current = def.innerType;
+  }
+  if ((current as any)._def?.typeName === 'ZodOptional' && (current as any)._def?.innerType) {
+    current = (current as any)._def.innerType;
+  }
+  if ((current as any)._def?.typeName === 'ZodNullable' && (current as any)._def?.innerType) {
+    current = (current as any)._def.innerType;
+  }
+
+  // Check for ZodEnum
+  const innerDef = (current as any)._def;
+  if (innerDef?.typeName === 'ZodEnum' && innerDef?.values) {
+    return innerDef.values as string[];
+  }
+
+  // Check for ZodNativeEnum
+  if (innerDef?.typeName === 'ZodNativeEnum' && innerDef?.values) {
+    return Object.values(innerDef.values).filter((v): v is string => typeof v === 'string');
   }
 
   return undefined;
