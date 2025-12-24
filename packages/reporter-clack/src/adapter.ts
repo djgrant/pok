@@ -12,14 +12,18 @@
  * - Process output is never interleaved with spinners
  *
  * Rendering strategy:
- * - group:start -> p.intro() with bold label
+ * - group:start -> p.intro() with bold label (or plain text in plain mode)
  * - group:end -> p.outro() with success indicator
- * - activity:start (sequential) -> spinner.start()
+ * - activity:start (sequential) -> spinner.start() (or plain text indicator)
  * - activity:start (parallel) -> track activity, update combined spinner
  * - activity:success -> spinner.stop() with checkmark (code 0) or update combined spinner
  * - activity:failure -> spinner.stop() with X (code 1)
  * - activity:update -> spinner.message()
  * - log -> pause spinner if active, p.log.*, resume spinner
+ *
+ * Plain mode (--plain or CI environment):
+ * - When unicode is disabled, uses ASCII symbols and bypasses clack's decorative output
+ * - When color is disabled (--no-color or NO_COLOR env), strips ANSI color codes
  */
 
 import * as p from '@clack/prompts';
@@ -32,6 +36,7 @@ import type {
   ActivityId,
   GroupId,
   GroupLayout,
+  LogLevel,
 } from '@openpok/core';
 
 type SpinnerInstance = ReturnType<typeof p.spinner>;
@@ -60,6 +65,19 @@ type ParallelActivity = {
 };
 
 /**
+ * A log message that was buffered during an active spinner
+ */
+type BufferedLog = {
+  activityId: ActivityId;
+  level: LogLevel;
+  message: string;
+  timestamp: number;
+};
+
+/** Maximum number of logs to buffer per activity to prevent memory issues */
+const MAX_BUFFERED_LOGS_PER_ACTIVITY = 100;
+
+/**
  * State for tracking active spinners and groups
  */
 type AdapterState = {
@@ -77,6 +95,10 @@ type AdapterState = {
   suspended: boolean;
   /** Activities that were suspended - we'll show completion for these on resume */
   suspendedActivities: Map<ActivityId, { label: string }>;
+  /** Logs buffered during active spinners, to be flushed on activity completion */
+  bufferedLogs: BufferedLog[];
+  /** Verbose mode - when true, all logs are displayed immediately (no buffering) */
+  verbose: boolean;
 };
 
 /**
@@ -107,25 +129,70 @@ function updateParallelSpinnerMessage(state: AdapterState): void {
 }
 
 /**
- * Execute a logging function.
+ * Display a log message using clack's log functions.
  *
- * Note: We previously tried to pause/resume spinners around logs, but this
- * caused double-completion artifacts (checkmark when stopping, then new spinner).
- * Instead, we now just execute the log directly - clack's log functions write
- * to a new line which works alongside the spinner. The spinner will overwrite
- * its own line on the next tick.
- *
- * For batch execution (parallel groups), logs are suppressed anyway since
- * we use a single progress spinner that tracks all activities.
+ * @param level - The log level
+ * @param message - The message to display
+ * @param indented - Whether to indent the log (for buffered logs inside activity context)
  */
-function executeLog(fn: () => void): void {
-  fn();
+function displayLog(level: LogLevel, message: string, indented: boolean = false): void {
+  const prefix = indented ? '\u2502  ' : ''; // │  for indented logs
+  const formattedMessage = prefix + message;
+
+  switch (level) {
+    case 'info':
+      p.log.info(formattedMessage);
+      break;
+    case 'warn':
+      p.log.warn(formattedMessage);
+      break;
+    case 'error':
+      p.log.error(formattedMessage);
+      break;
+    case 'success':
+      p.log.success(formattedMessage);
+      break;
+    case 'step':
+      p.log.step(formattedMessage);
+      break;
+  }
 }
 
 /**
- * Create a Clack-based ReporterAdapter
+ * Flush buffered logs for a specific activity.
+ *
+ * @param state - The adapter state
+ * @param activityId - The activity ID whose logs should be flushed
  */
-export function createReporterAdapter(): ReporterAdapter {
+function flushLogsForActivity(state: AdapterState, activityId: ActivityId): void {
+  // Filter logs for this activity, sorted by timestamp
+  const activityLogs = state.bufferedLogs
+    .filter((log) => log.activityId === activityId)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Display each buffered log with indentation
+  for (const log of activityLogs) {
+    displayLog(log.level, log.message, true);
+  }
+
+  // Remove flushed logs from buffer
+  state.bufferedLogs = state.bufferedLogs.filter((log) => log.activityId !== activityId);
+}
+
+/**
+ * Options for the reporter adapter
+ */
+export type ReporterAdapterOptions = {
+  /** When true, logs are displayed immediately instead of being buffered during spinners */
+  verbose?: boolean;
+};
+
+/**
+ * Create a Clack-based ReporterAdapter
+ *
+ * @param options - Optional configuration for the adapter
+ */
+export function createReporterAdapter(options?: ReporterAdapterOptions): ReporterAdapter {
   return {
     start(bus: EventBus): ReporterAdapterController {
       const state: AdapterState = {
@@ -136,6 +203,8 @@ export function createReporterAdapter(): ReporterAdapter {
         parallelSpinnerGroupId: null,
         suspended: false,
         suspendedActivities: new Map(),
+        bufferedLogs: [],
+        verbose: options?.verbose ?? false,
       };
 
       const handleEvent = (event: CLIEvent): void => {
@@ -189,6 +258,8 @@ export function createReporterAdapter(): ReporterAdapter {
                 if (firstSuccess) {
                   // Show first success via spinner stop
                   state.parallelSpinner.spinner.stop(firstSuccess[1].label, 0);
+                  // Flush buffered logs for this activity
+                  flushLogsForActivity(state, firstSuccess[0]);
                   state.parallelActivities.delete(firstSuccess[0]);
                 } else {
                   // All failed - show first failure label (not error) via spinner stop
@@ -200,6 +271,8 @@ export function createReporterAdapter(): ReporterAdapter {
                     if (firstFailure[1].error) {
                       deferredErrors.push(firstFailure[1].error);
                     }
+                    // Flush buffered logs for this activity
+                    flushLogsForActivity(state, firstFailure[0]);
                     state.parallelActivities.delete(firstFailure[0]);
                   } else {
                     state.parallelSpinner.spinner.stop('Complete', 0);
@@ -210,7 +283,7 @@ export function createReporterAdapter(): ReporterAdapter {
               }
 
               // Show remaining results (only labels inside group, defer errors)
-              for (const [, activity] of state.parallelActivities) {
+              for (const [activityId, activity] of state.parallelActivities) {
                 if (activity.groupId !== event.id) continue;
                 if (activity.status === 'success') {
                   p.log.success(activity.label);
@@ -222,6 +295,8 @@ export function createReporterAdapter(): ReporterAdapter {
                     deferredErrors.push(activity.error);
                   }
                 }
+                // Flush any buffered logs for this parallel activity
+                flushLogsForActivity(state, activityId);
               }
 
               // Clean up all activities for this group
@@ -321,6 +396,7 @@ export function createReporterAdapter(): ReporterAdapter {
             if (parallelActivity) {
               parallelActivity.status = 'success';
               updateParallelSpinnerMessage(state);
+              // Note: For parallel activities, logs will be flushed at group:end
               break;
             }
 
@@ -329,6 +405,9 @@ export function createReporterAdapter(): ReporterAdapter {
             if (entry) {
               entry.spinner.stop(entry.label, 0);
               state.spinners.delete(event.id);
+
+              // Flush any buffered logs for this activity
+              flushLogsForActivity(state, event.id);
             } else {
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
@@ -370,6 +449,9 @@ export function createReporterAdapter(): ReporterAdapter {
               }
               entry.spinner.stop(errorMessage, 1);
               state.spinners.delete(event.id);
+
+              // Flush any buffered logs for this activity
+              flushLogsForActivity(state, event.id);
             } else {
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
@@ -385,35 +467,51 @@ export function createReporterAdapter(): ReporterAdapter {
           case 'log': {
             if (state.suspended) break;
 
-            // Suppress logs while inside a group with active spinners
-            // Per design principle: "process logs should never show inside a group"
-            // Logs only show for single command execution (no active groups)
-            const hasActiveSpinners = state.spinners.size > 0 || state.parallelSpinner !== null;
-            if (hasActiveSpinners) {
-              // Swallow the log - it would interfere with spinner display
+            // Verbose mode: always display logs immediately
+            if (state.verbose) {
+              displayLog(event.level, event.message, false);
               break;
             }
 
-            // No active spinners - safe to log
-            executeLog(() => {
-              switch (event.level) {
-                case 'info':
-                  p.log.info(event.message);
-                  break;
-                case 'warn':
-                  p.log.warn(event.message);
-                  break;
-                case 'error':
-                  p.log.error(event.message);
-                  break;
-                case 'success':
-                  p.log.success(event.message);
-                  break;
-                case 'step':
-                  p.log.step(event.message);
-                  break;
+            const hasActiveSpinners = state.spinners.size > 0 || state.parallelSpinner !== null;
+
+            // Error logs interrupt spinners immediately
+            if (event.level === 'error' && hasActiveSpinners && event.activityId) {
+              const spinner = state.spinners.get(event.activityId);
+              if (spinner) {
+                // Temporarily stop spinner, show error, resume
+                const currentMessage = spinner.currentMessage;
+                spinner.spinner.stop(currentMessage, 0);
+                displayLog(event.level, event.message, false);
+                spinner.spinner.start(currentMessage);
+              } else {
+                // No spinner for this activity, just display
+                displayLog(event.level, event.message, false);
               }
-            });
+              break;
+            }
+
+            // Buffer logs during active spinners
+            if (hasActiveSpinners && event.activityId) {
+              // Check if we've hit the buffer limit for this activity
+              const activityLogCount = state.bufferedLogs.filter(
+                (log) => log.activityId === event.activityId
+              ).length;
+
+              if (activityLogCount < MAX_BUFFERED_LOGS_PER_ACTIVITY) {
+                state.bufferedLogs.push({
+                  activityId: event.activityId,
+                  level: event.level,
+                  message: event.message,
+                  timestamp: Date.now(),
+                });
+              }
+              // If over limit, silently drop (prevent memory issues)
+              break;
+            }
+
+            // No active spinners - display immediately
+            displayLog(event.level, event.message, false);
             break;
           }
 
