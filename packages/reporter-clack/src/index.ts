@@ -6,3 +6,4 @@
  */
 
 export { createReporterAdapter } from './adapter';
+export type { ReporterAdapterOptions } from './adapter';

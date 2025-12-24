@@ -10,3 +10,6 @@ export * as multipleActivities from './multiple-activities';
 export * as parallelGroupSuccess from './parallel-group-success';
 export * as parallelGroupFailure from './parallel-group-failure';
 export * as suspendResume from './suspend-resume';
+export * as bufferedLogsSequential from './buffered-logs-sequential';
+export * as bufferedLogsParallel from './buffered-logs-parallel';
+export * as verboseLogs from './verbose-logs';
