@@ -87,79 +87,167 @@ export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
 }
 
 /**
- * Try to extract enum choices from a schema
- *
- * Uses Zod's internal _def structure to get exact enum values when possible,
- * with fallback to heuristic probing for wrapped schemas.
+ * Wrapper type names that should be unwrapped when extracting enum values
+ * Supports both Zod v3 (typeName) and Zod v4 (type) formats
  */
-function extractEnumChoices(schema: z.ZodType): string[] | undefined {
-  // Try to access Zod internal structure for enum values
-  const choices = getEnumChoicesFromSchema(schema);
-  if (choices) return choices;
+const WRAPPER_TYPE_NAMES_V3 = [
+  'ZodOptional',
+  'ZodDefault',
+  'ZodNullable',
+  'ZodBranded',
+  'ZodReadonly',
+  'ZodCatch',
+] as const;
 
-  // Fallback: heuristic approach for wrapped or complex schemas
-  // Common environment values to test
-  const testValues = ['dev', 'staging', 'prod', 'production', 'development', 'test', 'local'];
+const WRAPPER_TYPE_NAMES_V4 = ['optional', 'default', 'nullable', 'readonly', 'catch'] as const;
 
-  const validValues: string[] = [];
-  let hasStringRestriction = false;
+/**
+ * Unwrap a Zod schema to get its core type
+ *
+ * Removes wrapper types (optional, default, nullable, branded, readonly, catch)
+ * to expose the underlying schema type.
+ * Supports both Zod v3 and Zod v4.
+ */
+export function unwrapSchema(schema: z.ZodType): z.ZodType {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const def = (schema as any)._def;
+  if (!def) return schema;
 
-  for (const value of testValues) {
-    const result = schema.safeParse(value);
-    if (result.success) {
-      validValues.push(value);
-    } else {
-      hasStringRestriction = true;
-    }
+  // Zod v3 uses `typeName`, Zod v4 uses `type`
+  const typeName = def.typeName || def.type;
+
+  // Check if this is a wrapper type that should be unwrapped
+  const isWrapperV3 = WRAPPER_TYPE_NAMES_V3.includes(typeName);
+  const isWrapperV4 = WRAPPER_TYPE_NAMES_V4.includes(typeName);
+
+  if ((isWrapperV3 || isWrapperV4) && def.innerType) {
+    return unwrapSchema(def.innerType);
   }
 
-  // If some test values work and some don't, it's likely an enum
-  // Also check that random strings fail
-  const randomResult = schema.safeParse('__random_unlikely_value_xyz__');
-  if (hasStringRestriction && validValues.length > 0 && !randomResult.success) {
-    return validValues;
+  return schema;
+}
+
+/**
+ * Try to extract enum choices from a schema
+ *
+ * Uses Zod's internal _def structure to get exact enum values.
+ * Supports both Zod v3 and Zod v4.
+ * Supports:
+ * - z.enum(['a', 'b', 'c'])
+ * - z.nativeEnum(SomeEnum)
+ * - z.literal('a').or(z.literal('b'))
+ * - Wrapped versions (optional, default, nullable, etc.)
+ */
+export function extractEnumChoices(schema: z.ZodType): string[] | undefined {
+  const unwrapped = unwrapSchema(schema);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const unwrappedAny = unwrapped as any;
+  const def = unwrappedAny._def;
+  if (!def) return undefined;
+
+  // Zod v3 uses `typeName`, Zod v4 uses `type`
+  const typeName = def.typeName || def.type;
+
+  // Zod v4: Check for `.options` property directly on the schema (enum)
+  // Enum's options are string values, union's options are ZodType objects
+  if (
+    Array.isArray(unwrappedAny.options) &&
+    unwrappedAny.options.length > 0 &&
+    typeof unwrappedAny.options[0] === 'string'
+  ) {
+    return unwrappedAny.options as string[];
+  }
+
+  // Zod v3/v4: Check for ZodEnum: z.enum(['a', 'b', 'c'])
+  if ((typeName === 'ZodEnum' || typeName === 'enum') && Array.isArray(def.values)) {
+    return def.values as string[];
+  }
+
+  // Zod v4: Check for entries (enum as object)
+  if (typeName === 'enum' && def.entries && typeof def.entries === 'object') {
+    return Object.values(def.entries).filter((v): v is string => typeof v === 'string');
+  }
+
+  // Zod v3/v4: Check for ZodNativeEnum: z.nativeEnum(SomeEnum)
+  if ((typeName === 'ZodNativeEnum' || typeName === 'nativeEnum') && def.values) {
+    return Object.values(def.values).filter((v): v is string => typeof v === 'string');
+  }
+
+  // Zod v3/v4: Check for ZodUnion of literals: z.literal('a').or(z.literal('b'))
+  const isUnion = typeName === 'ZodUnion' || typeName === 'union';
+  if (isUnion && Array.isArray(def.options)) {
+    const literals = extractLiteralsFromUnion(def.options);
+    if (literals && literals.length > 0) {
+      return literals;
+    }
   }
 
   return undefined;
 }
 
 /**
+ * Recursively extract string literal values from union options.
+ * Handles nested unions like z.literal('a').or(z.literal('b')).or(z.literal('c'))
+ */
+function extractLiteralsFromUnion(options: z.ZodType[]): string[] | undefined {
+  const literals: string[] = [];
+
+  for (const option of options) {
+    // Unwrap each option in case it's wrapped
+    const unwrappedOption = unwrapSchema(option);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unwrappedOptionAny = unwrappedOption as any;
+    const optDef = unwrappedOptionAny._def;
+    const optTypeName = optDef?.typeName || optDef?.type;
+
+    const isLiteral = optTypeName === 'ZodLiteral' || optTypeName === 'literal';
+    const isNestedUnion = optTypeName === 'ZodUnion' || optTypeName === 'union';
+
+    if (isLiteral) {
+      // Zod v3 uses _def.value, Zod v4 uses _def.values[0] or schema.value
+      let literalValue: unknown;
+      if (typeof optDef.value === 'string') {
+        // Zod v3
+        literalValue = optDef.value;
+      } else if (Array.isArray(optDef.values) && optDef.values.length === 1) {
+        // Zod v4: _def.values is an array
+        literalValue = optDef.values[0];
+      } else if (typeof unwrappedOptionAny.value === 'string') {
+        // Zod v4: direct property on schema
+        literalValue = unwrappedOptionAny.value;
+      }
+
+      if (typeof literalValue === 'string') {
+        literals.push(literalValue);
+      } else {
+        // Non-string literal in union
+        return undefined;
+      }
+    } else if (isNestedUnion && Array.isArray(optDef.options)) {
+      // Recursively extract from nested union
+      const nestedLiterals = extractLiteralsFromUnion(optDef.options);
+      if (nestedLiterals === undefined) {
+        return undefined;
+      }
+      literals.push(...nestedLiterals);
+    } else {
+      // If any option is not a literal or nested union, return undefined
+      // (can't extract reliable choices from mixed unions)
+      return undefined;
+    }
+  }
+
+  return literals;
+}
+
+/**
  * Extract enum choices directly from Zod schema internal structure
  *
- * This is more reliable than heuristic probing but requires accessing
- * Zod internals, which may change between versions.
+ * @deprecated Use extractEnumChoices instead, which handles more schema types.
+ * This function is kept for backwards compatibility.
  */
 export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefined {
-  // Unwrap through layers: ZodDefault, ZodOptional, ZodNullable
-  let current: z.ZodType = schema;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const def = (current as any)._def;
-  if (!def) return undefined;
-
-  // Follow the chain of wrappers
-  if (def.typeName === 'ZodDefault' && def.innerType) {
-    current = def.innerType;
-  }
-  if ((current as any)._def?.typeName === 'ZodOptional' && (current as any)._def?.innerType) {
-    current = (current as any)._def.innerType;
-  }
-  if ((current as any)._def?.typeName === 'ZodNullable' && (current as any)._def?.innerType) {
-    current = (current as any)._def.innerType;
-  }
-
-  // Check for ZodEnum
-  const innerDef = (current as any)._def;
-  if (innerDef?.typeName === 'ZodEnum' && innerDef?.values) {
-    return innerDef.values as string[];
-  }
-
-  // Check for ZodNativeEnum
-  if (innerDef?.typeName === 'ZodNativeEnum' && innerDef?.values) {
-    return Object.values(innerDef.values).filter((v): v is string => typeof v === 'string');
-  }
-
-  return undefined;
+  return extractEnumChoices(schema);
 }
 
 /**
@@ -360,12 +448,23 @@ export function validateRequiredContext<C extends ContextDef>(
  * Extract choices from context field definitions
  *
  * This is used during command loading to extract enum choices
- * before interactive prompting (since we can't reliably probe schemas).
+ * before interactive prompting.
+ *
+ * Priority:
+ * 1. Explicit `choices` field in the context definition (escape hatch)
+ * 2. Auto-extraction from Zod schema internals
  */
 export function extractChoices<C extends ContextDef>(contextDef: C): Map<string, string[]> {
   const result = new Map<string, string[]>();
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Prefer explicit choices if provided (escape hatch for edge cases)
+    if (fieldDef.choices && fieldDef.choices.length > 0) {
+      result.set(name, fieldDef.choices);
+      continue;
+    }
+
+    // Fall back to schema extraction
     const choices = extractEnumChoices(fieldDef.schema);
     if (choices) {
       result.set(name, choices);
