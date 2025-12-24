@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "noEmit": true,
+    "types": ["bun"]
+  },
+  "include": ["core/**/*", "reporter-clack/**/*", "cases/**/*", "commands/**/*", "shared/**/*"],
+  "exclude": ["utils/**/*"],
+  "references": [
+    { "path": "../packages/core" },
+    { "path": "../packages/reporter-clack" },
+    { "path": "./utils" }
+  ]
+}

@@ -1,0 +1,772 @@
+import {
+  type AnyTaskConfig,
+  type ExecTaskConfig,
+  type RunTaskConfig,
+  type TaskContext,
+} from './task';
+import { type Env, getEnvKeys } from './env';
+import { $ } from 'bun';
+import type { TabsAdapter, TabSpec } from '../tabs';
+import type {
+  EventBus,
+  Reporter,
+  CommandReporter,
+  GroupOptions,
+} from '../events';
+import { ScopedReporter } from '../events';
+import type { Prompter } from '../prompter';
+
+type AnyEnv = Env<any, any>;
+
+export type ExecOptions = {
+  timeout?: number;
+};
+
+/**
+ * Error thrown when a command is aborted via AbortSignal
+ */
+export class AbortError extends Error {
+  constructor(message: string = 'Command aborted') {
+    super(message);
+    this.name = 'AbortError';
+  }
+}
+
+export type Command = {
+  readonly _type: 'command';
+  readonly cmd: string;
+  readonly opts?: ExecOptions;
+  then<T = void, R = never>(
+    onFulfilled?: ((value: void) => T | PromiseLike<T>) | null,
+    onRejected?: ((reason: unknown) => R | PromiseLike<R>) | null
+  ): Promise<T | R>;
+};
+
+function isCommand(item: unknown): item is Command {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    '_type' in item &&
+    (item as Command)._type === 'command'
+  );
+}
+
+/**
+ * A deferred task that can be awaited or passed to r.tabs().
+ * Created via r.run() - implements thenable interface for direct await.
+ */
+export type DeferredTask<TReturn = void> = {
+  readonly _type: 'deferred-task';
+  readonly task: AnyTaskConfig;
+  readonly params?: Record<string, unknown>;
+  then<T = TReturn, R = never>(
+    onFulfilled?: ((value: TReturn) => T | PromiseLike<T>) | null,
+    onRejected?: ((reason: unknown) => R | PromiseLike<R>) | null
+  ): Promise<T | R>;
+};
+
+function isDeferredTask(item: unknown): item is DeferredTask<unknown> {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    '_type' in item &&
+    (item as DeferredTask)._type === 'deferred-task'
+  );
+}
+
+/** Items that can be passed to r.parallel() or r.tabs() */
+export type RunnerItem = Command | DeferredTask<unknown>;
+
+/**
+ * Options for the tabs runner.
+ */
+export type TabsRunnerOptions = {
+  /** Name shown in console messages (e.g., "Opening {name} console...") */
+  name?: string;
+};
+
+export interface Runner<
+  _TContext extends Record<string, unknown> = Record<string, unknown>,
+> {
+  cwd: string;
+
+  /**
+   * Reporter for event-driven output.
+   * Use this to emit events for logging and sectioning.
+   */
+  reporter: CommandReporter;
+
+  /**
+   * Prompter for interactive user input.
+   * Use this for select, multiselect, confirm, and text prompts.
+   * In tests, this can be replaced with createRawPrompter() for non-interactive testing.
+   */
+  prompter: Prompter;
+
+  exec(cmd: string, opts?: ExecOptions): Command;
+
+  /**
+   * Run multiple commands or tasks in parallel.
+   * Exits when any item completes (race behavior), killing all others.
+   *
+   * Accepts commands (r.exec) or deferred tasks (r.run).
+   *
+   * @example
+   * await r.parallel([r.exec('vite'), r.exec('stripe listen')]);
+   * await r.parallel([r.run(task1), r.run(task2)]);
+   */
+  parallel(items: RunnerItem[]): Promise<void>;
+
+  /**
+   * Run multiple commands or tasks in a tabbed terminal interface.
+   * Each tab shows the buffered output of its process.
+   * User can switch tabs and scroll through output.
+   *
+   * Accepts commands (r.exec) or deferred tasks (r.run).
+   * Task envs are resolved before spawning processes.
+   *
+   * @example
+   * // With tasks
+   * await r.tabs([r.run(startViteDev), r.run(startStripeListener)]);
+   *
+   * // With commands
+   * await r.tabs([r.exec('vite'), r.exec('stripe listen')]);
+   *
+   * // Mixed
+   * await r.tabs([r.run(startViteDev), r.exec('stripe listen')]);
+   *
+   * // With custom name
+   * await r.tabs([...], { name: 'Development' });
+   */
+  tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
+
+  /**
+   * Run a task. Returns a deferred task that can be awaited directly
+   * or passed to r.tabs() for tabbed execution.
+   *
+   * Task envs are resolved before execution.
+   *
+   * @example
+   * // Execute immediately
+   * await r.run(buildTask, { mode: 'dev' });
+   *
+   * // Pass to tabs for tabbed execution
+   * await r.tabs([r.run(startViteDev), r.run(startStripeListener)]);
+   */
+  run<TReturn = void>(
+    task: AnyTaskConfig,
+    params?: Record<string, unknown>
+  ): DeferredTask<TReturn>;
+
+  /**
+   * Create a visual group for organizing related activities.
+   * Groups provide visual structure (intro/outro) and contain activities.
+   *
+   * @example
+   * await r.group('Database Setup', { layout: 'sequence' }, async (grp) => {
+   *   await grp.activity('Run migrations', async () => {
+   *     await r.run(migrateTask);
+   *   });
+   *   await grp.activity('Seed data', async () => {
+   *     await r.run(seedTask);
+   *   });
+   * });
+   */
+  group<T>(
+    label: string,
+    options: GroupOptions,
+    fn: (reporter: Reporter) => Promise<T> | T
+  ): Promise<T>;
+}
+
+const activeProcesses = new Set<ReturnType<typeof Bun.spawn>>();
+
+function killAllProcesses(): void {
+  for (const proc of activeProcesses) {
+    if (!proc.killed) {
+      try {
+        proc.kill();
+      } catch {
+        // Process may already be dead
+      }
+    }
+  }
+  activeProcesses.clear();
+}
+
+let signalHandlersRegistered = false;
+
+function registerSignalHandlers(): void {
+  if (signalHandlersRegistered) return;
+  signalHandlersRegistered = true;
+
+  const cleanup = () => {
+    killAllProcesses();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+}
+
+export type RunnerOptions<TContext extends Record<string, unknown>> = {
+  cwd: string;
+  context: TContext;
+  extraArgs: string[];
+  timeout?: number;
+  quiet?: boolean;
+  /** AbortSignal for cancelling execution */
+  signal?: AbortSignal;
+  /** EventBus for event-driven output */
+  eventBus: EventBus;
+  /** Optional tabs adapter for tabbed terminal UI */
+  tabs?: TabsAdapter;
+  /** Prompter for interactive input */
+  prompter: Prompter;
+};
+
+/**
+ * Error class that includes captured output from failed commands
+ */
+export class CommandError extends Error {
+  constructor(
+    message: string,
+    public readonly output: string
+  ) {
+    super(message);
+    this.name = 'CommandError';
+  }
+}
+
+export function createRunner<TContext extends Record<string, unknown>>(
+  options: RunnerOptions<TContext>
+): Runner<TContext> {
+  const {
+    cwd,
+    context,
+    extraArgs: forwardedArgs,
+    quiet = false,
+    signal,
+    tabs: tabsAdapter,
+    eventBus,
+    prompter,
+  } = options;
+
+  const reporter: Reporter = new ScopedReporter(eventBus, 'root', 'root');
+  const envCache = new Map<string, string>();
+  // Track processes spawned by this runner for cancellation
+  const runnerProcesses = new Set<ReturnType<typeof Bun.spawn>>();
+
+  const getAllCachedEnv = (): Record<string, string> => {
+    return Object.fromEntries(envCache.entries());
+  };
+
+  /**
+   * Kill all processes spawned by this runner
+   */
+  const killRunnerProcesses = (): void => {
+    for (const proc of runnerProcesses) {
+      if (!proc.killed) {
+        try {
+          proc.kill();
+        } catch {
+          // Process may already be dead
+        }
+      }
+    }
+    runnerProcesses.clear();
+  };
+
+  // If signal is provided, kill processes when aborted
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      killRunnerProcesses();
+    });
+  }
+
+  registerSignalHandlers();
+
+  const exec = (cmd: string, opts?: ExecOptions): Command => {
+    const finalCmd = cmd.trim();
+
+    return {
+      _type: 'command',
+      cmd: finalCmd,
+      opts,
+      then(onFulfilled, onRejected) {
+        const execute = async (): Promise<void> => {
+          // Check if already aborted before starting
+          if (signal?.aborted) {
+            throw new AbortError();
+          }
+
+          const allEnv = getAllCachedEnv();
+          const mergedEnv = { ...process.env, ...allEnv };
+
+          try {
+            if (quiet) {
+              // Use Bun.spawn for quiet mode so we can track and kill the process
+              const proc = Bun.spawn(['sh', '-c', finalCmd], {
+                cwd,
+                stdio: ['inherit', 'pipe', 'pipe'],
+                env: mergedEnv,
+              });
+
+              runnerProcesses.add(proc);
+              activeProcesses.add(proc);
+
+              const exitCode = await proc.exited;
+
+              runnerProcesses.delete(proc);
+              activeProcesses.delete(proc);
+
+              // Check if we were aborted
+              if (signal?.aborted) {
+                throw new AbortError();
+              }
+
+              if (exitCode !== 0 && exitCode !== null) {
+                // Collect output for error reporting
+                const stdout = await new Response(proc.stdout).text();
+                const stderr = await new Response(proc.stderr).text();
+                const output = [stdout.trim(), stderr.trim()]
+                  .filter(Boolean)
+                  .join('\n');
+                throw new CommandError(`Command failed: ${finalCmd}`, output);
+              }
+            } else {
+              await $`${{ raw: finalCmd }}`.env(mergedEnv).cwd(cwd);
+            }
+          } catch (error) {
+            // Re-throw AbortError and CommandError as-is
+            if (error instanceof AbortError || error instanceof CommandError) {
+              throw error;
+            }
+            if (
+              quiet &&
+              error &&
+              typeof error === 'object' &&
+              'stdout' in error
+            ) {
+              // Bun shell error includes stdout/stderr
+              const shellError = error as {
+                stdout: Buffer;
+                stderr: Buffer;
+                message?: string;
+              };
+              const output = [
+                shellError.stdout?.toString().trim(),
+                shellError.stderr?.toString().trim(),
+              ]
+                .filter(Boolean)
+                .join('\n');
+              throw new CommandError(`Command failed: ${finalCmd}`, output);
+            }
+            throw new Error(
+              `Command failed: ${finalCmd}\n${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        };
+
+        return execute().then(onFulfilled, onRejected);
+      },
+    };
+  };
+
+  const parallel = async (items: RunnerItem[]): Promise<void> => {
+    if (items.length === 0) return;
+    if (items.length === 1) {
+      await items[0];
+      return;
+    }
+
+    const allEnv = getAllCachedEnv();
+    const envVars = { ...process.env, ...allEnv };
+
+    const promises: Promise<void>[] = items.map((item) => {
+      if (isCommand(item)) {
+        // Spawn command directly and track the process
+        const proc = Bun.spawn(['sh', '-c', item.cmd], {
+          cwd,
+          stdio: ['inherit', 'inherit', 'inherit'],
+          env: envVars,
+        });
+
+        activeProcesses.add(proc);
+
+        return proc.exited.then((exitCode) => {
+          activeProcesses.delete(proc);
+          if (exitCode !== 0 && exitCode !== null) {
+            throw new Error(
+              `Command failed with exit code ${exitCode}: ${item.cmd}`
+            );
+          }
+        });
+      } else if (isDeferredTask(item)) {
+        // Execute the deferred task (runs via executeTask which tracks processes)
+        return item.then(() => {});
+      } else {
+        throw new Error(
+          'r.parallel() only accepts commands (r.exec) or tasks (r.run).'
+        );
+      }
+    });
+
+    try {
+      await Promise.race(promises);
+    } finally {
+      killAllProcesses();
+    }
+  };
+
+  const executeTask = async <TReturn>(
+    task: AnyTaskConfig,
+    params?: Record<string, unknown>
+  ): Promise<TReturn> => {
+    // Check if already aborted before starting
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Resolve env if task declares env(s)
+    const taskEnvs: Record<string, unknown> = {};
+    if (task.env) {
+      // Normalize to array (last occurrence wins when merging)
+      const envs: AnyEnv[] = Array.isArray(task.env) ? task.env : [task.env];
+      const mergedRawEnv: Record<string, string> = {};
+
+      for (const env of envs) {
+        const keys = getEnvKeys(env);
+        const resolver = env.resolver;
+        const rawEnv = await resolver.resolve(keys, context);
+
+        for (const [key, value] of Object.entries(rawEnv)) {
+          mergedRawEnv[key] = value;
+          envCache.set(key, value);
+        }
+      }
+
+      // Copy resolved vars to taskEnvs (no Zod validation needed - resolver returns strings)
+      Object.assign(taskEnvs, mergedRawEnv);
+    }
+
+    // Validate params if task declares a params schema
+    const taskParams = task.params ? task.params.parse(params ?? {}) : {};
+
+    // Build writeEnvs function if task declares envWriter
+    let writeEnvs:
+      | ((values: Partial<Record<string, string>>) => Promise<void>)
+      | undefined;
+    if (task.envWriter) {
+      const envWriter = task.envWriter as AnyEnv;
+      const declaredVars = new Set(envWriter.vars);
+
+      writeEnvs = async (
+        values: Partial<Record<string, string>>
+      ): Promise<void> => {
+        // Filter out undefined values and validate keys
+        const definedValues: Record<string, string> = {};
+        for (const [key, value] of Object.entries(values)) {
+          if (value === undefined) continue;
+          if (!declaredVars.has(key)) {
+            throw new Error(
+              `Cannot write undeclared variable "${key}". ` +
+                `Declared vars: ${[...declaredVars].join(', ')}`
+            );
+          }
+          definedValues[key] = value;
+        }
+
+        // Check if resolver implements write method
+        if (!envWriter.resolver.write) {
+          throw new Error(
+            `Resolver for envWriter does not implement write method. ` +
+              `Ensure the resolver supports writing.`
+          );
+        }
+
+        // Write using the runner's current context
+        await envWriter.resolver.write(definedValues, context);
+      };
+    }
+
+    // Task uses the runner's reporter directly (no extra activity wrapper)
+    // The caller is responsible for activity management if needed
+    const taskContext: TaskContext<
+      unknown,
+      unknown,
+      typeof writeEnvs,
+      typeof context
+    > = {
+      context,
+      cwd,
+      envs: taskEnvs,
+      params: taskParams,
+      extraArgs: forwardedArgs,
+      reporter,
+      writeEnvs,
+    };
+
+    if ('exec' in task) {
+      const execTask = task as ExecTaskConfig;
+      const cmd =
+        typeof execTask.exec === 'function'
+          ? execTask.exec(taskContext as any)
+          : execTask.exec;
+
+      const allEnv = getAllCachedEnv();
+      const mergedEnv = { ...process.env, ...allEnv };
+
+      try {
+        if (quiet) {
+          // Use Bun.spawn for quiet mode so we can track and kill the process
+          const proc = Bun.spawn(['sh', '-c', cmd], {
+            cwd,
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env: mergedEnv,
+          });
+
+          runnerProcesses.add(proc);
+          activeProcesses.add(proc);
+
+          const exitCode = await proc.exited;
+
+          runnerProcesses.delete(proc);
+          activeProcesses.delete(proc);
+
+          // Check if we were aborted
+          if (signal?.aborted) {
+            throw new AbortError();
+          }
+
+          if (exitCode !== 0 && exitCode !== null) {
+            // Collect output for error reporting
+            const stdout = await new Response(proc.stdout).text();
+            const stderr = await new Response(proc.stderr).text();
+            const output = [stdout.trim(), stderr.trim()]
+              .filter(Boolean)
+              .join('\n');
+            throw new CommandError(`Command failed: ${cmd}`, output);
+          }
+        } else {
+          await $`${{ raw: cmd }}`.env(mergedEnv).cwd(cwd);
+        }
+      } catch (error) {
+        // Re-throw AbortError and CommandError as-is
+        if (error instanceof AbortError || error instanceof CommandError) {
+          throw error;
+        }
+        throw new Error(
+          `Task "${task.label}" failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+
+      return undefined as TReturn;
+    } else {
+      const runTask = task as RunTaskConfig;
+      return runTask.run(runner, taskContext as any) as TReturn;
+    }
+  };
+
+  const run = <TReturn>(
+    task: AnyTaskConfig,
+    params?: Record<string, unknown>
+  ): DeferredTask<TReturn> => {
+    return {
+      _type: 'deferred-task',
+      task,
+      params,
+      then(onFulfilled, onRejected) {
+        return executeTask<TReturn>(task, params).then(onFulfilled, onRejected);
+      },
+    };
+  };
+
+  const tabs = async (
+    items: RunnerItem[],
+    options?: TabsRunnerOptions
+  ): Promise<void> => {
+    if (!tabsAdapter) {
+      throw new Error(
+        'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
+          'Install @openpok/tabs-ink and pass the adapter:\n' +
+          '  import { createTabsAdapter } from "@openpok/tabs-ink";\n' +
+          '  // In your router config:\n' +
+          '  tabs: createTabsAdapter()'
+      );
+    }
+
+    if (items.length === 0) return;
+
+    // Validate items first
+    for (const item of items) {
+      if (isDeferredTask(item)) {
+        const { task } = item;
+        if (!('exec' in task)) {
+          throw new Error(
+            `r.tabs() only supports exec tasks. Task "${task.label}" is not an exec task.`
+          );
+        }
+      } else if (!isCommand(item)) {
+        throw new Error(
+          'r.tabs() only accepts commands (r.exec) or tasks (r.run).'
+        );
+      }
+    }
+
+    // Collect all envs that need to be resolved
+    const envsToResolve: AnyEnv[] = [];
+    for (const item of items) {
+      if (isDeferredTask(item) && item.task.env) {
+        const taskEnvs: AnyEnv[] = Array.isArray(item.task.env)
+          ? item.task.env
+          : [item.task.env];
+        for (const env of taskEnvs) {
+          envsToResolve.push(env);
+        }
+      }
+    }
+
+    // Resolve envs with UI feedback if there are any
+    if (envsToResolve.length > 0) {
+      await reporter.group(
+        'Loading Secrets',
+        { layout: 'sequence' },
+        async (groupReporter) => {
+          for (const env of envsToResolve) {
+            const keys = getEnvKeys(env);
+            // Skip if all keys are already cached
+            const uncachedKeys = keys.filter((k) => !envCache.has(k));
+            if (uncachedKeys.length === 0) continue;
+
+            // Build descriptive label showing which secrets are being loaded
+            const label =
+              uncachedKeys.length <= 3
+                ? uncachedKeys.join(', ')
+                : `${uncachedKeys.slice(0, 2).join(', ')} +${uncachedKeys.length - 2} more`;
+
+            await groupReporter.activity(label, async () => {
+              const resolver = env.resolver;
+              const rawEnv = await resolver.resolve(keys, context);
+              for (const [key, value] of Object.entries(rawEnv)) {
+                envCache.set(key, value);
+              }
+            });
+          }
+        }
+      );
+    }
+
+    const allEnv = getAllCachedEnv();
+    const envVars = { ...process.env, ...allEnv };
+
+    // Convert items to tab specs
+    const tabSpecs: TabSpec[] = items.map((item) => {
+      if (isCommand(item)) {
+        // Command: use first word (binary name) as label
+        const label = item.cmd.split(/\s+/)[0] ?? item.cmd;
+        return { label, exec: item.cmd };
+      }
+
+      // DeferredTask: extract exec command from task
+      const { task, params } = item as DeferredTask<unknown>;
+      const execTask = task as ExecTaskConfig<any, any, any>;
+      let execCmd: string;
+
+      if (typeof execTask.exec === 'function') {
+        // Build task context for exec function
+        const taskEnvs: Record<string, unknown> = {};
+        if (execTask.env) {
+          const envs: AnyEnv[] = Array.isArray(execTask.env)
+            ? execTask.env
+            : [execTask.env];
+          for (const env of envs) {
+            for (const key of env.vars) {
+              const value = envCache.get(key);
+              if (value !== undefined) {
+                taskEnvs[key] = value;
+              }
+            }
+          }
+        }
+        const taskParams = execTask.params
+          ? execTask.params.parse(params ?? {})
+          : {};
+        const taskContext = {
+          context,
+          cwd,
+          envs: taskEnvs,
+          params: taskParams,
+          extraArgs: forwardedArgs,
+          reporter,
+          writeEnvs: undefined,
+        };
+        execCmd = execTask.exec(taskContext as any);
+      } else {
+        execCmd = execTask.exec;
+      }
+
+      // Use shortLabel if provided, otherwise derive from exec command
+      const label =
+        execTask.shortLabel ??
+        (typeof execTask.exec === 'string'
+          ? (execTask.exec.split(/\s+/)[0] ?? execTask.label)
+          : execTask.label);
+      return { label, exec: execCmd };
+    });
+
+    // Derive name from tab labels if not provided
+    const name =
+      options?.name ?? tabSpecs.map((t) => t.label).join(' + ') ?? 'console';
+
+    // Single item - just run it directly with inherited stdio
+    if (tabSpecs.length === 1) {
+      const item = tabSpecs[0]!;
+      const proc = Bun.spawn(['sh', '-c', item.exec], {
+        cwd,
+        stdio: ['inherit', 'inherit', 'inherit'],
+        env: envVars,
+      });
+
+      activeProcesses.add(proc);
+      const exitCode = await proc.exited;
+      activeProcesses.delete(proc);
+
+      if (exitCode !== 0 && exitCode !== null) {
+        throw new Error(
+          `Command failed with exit code ${exitCode}: ${item.exec}`
+        );
+      }
+      return;
+    }
+
+    // Multiple items - use tabbed UI
+    // Suspend reporter before OpenTUI takes over the terminal
+    reporter.suspend();
+    try {
+      await tabsAdapter.run(tabSpecs, { name, cwd, env: envVars });
+    } finally {
+      reporter.resume();
+    }
+  };
+
+  const group = <T>(
+    label: string,
+    options: GroupOptions,
+    fn: (reporter: Reporter) => Promise<T> | T
+  ): Promise<T> => {
+    return reporter.group(label, options, fn);
+  };
+
+  const runner: Runner<TContext> = {
+    cwd,
+    reporter,
+    prompter,
+    exec,
+    parallel,
+    tabs,
+    run,
+    group,
+  };
+  return runner;
+}

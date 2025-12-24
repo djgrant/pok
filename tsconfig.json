@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+  },
+  "include": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/cmd" },
+    { "path": "packages/create" },
+    { "path": "packages/op" },
+    { "path": "packages/prompter-clack" },
+    { "path": "packages/reporter-clack" },
+    { "path": "packages/tabs-core" },
+    { "path": "packages/tabs-ink" },
+    { "path": "packages/tabs-opentui" },
+    { "path": "test/utils" },
+    { "path": "test" },
+  ],
+}
