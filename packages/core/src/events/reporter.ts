@@ -7,6 +7,7 @@
 
 import type { EventBus } from './bus.js';
 import type { ActivityId, GroupId, GroupLayout, LogLevel } from './types.js';
+import { CheckError } from '../lib/check.js';
 
 /**
  * Activity update payload - can be a string (shorthand for message) or full payload
@@ -259,10 +260,18 @@ export class ScopedReporter implements Reporter {
 
       return result;
     } catch (error) {
+      // Extract remediation info from CheckError if available
+      const remediation =
+        error instanceof CheckError ? error.remediation : undefined;
+      const documentationUrl =
+        error instanceof CheckError ? error.documentationUrl : undefined;
+
       this.bus.emit({
         type: 'activity:failure',
         id: activityId,
         error: error instanceof Error ? error : String(error),
+        remediation,
+        documentationUrl,
       });
 
       throw error;

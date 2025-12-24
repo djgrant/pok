@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Text, useInput, useStdout, useStdin } from 'ink';
+import { Box, Text, useInput, useStdout } from 'ink';
 import type { TabProcess } from './types.js';
+import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {
   tabs: TabProcess[];
@@ -15,6 +16,9 @@ type TabbedViewProps = {
   onEnterFocusMode: () => void;
   onExitFocusMode: () => void;
   onSendInput: (data: string) => void;
+  helpVisible: boolean;
+  onToggleHelp: () => void;
+  onCloseHelp: () => void;
 };
 
 function getStatusIndicator({
@@ -183,7 +187,6 @@ export function TabbedView({
   onSendInput,
 }: TabbedViewProps) {
   const { stdout } = useStdout();
-  const { isRawModeSupported, stdin } = useStdin();
 
   const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(() => new Map());
   const [autoScroll, setAutoScroll] = useState<Map<string, boolean>>(
