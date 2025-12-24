@@ -325,8 +325,7 @@ defineTask({
 defineEnv({
   requiredVars: ZodObject,
   requiredContext: ZodObject,
-  resolve: (keys: string[], context: Context) =>
-    Promise<Record<string, string>>,
+  resolve: (keys: string[], context: Context) => Promise<Record<string, string>>,
 });
 ```
 
@@ -343,28 +342,10 @@ defineCheck({
 
 ```typescript
 // Logging
-import {
-  info,
-  success,
-  done,
-  warn,
-  error,
-  step,
-  dim,
-  header,
-  divider,
-} from '@openpok/core';
+import { info, success, done, warn, error, step, dim, header, divider } from '@openpok/core';
 
 // Prompts
-import {
-  text,
-  secret,
-  confirm,
-  select,
-  multiselect,
-  intro,
-  outro,
-} from '@openpok/core';
+import { text, secret, confirm, select, multiselect, intro, outro } from '@openpok/core';
 
 // Shell
 import { commandExists, getVersion, getPackageManager } from '@openpok/core';

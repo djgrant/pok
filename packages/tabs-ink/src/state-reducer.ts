@@ -24,10 +24,7 @@ export function createInitialState(): EventDrivenState {
 /**
  * Reducer function for CLI events
  */
-export function reducer(
-  state: EventDrivenState,
-  event: CLIEvent
-): EventDrivenState {
+export function reducer(state: EventDrivenState, event: CLIEvent): EventDrivenState {
   switch (event.type) {
     case 'root:start':
       return {
@@ -147,10 +144,7 @@ export function reducer(
       const activity = state.activities.get(event.id);
       if (!activity) return state;
 
-      const errorMessage =
-        event.error instanceof Error
-          ? event.error.message
-          : String(event.error);
+      const errorMessage = event.error instanceof Error ? event.error.message : String(event.error);
 
       const updatedActivity: ActivityNode = {
         ...activity,
@@ -172,10 +166,7 @@ export function reducer(
 
       const updatedActivity: ActivityNode = {
         ...activity,
-        logs: [
-          ...activity.logs,
-          { level: event.level, message: event.message },
-        ],
+        logs: [...activity.logs, { level: event.level, message: event.message }],
       };
 
       const newActivities = new Map(state.activities);
@@ -192,10 +183,7 @@ export function reducer(
 /**
  * Get activities that belong to a tabs group
  */
-export function getTabsGroupActivities(
-  state: EventDrivenState,
-  groupId: GroupId
-): ActivityNode[] {
+export function getTabsGroupActivities(state: EventDrivenState, groupId: GroupId): ActivityNode[] {
   const group = state.groups.get(groupId);
   if (!group || group.layout !== 'tabs') return [];
 

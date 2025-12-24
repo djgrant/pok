@@ -43,21 +43,17 @@ const envResolver = defineEnvResolver({
   requiredContext: z.object({
     env: z.enum(['dev', 'staging', 'prod']),
   }),
-  
-  availableVars: [
-    'DATABASE_URL',
-    'REDIS_URL',
-    'API_KEY',
-  ] as const,
-  
+
+  availableVars: ['DATABASE_URL', 'REDIS_URL', 'API_KEY'] as const,
+
   resolve: async (keys, ctx) => {
     // Fetch only requested keys
     const result: Record<string, string> = {};
-    
+
     for (const key of keys) {
       result[key] = await fetchSecret(ctx.env, key);
     }
-    
+
     return result;
   },
 });
@@ -70,22 +66,18 @@ const opResolver = defineEnvResolver({
   requiredContext: z.object({
     env: z.enum(['dev', 'staging', 'prod']),
   }),
-  
-  availableVars: [
-    'DATABASE_URL',
-    'STRIPE_SECRET_KEY',
-    'SENDGRID_API_KEY',
-  ] as const,
-  
+
+  availableVars: ['DATABASE_URL', 'STRIPE_SECRET_KEY', 'SENDGRID_API_KEY'] as const,
+
   resolve: async (keys, ctx) => {
     const vaultId = getVaultForEnv(ctx.env);
     const result: Record<string, string> = {};
-    
+
     for (const key of keys) {
       const ref = `op://${vaultId}/${key}`;
       result[key] = await $`op read ${ref}`.text();
     }
-    
+
     return result;
   },
 });
@@ -101,16 +93,16 @@ const awsResolver = defineEnvResolver({
     env: z.enum(['dev', 'staging', 'prod']),
     region: z.enum(['us-east-1', 'eu-west-1']),
   }),
-  
+
   availableVars: ['AWS_SECRET_1', 'AWS_SECRET_2'] as const,
-  
+
   resolve: async (keys, ctx) => {
     const client = new SecretsManager({ region: ctx.region });
     const secretName = `${ctx.env}/app-secrets`;
-    
+
     const response = await client.getSecretValue({ SecretId: secretName });
     const secrets = JSON.parse(response.SecretString!);
-    
+
     const result: Record<string, string> = {};
     for (const key of keys) {
       result[key] = secrets[key];
@@ -126,12 +118,12 @@ const awsResolver = defineEnvResolver({
 const secretsResolver = defineEnvResolver({
   requiredContext: z.object({ env: z.enum(['dev', 'prod']) }),
   availableVars: ['API_KEY', 'WEBHOOK_SECRET'] as const,
-  
+
   resolve: async (keys, ctx) => {
     // Read from storage
     return await readSecrets(ctx.env, keys);
   },
-  
+
   write: async (values, ctx) => {
     // Persist to storage
     await writeSecrets(ctx.env, values);
@@ -164,13 +156,7 @@ const fullEnv = defineEnv({
 ```typescript
 // Full resolver with many vars
 const resolver = defineEnvResolver({
-  availableVars: [
-    'DATABASE_URL',
-    'REDIS_URL',
-    'API_KEY',
-    'STRIPE_KEY',
-    'SENDGRID_KEY',
-  ] as const,
+  availableVars: ['DATABASE_URL', 'REDIS_URL', 'API_KEY', 'STRIPE_KEY', 'SENDGRID_KEY'] as const,
   // ...
 });
 
@@ -236,7 +222,7 @@ const compositeResolver = defineCompositeResolver({
     env: z.enum(['dev', 'staging', 'prod']),
     region: z.enum(['us', 'eu']),
   }),
-  
+
   resolvers: [
     {
       resolver: opResolver, // Has DATABASE_URL, STRIPE_KEY
@@ -291,7 +277,7 @@ run: async (r) => {
   await r.run(task1); // Resolves DATABASE_URL
   await r.run(task2); // Uses cached value
   await r.run(task3); // Uses cached value
-  
+
   // Also available in exec
   await r.exec('psql $DATABASE_URL');
 },

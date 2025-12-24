@@ -33,10 +33,7 @@ export async function getNodeMajorVersion(): Promise<number | null> {
 /**
  * Run a command and stream output to console
  */
-export async function run(
-  cmd: string,
-  args: string[] = []
-): Promise<{ exitCode: number }> {
+export async function run(cmd: string, args: string[] = []): Promise<{ exitCode: number }> {
   const result = await $`${cmd} ${args}`.nothrow();
   return { exitCode: result.exitCode };
 }
@@ -44,10 +41,7 @@ export async function run(
 /**
  * Run a command silently and return success/failure
  */
-export async function runQuiet(
-  cmd: string,
-  args: string[] = []
-): Promise<boolean> {
+export async function runQuiet(cmd: string, args: string[] = []): Promise<boolean> {
   const result = await $`${cmd} ${args}`.nothrow().quiet();
   return result.exitCode === 0;
 }

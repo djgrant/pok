@@ -149,26 +149,11 @@ describe('@openpok/create init command', () => {
     fs.mkdirSync(projectPath, { recursive: true });
     fs.mkdirSync(path.join(projectPath, 'commands'), { recursive: true });
 
-    fs.writeFileSync(
-      path.join(projectPath, 'package.json'),
-      generatePackageJson(config)
-    );
-    fs.writeFileSync(
-      path.join(projectPath, 'tsconfig.json'),
-      generateTsConfig()
-    );
-    fs.writeFileSync(
-      path.join(projectPath, '.gitignore'),
-      generateGitignore()
-    );
-    fs.writeFileSync(
-      path.join(projectPath, 'commands', 'hello.ts'),
-      generateExampleCommand()
-    );
-    fs.writeFileSync(
-      path.join(projectPath, 'commands', 'build.ts'),
-      generateBuildCommand()
-    );
+    fs.writeFileSync(path.join(projectPath, 'package.json'), generatePackageJson(config));
+    fs.writeFileSync(path.join(projectPath, 'tsconfig.json'), generateTsConfig());
+    fs.writeFileSync(path.join(projectPath, '.gitignore'), generateGitignore());
+    fs.writeFileSync(path.join(projectPath, 'commands', 'hello.ts'), generateExampleCommand());
+    fs.writeFileSync(path.join(projectPath, 'commands', 'build.ts'), generateBuildCommand());
 
     // Verify structure
     expect(fs.existsSync(projectPath)).toBe(true);

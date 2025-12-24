@@ -11,7 +11,7 @@ import { defineCheck } from '@openpok/core';
 ## Signature
 
 ```typescript
-function defineCheck(config: CheckConfig): CheckConfig
+function defineCheck(config: CheckConfig): CheckConfig;
 
 type CheckConfig = {
   label: string;
@@ -21,10 +21,10 @@ type CheckConfig = {
 
 ## Configuration
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `label` | `string` | Human-readable label for logging |
-| `check` | `() => void \| Promise<void>` | Validation function that throws on failure |
+| Property | Type                          | Description                                |
+| -------- | ----------------------------- | ------------------------------------------ |
+| `label`  | `string`                      | Human-readable label for logging           |
+| `check`  | `() => void \| Promise<void>` | Validation function that throws on failure |
 
 ## Examples
 
@@ -56,9 +56,7 @@ export const dockerRunning = defineCheck({
   check: async () => {
     const result = await $`docker info`.nothrow().quiet();
     if (result.exitCode !== 0) {
-      throw new Error(
-        'Docker is not running. Please start Docker Desktop.'
-      );
+      throw new Error('Docker is not running. Please start Docker Desktop.');
     }
   },
 });
@@ -90,9 +88,7 @@ export const envFileExists = defineCheck({
   label: '.env file exists',
   check: async () => {
     if (!(await exists('.env'))) {
-      throw new Error(
-        '.env file not found. Copy .env.example to .env and fill in values.'
-      );
+      throw new Error('.env file not found. Copy .env.example to .env and fill in values.');
     }
   },
 });
@@ -170,6 +166,7 @@ export const command = defineCommand({
 ### Returning Checks from Hook
 
 The hook function can return:
+
 - `void` - No checks
 - `CheckConfig` - Single check
 - `CheckConfig[]` - Multiple checks
@@ -178,15 +175,15 @@ The hook function can return:
 ```typescript
 pre: async (ctx) => {
   const checks: CheckConfig[] = [];
-  
+
   if (ctx.env === 'prod') {
     checks.push(prodConfirmation);
   }
-  
+
   if (ctx.useDocker) {
     checks.push(dockerRunning);
   }
-  
+
   return checks;
 },
 ```
@@ -218,7 +215,7 @@ When running all children of a parent command, checks are deduplicated by refere
 // commands/dev.ts
 pre: [dockerRunning, nodeVersion],
 
-// commands/build.ts  
+// commands/build.ts
 pre: [dockerRunning],
 
 // Running "all" only executes dockerRunning once
@@ -229,9 +226,9 @@ pre: [dockerRunning],
 pok exports utilities for common checks:
 
 ```typescript
-import { 
-  commandExists,     // Check if command is in PATH
-  getVersion,        // Get version of a command
+import {
+  commandExists, // Check if command is in PATH
+  getVersion, // Get version of a command
   getNodeMajorVersion,
   getPackageManager,
 } from '@openpok/core';

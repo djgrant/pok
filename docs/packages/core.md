@@ -61,11 +61,7 @@ Command execution engine with shell, parallel, and tabs support.
 ### Event System
 
 ```typescript
-import {
-  createEventBus,
-  ScopedReporter,
-  createRawReporterAdapter,
-} from '@openpok/core';
+import { createEventBus, ScopedReporter, createRawReporterAdapter } from '@openpok/core';
 ```
 
 Event-driven architecture for decoupled output.
@@ -73,12 +69,7 @@ Event-driven architecture for decoupled output.
 ### Shell Utilities
 
 ```typescript
-import {
-  commandExists,
-  getVersion,
-  getNodeMajorVersion,
-  getPackageManager,
-} from '@openpok/core';
+import { commandExists, getVersion, getNodeMajorVersion, getPackageManager } from '@openpok/core';
 ```
 
 Helpers for shell operations and environment checks.
@@ -86,10 +77,7 @@ Helpers for shell operations and environment checks.
 ### Raw Adapters (Testing)
 
 ```typescript
-import {
-  createRawPrompter,
-  createRawReporterAdapter,
-} from '@openpok/core';
+import { createRawPrompter, createRawReporterAdapter } from '@openpok/core';
 ```
 
 Test-friendly implementations with no TTY dependencies.
@@ -105,38 +93,38 @@ import type {
   ContextDef,
   RunContext,
   RunFn,
-  
+
   // Tasks
   ExecTaskConfig,
   RunTaskConfig,
   TaskContext,
-  
+
   // Environment
   Env,
   EnvResolver,
-  
+
   // Checks
   CheckConfig,
-  
+
   // Runner
   Runner,
   ExecOptions,
-  
+
   // Router
   RouterConfig,
-  
+
   // Events
   CLIEvent,
   EventBus,
   Reporter,
   ReporterAdapter,
-  
+
   // Prompter
   Prompter,
   SelectOptions,
   ConfirmOptions,
   TextOptions,
-  
+
   // Tabs
   TabsAdapter,
   TabSpec,
@@ -164,13 +152,13 @@ await run(process.argv.slice(2), {
 
 ## Related Packages
 
-| Package | Purpose |
-|---------|---------|
+| Package                   | Purpose             |
+| ------------------------- | ------------------- |
 | `@openpok/prompter-clack` | Interactive prompts |
-| `@openpok/reporter-clack` | Terminal output |
-| `@openpok/tabs-ink` | Tabbed terminal UI |
-| `@openpok/tabs-core` | Shared tabs logic |
-| `@openpok/create` | Project scaffolding |
+| `@openpok/reporter-clack` | Terminal output     |
+| `@openpok/tabs-ink`       | Tabbed terminal UI  |
+| `@openpok/tabs-core`      | Shared tabs logic   |
+| `@openpok/create`         | Project scaffolding |
 
 ## API Reference
 

@@ -20,12 +20,16 @@ defineCommand({
 interface Runner<TContext> {
   cwd: string;
   reporter: CommandReporter;
-  
+
   exec(cmd: string, opts?: ExecOptions): Command;
   run<TReturn>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
   parallel(items: RunnerItem[]): Promise<void>;
   tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
-  group<T>(label: string, options: GroupOptions, fn: (reporter: Reporter) => Promise<T> | T): Promise<T>;
+  group<T>(
+    label: string,
+    options: GroupOptions,
+    fn: (reporter: Reporter) => Promise<T> | T
+  ): Promise<T>;
 }
 ```
 
@@ -34,7 +38,7 @@ interface Runner<TContext> {
 ### cwd
 
 ```typescript
-cwd: string
+cwd: string;
 ```
 
 The project root directory. Use this for file operations:
@@ -42,13 +46,13 @@ The project root directory. Use this for file operations:
 ```typescript
 run: async (r) => {
   const configPath = path.join(r.cwd, 'config.json');
-}
+};
 ```
 
 ### reporter
 
 ```typescript
-reporter: CommandReporter
+reporter: CommandReporter;
 ```
 
 Event emission for logging and progress updates:
@@ -59,7 +63,7 @@ run: async (r) => {
   r.reporter.warn('This might take a while');
   r.reporter.error('Something went wrong');
   r.reporter.success('Done!');
-}
+};
 ```
 
 ## Methods
@@ -82,14 +86,14 @@ Returns a `Command` that is thenable (can be awaited):
 run: async (r) => {
   // Simple execution
   await r.exec('npm install');
-  
+
   // With timeout
   await r.exec('npm test', { timeout: 60000 });
-  
+
   // Chained
   await r.exec('npm run build');
   await r.exec('npm run deploy');
-}
+};
 ```
 
 ### run
@@ -108,13 +112,13 @@ import { buildTask, deployTask } from '../tasks';
 run: async (r) => {
   // Execute task
   await r.run(buildTask);
-  
+
   // With parameters
   await r.run(deployTask, { env: 'staging' });
-  
+
   // Get return value
   const version = await r.run(getVersionTask);
-}
+};
 ```
 
 ### parallel
@@ -130,17 +134,11 @@ Exits when **any** item completes, killing all others:
 ```typescript
 run: async (r) => {
   // Run until one exits
-  await r.parallel([
-    r.exec('npm run dev'),
-    r.exec('npm run watch'),
-  ]);
-  
+  await r.parallel([r.exec('npm run dev'), r.exec('npm run watch')]);
+
   // Mix commands and tasks
-  await r.parallel([
-    r.run(devServerTask),
-    r.exec('stripe listen'),
-  ]);
-}
+  await r.parallel([r.run(devServerTask), r.exec('stripe listen')]);
+};
 ```
 
 ### tabs
@@ -159,15 +157,14 @@ Requires a tabs adapter (e.g., `@openpok/tabs-ink`):
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
-    r.exec('npm run dev'),
-    r.exec('stripe listen'),
-    r.run(watchTask),
-  ], { name: 'Development' });
-}
+  await r.tabs([r.exec('npm run dev'), r.exec('stripe listen'), r.run(watchTask)], {
+    name: 'Development',
+  });
+};
 ```
 
 Features:
+
 - Each tab shows buffered output
 - Keyboard navigation between tabs
 - Scrollable output history
@@ -179,8 +176,8 @@ Create a visual group for organizing activities.
 
 ```typescript
 group<T>(
-  label: string, 
-  options: GroupOptions, 
+  label: string,
+  options: GroupOptions,
   fn: (reporter: Reporter) => Promise<T> | T
 ): Promise<T>
 
@@ -195,12 +192,12 @@ run: async (r) => {
     await g.activity('Run migrations', async () => {
       await r.exec('prisma migrate deploy');
     });
-    
+
     await g.activity('Seed data', async () => {
       await r.exec('prisma db seed');
     });
   });
-}
+};
 ```
 
 ## Reporter Methods
@@ -214,12 +211,12 @@ interface CommandReporter {
   error(message: string): void;
   success(message: string): void;
   step(message: string): void;
-  
+
   group<T>(label: string, options: GroupOptions, fn: (r: Reporter) => T): Promise<T>;
   activity<T>(label: string, fn: () => T): Promise<T>;
-  
-  suspend(): void;   // Suspend output (for TUI takeover)
-  resume(): void;    // Resume output
+
+  suspend(): void; // Suspend output (for TUI takeover)
+  resume(): void; // Resume output
 }
 ```
 
@@ -240,7 +237,7 @@ run: async (r) => {
       console.log('Output:', error.output);
     }
   }
-}
+};
 ```
 
 ### AbortError
@@ -260,8 +257,8 @@ Resolved environment variables are automatically injected into shell commands:
 
 ```typescript
 const dbTask = defineTask({
-  env: dbEnv,  // Resolves DATABASE_URL
-  exec: 'prisma migrate deploy',  // DATABASE_URL available
+  env: dbEnv, // Resolves DATABASE_URL
+  exec: 'prisma migrate deploy', // DATABASE_URL available
 });
 
 run: async (r) => {
@@ -269,7 +266,7 @@ run: async (r) => {
   // After dbTask, DATABASE_URL is cached and available
   // in subsequent exec calls
   await r.exec('psql $DATABASE_URL -c "SELECT 1"');
-}
+};
 ```
 
 ## Process Management
@@ -298,7 +295,7 @@ export const command = defineCommand({
       await g.activity('Compile', () => r.run(buildTask));
       await g.activity('Test', () => r.run(testTask));
     });
-    
+
     r.reporter.info('Deploying...');
     await r.run(deployTask, { env: 'prod' });
     r.reporter.success('Deployed!');
@@ -312,11 +309,14 @@ export const command = defineCommand({
 export const command = defineCommand({
   label: 'Start development',
   run: async (r) => {
-    await r.tabs([
-      r.exec('npm run dev'),
-      r.exec('npm run watch:css'),
-      r.exec('stripe listen --forward-to localhost:3000/webhooks'),
-    ], { name: 'Dev' });
+    await r.tabs(
+      [
+        r.exec('npm run dev'),
+        r.exec('npm run watch:css'),
+        r.exec('stripe listen --forward-to localhost:3000/webhooks'),
+      ],
+      { name: 'Dev' }
+    );
   },
 });
 ```

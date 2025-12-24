@@ -18,11 +18,7 @@ export type {
   EventDrivenState,
 } from './types.js';
 
-export {
-  MAX_OUTPUT_LINES,
-  STATUS_INDICATORS,
-  getStatusIndicator,
-} from './types.js';
+export { MAX_OUTPUT_LINES, STATUS_INDICATORS, getStatusIndicator } from './types.js';
 
 // =============================================================================
 // State Reducer
@@ -39,10 +35,6 @@ export {
 // Process Manager
 // =============================================================================
 
-export type {
-  TabSpec,
-  ProcessManagerCallbacks,
-  ProcessManagerOptions,
-} from './process-manager.js';
+export type { TabSpec, ProcessManagerCallbacks, ProcessManagerOptions } from './process-manager.js';
 
 export { ProcessManager, OUTPUT_BATCH_MS } from './process-manager.js';

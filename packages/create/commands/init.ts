@@ -87,33 +87,18 @@ export const command = defineCommand({
         };
 
         // package.json
-        fs.writeFileSync(
-          path.join(projectPath, 'package.json'),
-          generatePackageJson(config)
-        );
+        fs.writeFileSync(path.join(projectPath, 'package.json'), generatePackageJson(config));
 
         // tsconfig.json
-        fs.writeFileSync(
-          path.join(projectPath, 'tsconfig.json'),
-          generateTsConfig()
-        );
+        fs.writeFileSync(path.join(projectPath, 'tsconfig.json'), generateTsConfig());
 
         // .gitignore
-        fs.writeFileSync(
-          path.join(projectPath, '.gitignore'),
-          generateGitignore()
-        );
+        fs.writeFileSync(path.join(projectPath, '.gitignore'), generateGitignore());
 
         // Example commands
-        fs.writeFileSync(
-          path.join(projectPath, 'commands', 'hello.ts'),
-          generateExampleCommand()
-        );
+        fs.writeFileSync(path.join(projectPath, 'commands', 'hello.ts'), generateExampleCommand());
 
-        fs.writeFileSync(
-          path.join(projectPath, 'commands', 'build.ts'),
-          generateBuildCommand()
-        );
+        fs.writeFileSync(path.join(projectPath, 'commands', 'build.ts'), generateBuildCommand());
       });
 
       // Install dependencies
@@ -149,23 +134,17 @@ export const command = defineCommand({
       });
 
       if (installChoice === 'install') {
-        await r.group(
-          'Installing global CLI',
-          { layout: 'sequence' },
-          async (grp) => {
-            await grp.activity('Install @openpok/cmd globally', async () => {
-              const proc = spawn(['bun', 'add', '-g', '@openpok/cmd'], {
-                stdio: ['inherit', 'pipe', 'pipe'],
-              });
-              const exitCode = await proc.exited;
-              if (exitCode !== 0) {
-                throw new Error(
-                  `Global install failed with exit code ${exitCode}`
-                );
-              }
+        await r.group('Installing global CLI', { layout: 'sequence' }, async (grp) => {
+          await grp.activity('Install @openpok/cmd globally', async () => {
+            const proc = spawn(['bun', 'add', '-g', '@openpok/cmd'], {
+              stdio: ['inherit', 'pipe', 'pipe'],
             });
-          }
-        );
+            const exitCode = await proc.exited;
+            if (exitCode !== 0) {
+              throw new Error(`Global install failed with exit code ${exitCode}`);
+            }
+          });
+        });
         pokAvailable = true;
       }
     }

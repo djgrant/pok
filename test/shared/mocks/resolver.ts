@@ -7,9 +7,7 @@ export const mockResolver = defineEnvResolver({
   }),
   availableVars: ['API_KEY', 'DATABASE_URL', 'SECRET_TOKEN'] as const,
   resolve: (keys, ctx) => {
-    return Object.fromEntries(
-      keys.map((k) => [k, `mock-${k.toLowerCase()}-${ctx.env}`])
-    );
+    return Object.fromEntries(keys.map((k) => [k, `mock-${k.toLowerCase()}-${ctx.env}`]));
   },
 });
 
@@ -17,8 +15,6 @@ export const simpleResolver = defineEnvResolver({
   requiredContext: z.object({}),
   availableVars: ['SIMPLE_VAR', 'ANOTHER_VAR'] as const,
   resolve: (keys) => {
-    return Object.fromEntries(
-      keys.map((k) => [k, `simple-${k.toLowerCase()}`])
-    );
+    return Object.fromEntries(keys.map((k) => [k, `simple-${k.toLowerCase()}`]));
   },
 });

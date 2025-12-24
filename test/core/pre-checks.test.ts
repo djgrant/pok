@@ -34,45 +34,25 @@ describe('Pre-flight Checks', () => {
 
   describe('dynamic checks', () => {
     it('runs fewer checks in dev environment', async () => {
-      const { events } = await captureEvents([
-        'with-dynamic-pre',
-        '--env',
-        'dev',
-      ]);
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithDynamicPreDev.events
-      );
+      const { events } = await captureEvents(['with-dynamic-pre', '--env', 'dev']);
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithDynamicPreDev.events);
     });
 
     it('runs more checks in staging environment', async () => {
-      const { events } = await captureEvents([
-        'with-dynamic-pre',
-        '--env',
-        'staging',
-      ]);
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithDynamicPreStaging.events
-      );
+      const { events } = await captureEvents(['with-dynamic-pre', '--env', 'staging']);
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithDynamicPreStaging.events);
     });
 
     it('selects checks based on context', async () => {
-      const { events: devEvents } = await captureEvents([
-        'with-dynamic-pre',
-        '--env',
-        'dev',
-      ]);
+      const { events: devEvents } = await captureEvents(['with-dynamic-pre', '--env', 'dev']);
       const { events: stagingEvents } = await captureEvents([
         'with-dynamic-pre',
         '--env',
         'staging',
       ]);
 
-      const devActivities = devEvents.filter((e) =>
-        e.type.startsWith('activity:')
-      );
-      const stagingActivities = stagingEvents.filter((e) =>
-        e.type.startsWith('activity:')
-      );
+      const devActivities = devEvents.filter((e) => e.type.startsWith('activity:'));
+      const stagingActivities = stagingEvents.filter((e) => e.type.startsWith('activity:'));
 
       expect(stagingActivities.length).toBeGreaterThan(devActivities.length);
     });

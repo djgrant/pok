@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import {
-  captureEvents,
-  normalizeEvents,
-  eventTypes,
-  filterEvents,
-} from './utils';
+import { captureEvents, normalizeEvents, eventTypes, filterEvents } from './utils';
 import * as fixtures from './fixtures';
 
 describe('Reporter', () => {
@@ -43,17 +38,13 @@ describe('Reporter', () => {
   describe('log levels', () => {
     it('emits info log events', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      const infoLogs = events.filter(
-        (e) => e.type === 'log' && e.level === 'info'
-      );
+      const infoLogs = events.filter((e) => e.type === 'log' && e.level === 'info');
       expect(infoLogs.length).toBeGreaterThan(0);
     });
 
     it('emits success log events', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      const successLogs = events.filter(
-        (e) => e.type === 'log' && e.level === 'success'
-      );
+      const successLogs = events.filter((e) => e.type === 'log' && e.level === 'success');
       expect(successLogs.length).toBeGreaterThan(0);
     });
 
@@ -86,10 +77,7 @@ describe('Reporter', () => {
       const types = eventTypes(normalized);
 
       const firstGroupStart = types.indexOf('group:start');
-      const secondGroupStart = types.indexOf(
-        'group:start',
-        firstGroupStart + 1
-      );
+      const secondGroupStart = types.indexOf('group:start', firstGroupStart + 1);
 
       expect(firstGroupStart).toBeLessThan(secondGroupStart);
     });
@@ -111,10 +99,7 @@ describe('Reporter', () => {
   describe('activity states', () => {
     it('emits start and success for passing activity', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      const activities = filterEvents(events, [
-        'activity:start',
-        'activity:success',
-      ]);
+      const activities = filterEvents(events, ['activity:start', 'activity:success']);
 
       const starts = activities.filter((e) => e.type === 'activity:start');
       const successes = activities.filter((e) => e.type === 'activity:success');

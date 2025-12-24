@@ -8,8 +8,5 @@
     "jsxImportSource": "@opentui/react"
   },
   "include": ["src/**/*"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../tabs-core" }
-  ]
+  "references": [{ "path": "../core" }, { "path": "../tabs-core" }]
 }

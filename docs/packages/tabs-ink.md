@@ -24,12 +24,10 @@ Then in commands:
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
-    r.exec('npm run dev'),
-    r.exec('stripe listen'),
-    r.run(watchTask),
-  ], { name: 'Development' });
-}
+  await r.tabs([r.exec('npm run dev'), r.exec('stripe listen'), r.run(watchTask)], {
+    name: 'Development',
+  });
+};
 ```
 
 ## What It Provides
@@ -66,30 +64,30 @@ A full-screen tabbed terminal interface:
 
 ## Keyboard Controls
 
-| Key | Action |
-|-----|--------|
-| `←` `→` | Switch to previous/next tab |
-| `1-9` | Switch to tab by number |
-| `↑` `↓` | Scroll output up/down |
-| `Page Up/Down` | Scroll by page |
-| `Home/End` | Scroll to start/end |
-| `q` or `Ctrl+C` | Quit all processes |
+| Key             | Action                      |
+| --------------- | --------------------------- |
+| `←` `→`         | Switch to previous/next tab |
+| `1-9`           | Switch to tab by number     |
+| `↑` `↓`         | Scroll output up/down       |
+| `Page Up/Down`  | Scroll by page              |
+| `Home/End`      | Scroll to start/end         |
+| `q` or `Ctrl+C` | Quit all processes          |
 
 ## Status Indicators
 
-| Symbol | Meaning |
-|--------|---------|
-| `●` (blue) | Process running |
+| Symbol      | Meaning                     |
+| ----------- | --------------------------- |
+| `●` (blue)  | Process running             |
 | `✓` (green) | Process exited successfully |
-| `✗` (red) | Process exited with error |
-| `○` (gray) | Process killed |
+| `✗` (red)   | Process exited with error   |
+| `○` (gray)  | Process killed              |
 
 ## API
 
 ### createTabsAdapter
 
 ```typescript
-function createTabsAdapter(): TabsAdapter
+function createTabsAdapter(): TabsAdapter;
 ```
 
 Returns a TabsAdapter that renders using Ink.
@@ -132,6 +130,7 @@ await r.tabs([r.exec('npm run dev')]);
 ## Process Cleanup
 
 On quit or error:
+
 1. All processes receive SIGTERM
 2. UI returns to normal terminal
 3. Reporter resumes

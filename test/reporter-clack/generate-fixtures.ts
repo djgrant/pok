@@ -24,8 +24,7 @@ type FixtureDefinition = {
 const fixtures: FixtureDefinition[] = [
   {
     name: 'sequential-group',
-    description:
-      'Sequential group with activities from taskWithReporter fixture',
+    description: 'Sequential group with activities from taskWithReporter fixture',
     events: cliFixtures.taskWithReporter.events,
   },
   {
@@ -168,14 +167,8 @@ async function generateFixture(fixture: FixtureDefinition): Promise<string[]> {
   return lines;
 }
 
-function toTypeScriptFile(
-  _name: string,
-  description: string,
-  lines: string[]
-): string {
-  const linesArray = lines
-    .map((line) => `  ${JSON.stringify(line)},`)
-    .join('\n');
+function toTypeScriptFile(_name: string, description: string, lines: string[]): string {
+  const linesArray = lines.map((line) => `  ${JSON.stringify(line)},`).join('\n');
 
   return `/**
  * Expected terminal output for: ${description}

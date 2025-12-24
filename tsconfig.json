@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["bun"],
+    "types": ["bun"]
   },
   "include": [],
   "references": [
@@ -15,6 +15,6 @@
     { "path": "packages/tabs-ink" },
     { "path": "packages/tabs-opentui" },
     { "path": "test/utils" },
-    { "path": "test" },
-  ],
+    { "path": "test" }
+  ]
 }

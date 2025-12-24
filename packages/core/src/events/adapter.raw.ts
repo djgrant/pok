@@ -20,8 +20,7 @@ export type RawReporterAdapterOptions = {
 /**
  * Extended controller with event access methods
  */
-export interface RawReporterAdapterController
-  extends ReporterAdapterController {
+export interface RawReporterAdapterController extends ReporterAdapterController {
   /** Get all captured events */
   getEvents(): CLIEvent[];
   /** Clear captured events */

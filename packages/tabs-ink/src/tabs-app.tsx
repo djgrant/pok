@@ -62,9 +62,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
 
         const newOutput = [...tab.output, ...lines];
         const trimmed =
-          newOutput.length > MAX_OUTPUT_LINES
-            ? newOutput.slice(-MAX_OUTPUT_LINES)
-            : newOutput;
+          newOutput.length > MAX_OUTPUT_LINES ? newOutput.slice(-MAX_OUTPUT_LINES) : newOutput;
 
         next[index] = { ...tab, output: trimmed };
       }

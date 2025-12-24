@@ -80,10 +80,7 @@ type NestingReporter = {
    * Create a child activity. Returns a Reporter scoped to that new activity.
    * The activity lifecycle (start/success/failure) is managed automatically.
    */
-  activity<T>(
-    label: string,
-    fn: (reporter: Reporter) => Promise<T> | T
-  ): Promise<T>;
+  activity<T>(label: string, fn: (reporter: Reporter) => Promise<T> | T): Promise<T>;
 
   /**
    * Create a child activity with metadata.
@@ -178,8 +175,7 @@ export class ScopedReporter implements Reporter {
       return;
     }
 
-    const normalizedPayload =
-      typeof payload === 'string' ? { message: payload } : payload;
+    const normalizedPayload = typeof payload === 'string' ? { message: payload } : payload;
 
     this.bus.emit({
       type: 'activity:update',
@@ -191,10 +187,7 @@ export class ScopedReporter implements Reporter {
   private log(level: LogLevel, message: string): void {
     this.bus.emit({
       type: 'log',
-      activityId:
-        this.scopeType === 'activity'
-          ? (this.scopeId as ActivityId)
-          : undefined,
+      activityId: this.scopeType === 'activity' ? (this.scopeId as ActivityId) : undefined,
       level,
       message,
     });
@@ -209,8 +202,7 @@ export class ScopedReporter implements Reporter {
   }
 
   error(message: string | Error): void {
-    const errorMessage =
-      message instanceof Error ? message.message : String(message);
+    const errorMessage = message instanceof Error ? message.message : String(message);
     this.log('error', errorMessage);
   }
 
@@ -230,10 +222,7 @@ export class ScopedReporter implements Reporter {
     this.bus.emit({ type: 'reporter:resume' });
   }
 
-  async activity<T>(
-    label: string,
-    fn: (reporter: Reporter) => Promise<T> | T
-  ): Promise<T> {
+  async activity<T>(label: string, fn: (reporter: Reporter) => Promise<T> | T): Promise<T> {
     return this.activityWithMeta(label, {}, fn);
   }
 
@@ -334,11 +323,7 @@ export class ScopedReporter implements Reporter {
 /**
  * Create a root reporter for the CLI application
  */
-export function createRootReporter(
-  bus: EventBus,
-  appName: string,
-  version?: string
-): Reporter {
+export function createRootReporter(bus: EventBus, appName: string, version?: string): Reporter {
   bus.emit({
     type: 'root:start',
     appName,

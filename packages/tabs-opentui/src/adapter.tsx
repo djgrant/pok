@@ -7,12 +7,7 @@
 
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
-import type {
-  TabsAdapter,
-  TabSpec,
-  TabsOptions,
-  EventBus,
-} from '@openpok/core';
+import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@openpok/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 
@@ -27,9 +22,7 @@ export function createTabsAdapter(): TabsAdapter {
       }
 
       if (!process.stdin.isTTY) {
-        throw new Error(
-          'Tabbed view requires stdin to be a TTY for keyboard input'
-        );
+        throw new Error('Tabbed view requires stdin to be a TTY for keyboard input');
       }
 
       if (items.length === 0) {
@@ -69,9 +62,7 @@ export function createTabsAdapter(): TabsAdapter {
           resolve();
         };
 
-        root.render(
-          <TabsApp items={items} options={options} onExit={handleExit} />
-        );
+        root.render(<TabsApp items={items} options={options} onExit={handleExit} />);
       });
     },
   };
@@ -98,13 +89,12 @@ export function createEventAdapter(
   }
 
   if (!process.stdin.isTTY) {
-    throw new Error(
-      'Event-driven tabs view requires stdin to be a TTY for keyboard input'
-    );
+    throw new Error('Event-driven tabs view requires stdin to be a TTY for keyboard input');
   }
 
   let root: ReturnType<typeof createRoot> | null = null;
   let renderer: Awaited<ReturnType<typeof createCliRenderer>> | null = null;
+  let unmountRequested = false;
 
   const init = async () => {
     // Let OpenTUI handle alternate screen and raw mode via its config
@@ -114,6 +104,12 @@ export function createEventAdapter(
       useMouse: false,
       useKittyKeyboard: {}, // Enable Kitty keyboard protocol for better key handling
     });
+
+    // Check if unmount was requested during async init
+    if (unmountRequested) {
+      renderer.destroy();
+      return;
+    }
 
     // Disable stdout interception to prevent output mangling with scrolling
     renderer.disableStdoutInterception();
@@ -131,10 +127,13 @@ export function createEventAdapter(
     root.render(<EventDrivenApp bus={bus} onExit={handleExit} />);
   };
 
-  init();
+  init().catch((error) => {
+    console.error('Failed to initialize event adapter:', error);
+  });
 
   return {
     unmount: () => {
+      unmountRequested = true;
       root?.unmount();
       renderer?.destroy();
     },

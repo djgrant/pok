@@ -15,12 +15,7 @@ export type {
   CLIEvent,
 } from './types';
 
-export {
-  isRootEvent,
-  isGroupEvent,
-  isActivityEvent,
-  isLogEvent,
-} from './types';
+export { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from './types';
 
 // Event bus
 export type { EventBus, EventListener, Unsubscribe } from './bus';

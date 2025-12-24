@@ -66,21 +66,13 @@ function ActivityTabBar({
   );
 }
 
-function ActivityView({
-  activity,
-  viewHeight,
-}: {
-  activity: ActivityNode;
-  viewHeight: number;
-}) {
+function ActivityView({ activity, viewHeight }: { activity: ActivityNode; viewHeight: number }) {
   const logs = activity.logs.slice(-viewHeight);
 
   return (
     <box flexDirection="column" height={viewHeight} overflow="hidden">
       {activity.message && <text fg="#00FFFF">{activity.message}</text>}
-      {activity.progress !== undefined && (
-        <text fg="#FFFF00">Progress: {activity.progress}%</text>
-      )}
+      {activity.progress !== undefined && <text fg="#FFFF00">Progress: {activity.progress}%</text>}
       {logs.map((log, i) => {
         let color: string | undefined;
         switch (log.level) {
@@ -131,10 +123,7 @@ function StatusBar({
     return (
       <box>
         <box style={{ backgroundColor: '#FFFF00' }}>
-          <text fg="#000000">
-            {' '}
-            Press q again to quit, any other key to cancel{' '}
-          </text>
+          <text fg="#000000"> Press q again to quit, any other key to cancel </text>
         </box>
       </box>
     );
@@ -239,17 +228,10 @@ export function EventDrivenApp({ bus, onExit }: EventDrivenAppProps) {
   return (
     <box flexDirection="column" padding={1}>
       <ActivityTabBar activities={activities} activeIndex={activeIndex} />
-      <box
-        border={['top', 'bottom']}
-        borderStyle="single"
-        borderColor="#666666"
-      >
+      <box border={['top', 'bottom']} borderStyle="single" borderColor="#666666">
         <ActivityView activity={activeActivity} viewHeight={viewHeight} />
       </box>
-      <StatusBar
-        activityCount={activities.length}
-        quitConfirmPending={quitConfirmPending}
-      />
+      <StatusBar activityCount={activities.length} quitConfirmPending={quitConfirmPending} />
     </box>
   );
 }

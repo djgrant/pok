@@ -44,13 +44,13 @@ context: {
     from: 'flag',
     schema: z.enum(['dev', 'prod']),
   },
-  
+
   // Optional - never prompts
   verbose: {
     from: 'flag',
     schema: z.boolean().optional(),
   },
-  
+
   // Default - uses default if missing
   timeout: {
     from: 'flag',
@@ -68,13 +68,13 @@ context: {
     from: 'flag',
     schema: z.array(z.string()).default([]),
   },
-  
+
   // Union types
   format: {
     from: 'flag',
     schema: z.enum(['json', 'yaml', 'toml']),
   },
-  
+
   // Transformed values
   port: {
     from: 'flag',
@@ -116,15 +116,15 @@ pre: [dockerRunning, nodeVersion, envFileExists],
 ```typescript
 pre: (ctx) => {
   const checks = [nodeVersion];
-  
+
   if (ctx.useDocker) {
     checks.push(dockerRunning);
   }
-  
+
   if (ctx.env === 'prod') {
     checks.push(prodConfirmation);
   }
-  
+
   return checks;
 },
 ```
@@ -212,6 +212,7 @@ export const command = defineCommand({
 ```
 
 Users can run:
+
 - `mycli check` → Interactive menu
 - `mycli check all` → Run all sequentially
 - `mycli check lint` → Run specific check
@@ -253,7 +254,7 @@ run: async (r) => {
   } catch {
     r.reporter.warn('optional-tool not found, skipping');
   }
-  
+
   await r.exec('npm run build'); // Always run
 },
 ```
@@ -328,7 +329,7 @@ run: async (r) => {
   await r.run(buildTask);
 },
 
-// commands/deploy.ts  
+// commands/deploy.ts
 run: async (r) => {
   await r.run(buildTask);
   await r.run(deployTask);
@@ -345,7 +346,7 @@ run: async (r) => {
     await g.activity('Compile', () => r.exec('tsc'));
     await g.activity('Bundle', () => r.exec('esbuild'));
   });
-  
+
   await r.group('Deploy', { layout: 'sequence' }, async (g) => {
     await g.activity('Upload', () => r.exec('upload'));
     await g.activity('Verify', () => r.exec('verify'));

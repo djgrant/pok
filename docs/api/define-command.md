@@ -11,22 +11,20 @@ import { defineCommand } from '@openpok/core';
 ## Signature
 
 ```typescript
-function defineCommand<C extends ContextDef>(
-  config: CommandConfig<C>
-): CommandConfig<C>
+function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandConfig<C>;
 ```
 
 ## CommandConfig
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `label` | `string` | Human-readable label for menus and help |
-| `context` | `ContextDef` | Context field definitions (flags) |
-| `pre` | `CheckConfig \| CheckConfig[] \| HookFn` | Pre-execution checks |
-| `timeout` | `number` | Default timeout for exec calls (ms). Default: 300000 |
-| `run` | `RunFn<C>` | Main execution function |
-| `enableRunAllChildren` | `'sequential' \| 'parallel'` | Enable "run all" for parent commands |
-| `quietRunAll` | `boolean` | Capture output when running all children. Default: true |
+| Property               | Type                                     | Description                                             |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------- |
+| `label`                | `string`                                 | Human-readable label for menus and help                 |
+| `context`              | `ContextDef`                             | Context field definitions (flags)                       |
+| `pre`                  | `CheckConfig \| CheckConfig[] \| HookFn` | Pre-execution checks                                    |
+| `timeout`              | `number`                                 | Default timeout for exec calls (ms). Default: 300000    |
+| `run`                  | `RunFn<C>`                               | Main execution function                                 |
+| `enableRunAllChildren` | `'sequential' \| 'parallel'`             | Enable "run all" for parent commands                    |
+| `quietRunAll`          | `boolean`                                | Capture output when running all children. Default: true |
 
 ## Context Definition
 
@@ -34,9 +32,9 @@ Each context field specifies where its value comes from and its schema:
 
 ```typescript
 type ContextFieldDef = {
-  from: 'flag';              // Currently only 'flag' is supported
-  schema: z.ZodType;         // Zod schema for validation
-  description?: string;      // Help text
+  from: 'flag'; // Currently only 'flag' is supported
+  schema: z.ZodType; // Zod schema for validation
+  description?: string; // Help text
 };
 ```
 
@@ -78,12 +76,12 @@ export const command = defineCommand({
   run: async (r, ctx) => {
     // ctx.context.env is typed as 'dev' | 'staging' | 'prod'
     // ctx.context.dryRun is typed as boolean
-    
+
     if (ctx.context.dryRun) {
       r.reporter.info('Dry run mode');
       return;
     }
-    
+
     await r.exec(`deploy --env ${ctx.context.env}`);
   },
 });
@@ -170,9 +168,9 @@ The `run` function receives a `Runner` and `RunContext`:
 
 ```typescript
 type RunContext<C> = {
-  context: InferContext<C>;  // Resolved context values
-  extraArgs: string[];       // Remaining CLI arguments
-  cwd: string;               // Project root directory
+  context: InferContext<C>; // Resolved context values
+  extraArgs: string[]; // Remaining CLI arguments
+  cwd: string; // Project root directory
 };
 ```
 
@@ -187,7 +185,7 @@ context: {
     schema: z.number().int().positive(),
   },
   tags: {
-    from: 'flag', 
+    from: 'flag',
     schema: z.array(z.string()).default([]),
   },
 },

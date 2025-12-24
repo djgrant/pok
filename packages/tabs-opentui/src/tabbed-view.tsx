@@ -121,10 +121,7 @@ function StatusBar({
     return (
       <box>
         <box style={{ backgroundColor: '#FFFF00' }}>
-          <text fg="#000000">
-            {' '}
-            Press q again to quit, any other key to cancel{' '}
-          </text>
+          <text fg="#000000"> Press q again to quit, any other key to cancel </text>
         </box>
       </box>
     );
@@ -144,8 +141,8 @@ function StatusBar({
   return (
     <box>
       <text fg="#666666">
-        [{'\u2191\u2193'}] scroll | [Tab/1-{tabCount}] switch | [i]nput |
-        [r]estart | [k]ill | [q]uit
+        [{'\u2191\u2193'}] scroll | [Tab/1-{tabCount}] switch | [i]nput | [r]estart | [k]ill |
+        [q]uit
       </text>
     </box>
   );
@@ -198,15 +195,7 @@ export function TabbedView({
     onEnterFocusModeRef.current = onEnterFocusMode;
     onExitFocusModeRef.current = onExitFocusMode;
     onSendInputRef.current = onSendInput;
-  }, [
-    onQuit,
-    onQuitRequest,
-    onRestart,
-    onKill,
-    onEnterFocusMode,
-    onExitFocusMode,
-    onSendInput,
-  ]);
+  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput]);
 
   useKeyboard((event: KeyEvent) => {
     const { name, ctrl, shift, meta, sequence } = event;

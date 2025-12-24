@@ -34,27 +34,27 @@ function defineTask<TEnv, TParams, TEnvWriter, TReturn>(config: {
 
 ## Configuration
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `label` | `string` | Human-readable label |
-| `shortLabel` | `string` | Short label for tabs (defaults to first word of exec) |
-| `env` | `Env \| Env[]` | Environment(s) to resolve before execution |
-| `params` | `z.ZodType` | Zod schema for task parameters |
-| `envWriter` | `Env` | Environment for writing (enables `ctx.writeEnvs`) |
-| `exec` | `string \| Function` | Shell command to execute |
-| `run` | `Function` | Custom execution logic |
+| Property     | Type                 | Description                                           |
+| ------------ | -------------------- | ----------------------------------------------------- |
+| `label`      | `string`             | Human-readable label                                  |
+| `shortLabel` | `string`             | Short label for tabs (defaults to first word of exec) |
+| `env`        | `Env \| Env[]`       | Environment(s) to resolve before execution            |
+| `params`     | `z.ZodType`          | Zod schema for task parameters                        |
+| `envWriter`  | `Env`                | Environment for writing (enables `ctx.writeEnvs`)     |
+| `exec`       | `string \| Function` | Shell command to execute                              |
+| `run`        | `Function`           | Custom execution logic                                |
 
 ## TaskContext
 
 ```typescript
 type TaskContext<TEnvs, TParams, TWriteEnvs, TContext> = {
-  context: TContext;           // Inherited from parent command
-  cwd: string;                 // Project root
-  envs: TEnvs;                 // Resolved environment variables
-  params: TParams;             // Validated parameters
-  extraArgs: string[];         // Remaining CLI args
-  reporter: TaskReporter;      // Event emission
-  writeEnvs: TWriteEnvs;       // Write function (if envWriter defined)
+  context: TContext; // Inherited from parent command
+  cwd: string; // Project root
+  envs: TEnvs; // Resolved environment variables
+  params: TParams; // Validated parameters
+  extraArgs: string[]; // Remaining CLI args
+  reporter: TaskReporter; // Event emission
+  writeEnvs: TWriteEnvs; // Write function (if envWriter defined)
 };
 ```
 
@@ -131,10 +131,10 @@ export const setup = defineTask({
   label: 'Setup development',
   run: async (r, ctx) => {
     ctx.reporter.info('Setting up...');
-    
+
     await r.exec('npm install');
     await r.exec('npm run db:setup');
-    
+
     ctx.reporter.success('Ready!');
   },
 });
@@ -202,16 +202,13 @@ Tasks are executed via `r.run()`:
 run: async (r) => {
   // Execute directly
   await r.run(buildTask);
-  
+
   // With parameters
   await r.run(migrateTask, { dryRun: true });
-  
+
   // In tabs
-  await r.tabs([
-    r.run(devServerTask),
-    r.run(watcherTask),
-  ]);
-}
+  await r.tabs([r.run(devServerTask), r.run(watcherTask)]);
+};
 ```
 
 ## Type Safety

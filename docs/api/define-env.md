@@ -27,17 +27,17 @@ function defineEnvResolver<TContext, TAvailableVars extends string>(config: {
   availableVars: readonly TAvailableVars[];
   resolve: (keys: string[], context: TContext) => Promise<Record<string, string>>;
   write?: (values: Record<string, string>, context: TContext) => Promise<void>;
-}): TypedEnvResolver<TAvailableVars>
+}): TypedEnvResolver<TAvailableVars>;
 ```
 
 ### Configuration
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `requiredContext` | `z.ZodObject` | Zod schema for context this resolver needs |
-| `availableVars` | `readonly string[]` | List of variable names this resolver can provide |
-| `resolve` | `Function` | Async function to fetch requested variables |
-| `write` | `Function` | Optional function to persist variables |
+| Property          | Type                | Description                                      |
+| ----------------- | ------------------- | ------------------------------------------------ |
+| `requiredContext` | `z.ZodObject`       | Zod schema for context this resolver needs       |
+| `availableVars`   | `readonly string[]` | List of variable names this resolver can provide |
+| `resolve`         | `Function`          | Async function to fetch requested variables      |
+| `write`           | `Function`          | Optional function to persist variables           |
 
 ### Example
 
@@ -50,27 +50,22 @@ const opResolver = defineEnvResolver({
   requiredContext: z.object({
     env: z.enum(['dev', 'staging', 'prod']),
   }),
-  
+
   // Variables this resolver can provide
-  availableVars: [
-    'DATABASE_URL',
-    'REDIS_URL',
-    'API_KEY',
-    'STRIPE_SECRET_KEY',
-  ] as const, // Use 'as const' for type inference
-  
+  availableVars: ['DATABASE_URL', 'REDIS_URL', 'API_KEY', 'STRIPE_SECRET_KEY'] as const, // Use 'as const' for type inference
+
   // Fetch the requested keys
   resolve: async (keys, ctx) => {
     const vault = getVaultForEnv(ctx.env);
     const secrets: Record<string, string> = {};
-    
+
     for (const key of keys) {
       secrets[key] = await vault.get(key);
     }
-    
+
     return secrets;
   },
-  
+
   // Optional: write secrets back
   write: async (values, ctx) => {
     const vault = getVaultForEnv(ctx.env);
@@ -91,7 +86,7 @@ Creates an environment that selects specific variables from a resolver.
 function defineEnv<TResolver, TVars extends TResolver['availableVars'][number]>(config: {
   resolver: TResolver;
   vars: readonly TVars[];
-}): Env<InferResolverContext<TResolver>, TVars>
+}): Env<InferResolverContext<TResolver>, TVars>;
 ```
 
 ### Example
@@ -205,7 +200,9 @@ Resolvers can optionally implement a `write` method for persisting values:
 const secretsResolver = defineEnvResolver({
   requiredContext: z.object({ env: z.enum(['dev', 'prod']) }),
   availableVars: ['NEW_API_KEY'] as const,
-  resolve: async (keys, ctx) => { /* ... */ },
+  resolve: async (keys, ctx) => {
+    /* ... */
+  },
   write: async (values, ctx) => {
     // Persist values to secret store
     await secretStore.write(ctx.env, values);

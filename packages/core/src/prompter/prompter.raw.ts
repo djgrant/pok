@@ -47,9 +47,7 @@ export type RawPrompterOptions = {
    * Can be a single value (used for all), an array (consumed in order),
    * or a function that receives the options and returns an array of values.
    */
-  multiselectResponses?:
-    | ResponseProvider<unknown[]>
-    | ResponseProvider<unknown[]>[];
+  multiselectResponses?: ResponseProvider<unknown[]> | ResponseProvider<unknown[]>[];
 
   /**
    * Responses for confirm prompts.
@@ -109,9 +107,7 @@ export interface RawPrompter extends Prompter {
  * expect(calls[0]).toMatchObject({ type: 'select', response: 'option1' });
  * ```
  */
-export function createRawPrompter(
-  options: RawPrompterOptions = {}
-): RawPrompter {
+export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter {
   const calls: PromptCall[] = [];
 
   // Track indices for array responses
@@ -162,8 +158,7 @@ export function createRawPrompter(
   return {
     async select<T>(selectOptions: SelectOptions<T>): Promise<T> {
       // Default: return first option's value, or initialValue
-      const defaultValue =
-        selectOptions.initialValue ?? selectOptions.options[0]?.value;
+      const defaultValue = selectOptions.initialValue ?? selectOptions.options[0]?.value;
 
       const response = getResponse(
         options.selectResponses,
@@ -187,9 +182,7 @@ export function createRawPrompter(
       // Default: return initialValues, or all options if required, or empty array
       const defaultValue =
         multiselectOptions.initialValues ??
-        (multiselectOptions.required
-          ? multiselectOptions.options.map((o) => o.value)
-          : []);
+        (multiselectOptions.required ? multiselectOptions.options.map((o) => o.value) : []);
 
       const response = getResponse(
         options.multiselectResponses,
@@ -235,12 +228,7 @@ export function createRawPrompter(
       // Default: initialValue or empty string
       const defaultValue = textOptions.initialValue ?? '';
 
-      const response = getResponse(
-        options.textResponses,
-        textIndex++,
-        textOptions,
-        defaultValue
-      );
+      const response = getResponse(options.textResponses, textIndex++, textOptions, defaultValue);
 
       const call: PromptCall = { type: 'text', options: textOptions, response };
       calls.push(call);

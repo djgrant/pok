@@ -168,8 +168,7 @@ function StatusBar({
   return (
     <Box>
       <Text dimColor>
-        [↑↓] scroll | [Tab/1-{tabCount}] switch | [i]nput | [r]estart | [k]ill |
-        [q]uit
+        [↑↓] scroll | [Tab/1-{tabCount}] switch | [i]nput | [r]estart | [k]ill | [q]uit
       </Text>
     </Box>
   );
@@ -198,9 +197,7 @@ export function TabbedView({
     debugLog(`[TabbedView] stdin.isRaw: ${stdin?.isRaw}`);
     debugLog(`[TabbedView] stdin.isPaused: ${stdin?.isPaused?.()}`);
   }, [isRawModeSupported, stdin]);
-  const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(
-    () => new Map()
-  );
+  const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(() => new Map());
   const [autoScroll, setAutoScroll] = useState<Map<string, boolean>>(
     () => new Map(tabs.map((t) => [t.id, true]))
   );
@@ -284,15 +281,7 @@ export function TabbedView({
     onEnterFocusModeRef.current = onEnterFocusMode;
     onExitFocusModeRef.current = onExitFocusMode;
     onSendInputRef.current = onSendInput;
-  }, [
-    onQuit,
-    onQuitRequest,
-    onRestart,
-    onKill,
-    onEnterFocusMode,
-    onExitFocusMode,
-    onSendInput,
-  ]);
+  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput]);
 
   // DEBUG: Log that useInput callback is being registered
   debugLog('useInput hook registered');

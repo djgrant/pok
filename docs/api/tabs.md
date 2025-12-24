@@ -5,6 +5,7 @@ The TabsAdapter interface defines the contract for tabbed terminal UI implementa
 ## Overview
 
 The tabs adapter enables `r.tabs()` to run multiple commands in a tabbed interface:
+
 - Each tab shows buffered output
 - Keyboard navigation between tabs
 - Scrollable output history
@@ -49,24 +50,20 @@ await run(args, {
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
-    r.exec('npm run dev'),
-    r.exec('npm run watch:css'),
-    r.exec('stripe listen'),
-  ], { name: 'Development' });
-}
+  await r.tabs([r.exec('npm run dev'), r.exec('npm run watch:css'), r.exec('stripe listen')], {
+    name: 'Development',
+  });
+};
 ```
 
 ### With Tasks
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
-    r.run(devServerTask),
-    r.run(watcherTask),
-    r.exec('stripe listen'),
-  ], { name: 'Development' });
-}
+  await r.tabs([r.run(devServerTask), r.run(watcherTask), r.exec('stripe listen')], {
+    name: 'Development',
+  });
+};
 ```
 
 ## Tab Labels
@@ -74,16 +71,18 @@ run: async (r) => {
 Labels are derived from:
 
 1. **Commands**: First word of the command
+
    ```typescript
-   r.exec('npm run dev')  // Label: "npm"
-   r.exec('stripe listen')  // Label: "stripe"
+   r.exec('npm run dev'); // Label: "npm"
+   r.exec('stripe listen'); // Label: "stripe"
    ```
 
 2. **Tasks with shortLabel**: The `shortLabel` property
+
    ```typescript
    defineTask({
      label: 'Development Server',
-     shortLabel: 'dev',  // Tab shows "dev"
+     shortLabel: 'dev', // Tab shows "dev"
      exec: 'npm run dev',
    });
    ```
@@ -115,15 +114,16 @@ await r.tabs([r.exec('npm run dev')]);
 
 The Ink adapter provides:
 
-| Key | Action |
-|-----|--------|
-| `←` `→` or `1-9` | Switch tabs |
-| `↑` `↓` | Scroll output |
-| `q` or `Ctrl+C` | Quit |
+| Key              | Action        |
+| ---------------- | ------------- |
+| `←` `→` or `1-9` | Switch tabs   |
+| `↑` `↓`          | Scroll output |
+| `q` or `Ctrl+C`  | Quit          |
 
 ## Error Handling
 
 If a process fails:
+
 - Tab status shows error indicator
 - Other processes continue (configurable)
 - Error shown when exiting
@@ -141,8 +141,8 @@ await r.tabs([...]);
 
 ```typescript
 type TabSpec = {
-  label: string;  // Display name in tab bar
-  exec: string;   // Shell command to run
+  label: string; // Display name in tab bar
+  exec: string; // Shell command to run
 };
 ```
 
@@ -162,7 +162,7 @@ Task environments are resolved before tabs render:
 
 ```typescript
 await r.tabs([
-  r.run(taskWithEnv),  // Env resolved with loading spinner
+  r.run(taskWithEnv), // Env resolved with loading spinner
   r.exec('other'),
 ]);
 ```

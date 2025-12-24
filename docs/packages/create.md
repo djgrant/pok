@@ -85,11 +85,7 @@ bun pok hello  # Runs hello command
 ## Programmatic Usage
 
 ```typescript
-import { 
-  generatePackageJson,
-  generateTsConfig,
-  generateExampleCommand,
-} from '@openpok/create';
+import { generatePackageJson, generateTsConfig, generateExampleCommand } from '@openpok/create';
 
 const pkg = generatePackageJson({
   name: 'my-cli',

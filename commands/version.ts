@@ -19,7 +19,15 @@ export const command = defineCommand({
   },
   run: async (r, ctx) => {
     const bump = ctx.extraArgs[0] || 'patch';
-    const validBumps = ['patch', 'minor', 'major', 'prepatch', 'preminor', 'premajor', 'prerelease'];
+    const validBumps = [
+      'patch',
+      'minor',
+      'major',
+      'prepatch',
+      'preminor',
+      'premajor',
+      'prerelease',
+    ];
 
     if (!validBumps.includes(bump)) {
       throw new Error(`Invalid version bump: ${bump}. Use one of: ${validBumps.join(', ')}`);
@@ -27,7 +35,9 @@ export const command = defineCommand({
 
     if (ctx.context.filter) {
       // Version a specific package
-      await r.exec(`pnpm --filter ${ctx.context.filter} exec npm version ${bump} --no-git-tag-version`);
+      await r.exec(
+        `pnpm --filter ${ctx.context.filter} exec npm version ${bump} --no-git-tag-version`
+      );
     } else {
       // Version all packages
       await r.exec(`pnpm -r exec npm version ${bump} --no-git-tag-version`);

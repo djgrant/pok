@@ -4,13 +4,6 @@
  * Test utilities for openpok packages.
  */
 
-export {
-  normalizeEvents,
-  filterEvents,
-  eventTypes,
-} from './normalize';
+export { normalizeEvents, filterEvents, eventTypes } from './normalize';
 
-export {
-  createVirtualTerminal,
-  type VirtualTerminal,
-} from './virtual-terminal';
+export { createVirtualTerminal, type VirtualTerminal } from './virtual-terminal';

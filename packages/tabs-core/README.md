@@ -31,11 +31,7 @@ import { ProcessManager } from '@openpok/tabs-core';
 ### Types
 
 ```typescript
-import type {
-  TabStatus,
-  TabProcess,
-  EventDrivenState,
-} from '@openpok/tabs-core';
+import type { TabStatus, TabProcess, EventDrivenState } from '@openpok/tabs-core';
 ```
 
 ### Status Indicators

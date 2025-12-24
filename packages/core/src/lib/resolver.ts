@@ -59,8 +59,7 @@ export type InferResolverContext<T> =
 /**
  * Infer the available vars from a resolver
  */
-export type InferResolverVars<T> =
-  T extends EnvResolver<any, infer V> ? V : never;
+export type InferResolverVars<T> = T extends EnvResolver<any, infer V> ? V : never;
 
 /**
  * Define an environment resolver.

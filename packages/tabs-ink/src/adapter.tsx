@@ -5,12 +5,7 @@
  * Also provides an event-driven adapter that renders based on EventBus events.
  */
 import { render, type RenderOptions } from 'ink';
-import type {
-  TabsAdapter,
-  TabSpec,
-  TabsOptions,
-  EventBus,
-} from '@openpok/core';
+import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@openpok/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 
@@ -27,9 +22,7 @@ export function createTabsAdapter(): TabsAdapter {
 
       // Check stdin TTY - required for keyboard input
       if (!process.stdin.isTTY) {
-        throw new Error(
-          'Tabbed view requires stdin to be a TTY for keyboard input'
-        );
+        throw new Error('Tabbed view requires stdin to be a TTY for keyboard input');
       }
 
       // Empty items - nothing to do
@@ -44,10 +37,7 @@ export function createTabsAdapter(): TabsAdapter {
       // DEBUG: Log stdin state
       const fs = await import('node:fs');
       const debugLog = (msg: string) => {
-        fs.appendFileSync(
-          '/tmp/tabs-debug.log',
-          `${new Date().toISOString()} [adapter] ${msg}\n`
-        );
+        fs.appendFileSync('/tmp/tabs-debug.log', `${new Date().toISOString()} [adapter] ${msg}\n`);
       };
 
       // Ensure stdin is not paused - previous CLI operations (prompts, spinners)
@@ -114,9 +104,7 @@ export function createEventAdapter(
   }
 
   if (!process.stdin.isTTY) {
-    throw new Error(
-      'Event-driven tabs view requires stdin to be a TTY for keyboard input'
-    );
+    throw new Error('Event-driven tabs view requires stdin to be a TTY for keyboard input');
   }
 
   process.stdout.write('\x1b[?1049h\x1b[H');
@@ -128,13 +116,10 @@ export function createEventAdapter(
     options.onExit?.(code);
   };
 
-  const { unmount, clear } = render(
-    <EventDrivenApp bus={bus} onExit={handleExit} />,
-    {
-      exitOnCtrlC: false,
-      incrementalRendering: true,
-    } as RenderOptions
-  );
+  const { unmount, clear } = render(<EventDrivenApp bus={bus} onExit={handleExit} />, {
+    exitOnCtrlC: false,
+    incrementalRendering: true,
+  } as RenderOptions);
 
   return { unmount };
 }

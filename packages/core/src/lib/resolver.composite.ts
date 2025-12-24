@@ -22,9 +22,7 @@ type ExtractAvailableVars<T extends readonly TypedEnvResolver<string>[]> =
  */
 export function defineCompositeResolver<
   const TResolvers extends readonly TypedEnvResolver<string>[],
->(config: {
-  resolvers: TResolvers;
-}): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
+>(config: { resolvers: TResolvers }): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
   // Collect all available vars from all resolvers (union)
   const allVars = new Set<string>();
   for (const resolver of config.resolvers) {
@@ -50,9 +48,7 @@ export function defineCompositeResolver<
 
         // Check which keys this resolver can provide
         const resolverVars = new Set(resolver.availableVars);
-        const keysForThisResolver = [...remainingKeys].filter((k) =>
-          resolverVars.has(k)
-        );
+        const keysForThisResolver = [...remainingKeys].filter((k) => resolverVars.has(k));
 
         if (keysForThisResolver.length === 0) continue;
 
@@ -62,10 +58,7 @@ export function defineCompositeResolver<
 
         // Try to resolve
         try {
-          const resolved = await resolver.resolve(
-            keysForThisResolver,
-            context as any
-          );
+          const resolved = await resolver.resolve(keysForThisResolver, context as any);
 
           for (const [key, value] of Object.entries(resolved)) {
             if (value !== undefined && value !== null) {
@@ -73,8 +66,16 @@ export function defineCompositeResolver<
               remainingKeys.delete(key);
             }
           }
-        } catch {
-          // This resolver failed, continue to next
+        } catch (error) {
+          // Log resolver failures for debugging (silent in production)
+          if (process.env.DEBUG) {
+            const resolverName = 'name' in resolver ? resolver.name : 'unnamed resolver';
+            console.error(
+              `[composite-resolver] ${resolverName} failed for keys [${keysForThisResolver.join(', ')}]:`,
+              error instanceof Error ? error.message : error
+            );
+          }
+          // Continue to next resolver
           continue;
         }
       }

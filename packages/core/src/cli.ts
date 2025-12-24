@@ -13,7 +13,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { run } from './lib/router';
+import { run, RouterError } from './lib/router';
 
 /**
  * Find project root by looking for package.json
@@ -114,11 +114,18 @@ export async function runCli(
     }
   }
 
-  await run(args, {
-    commandsDir,
-    projectRoot,
-    appName,
-    reporterAdapter: createReporterAdapter(),
-    prompter: createPrompter(),
-  });
+  try {
+    await run(args, {
+      commandsDir,
+      projectRoot,
+      appName,
+      reporterAdapter: createReporterAdapter(),
+      prompter: createPrompter(),
+    });
+  } catch (error) {
+    if (error instanceof RouterError) {
+      process.exit(error.exitCode);
+    }
+    throw error;
+  }
 }
