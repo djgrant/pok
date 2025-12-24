@@ -8,6 +8,7 @@ import {
   extractEnumChoices,
   unwrapSchema,
 } from '../../packages/core/src/lib/args';
+import { CLIError } from '../../packages/core/src/lib/cli-error';
 import type { ContextDef, Prompter } from '@openpok/core';
 
 // =============================================================================
@@ -181,6 +182,52 @@ describe('parseContext', () => {
     it('overrides defaults with explicit flags', () => {
       const { context } = parseContext(['--verbose'], simpleContextDef);
       expect(context.verbose).toBe(true);
+    });
+  });
+
+  describe('error context (CLIError)', () => {
+    it('throws CLIError when errorContext is provided', () => {
+      const errorContext = {
+        appName: 'mycli',
+        commandPath: ['deploy'],
+      };
+
+      try {
+        parseContext(['--unknown'], simpleContextDef, { errorContext });
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(CLIError);
+        const cliError = error as CLIError;
+        expect(cliError.context.appName).toBe('mycli');
+        expect(cliError.context.commandPath).toEqual(['deploy']);
+      }
+    });
+
+    it('CLIError format includes usage and help hint', () => {
+      const errorContext = {
+        appName: 'mycli',
+        commandPath: ['deploy'],
+      };
+
+      try {
+        parseContext(['--unknown'], simpleContextDef, { errorContext });
+      } catch (error) {
+        const cliError = error as CLIError;
+        const formatted = cliError.format();
+        expect(formatted).toContain('Error:');
+        expect(formatted).toContain('Usage: mycli deploy');
+        expect(formatted).toContain("Run 'mycli deploy --help' for more information.");
+      }
+    });
+
+    it('throws regular Error when errorContext is not provided', () => {
+      try {
+        parseContext(['--unknown'], simpleContextDef);
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).not.toBeInstanceOf(CLIError);
+      }
     });
   });
 });

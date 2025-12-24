@@ -12,12 +12,15 @@ import { Glob } from 'bun';
 import * as path from 'path';
 import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
 import type { CheckConfig } from './check';
+import { CheckError } from './check';
 import {
   parseContext,
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
 } from './args';
+import { CLIError, type ErrorContext } from './cli-error';
+import { findClosestMatch } from './string-distance';
 import { createRunner, AbortError } from './runner';
 import { generateHelp, generateRootHelp, hasHelpFlag } from './help';
 import type { Prompter } from '../prompter';
@@ -62,6 +65,17 @@ let currentConfig: RouterConfig | null = null;
 let currentEventBus: EventBus | null = null;
 let currentReporter: Reporter | null = null;
 let currentAdapterController: ReporterAdapterController | null = null;
+let currentAppName: string | null = null;
+
+/**
+ * Get the app name (for error context)
+ */
+function getAppName(): string {
+  if (!currentAppName) {
+    throw new Error('Router not initialized. Call run() first.');
+  }
+  return currentAppName;
+}
 
 /**
  * Get the prompter from config
@@ -252,6 +266,34 @@ async function resolveChecks(
 }
 
 /**
+ * Execute a check and wrap any errors with remediation info from the check config.
+ * This ensures that when checks fail, the failure event includes remediation steps.
+ */
+async function executeCheck(check: CheckConfig): Promise<void> {
+  try {
+    await executeCheck(check);
+  } catch (originalError) {
+    // Normalize remediation to array
+    const remediation = check.remediation
+      ? Array.isArray(check.remediation)
+        ? check.remediation
+        : [check.remediation]
+      : undefined;
+
+    // Use custom errorMessage if provided, otherwise use original error message
+    const errorMessage =
+      check.errorMessage ||
+      (originalError instanceof Error ? originalError.message : String(originalError));
+
+    // Throw a CheckError with remediation info
+    throw new CheckError(errorMessage, {
+      remediation,
+      documentationUrl: check.documentationUrl,
+    });
+  }
+}
+
+/**
  * Get the current project root (from config)
  */
 function getProjectRoot(): string {
@@ -404,8 +446,14 @@ async function executeLeaf(
     throw new AbortError();
   }
 
+  // Build error context for rich error messages
+  const errorContext: ErrorContext = {
+    appName: getAppName(),
+    commandPath: node.path.split('.'),
+  };
+
   // Parse context from args
-  const parsed = parseContext(args, contextDef);
+  const parsed = parseContext(args, contextDef, { errorContext });
 
   // Extract choices for interactive prompts
   const choices = extractChoices(contextDef);
@@ -420,7 +468,7 @@ async function executeLeaf(
   );
 
   // Validate required context fields
-  validateRequiredContext(resolvedContext, contextDef);
+  validateRequiredContext(resolvedContext, contextDef, { errorContext });
 
   // Close menu box after context resolution (emit group end for menu)
   if (menuOpen) {
@@ -456,7 +504,7 @@ async function executeLeaf(
       // Execute checks as activities (with spinners)
       for (const check of checks) {
         await groupReporter.activity(check.label, async () => {
-          await check.check();
+          await executeCheck(check);
         });
       }
     });
@@ -534,7 +582,11 @@ async function executeAllChildren(
 
   for (const leaf of leaves) {
     const contextDef = leaf.config.context || {};
-    const parsed = parseContext(args, contextDef);
+    const errorContext: ErrorContext = {
+      appName: getAppName(),
+      commandPath: leaf.path.split('.'),
+    };
+    const parsed = parseContext(args, contextDef, { errorContext });
     const choices = extractChoices(contextDef);
     const resolvedContext = await resolveInteractiveContext(
       parsed.context,
@@ -543,7 +595,7 @@ async function executeAllChildren(
       prompter,
       fromMenu
     );
-    validateRequiredContext(resolvedContext, contextDef);
+    validateRequiredContext(resolvedContext, contextDef, { errorContext });
 
     leavesWithContext.push({
       node: leaf,
@@ -576,7 +628,7 @@ async function executeAllChildren(
     await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
       for (const check of allChecks) {
         await groupReporter.activity(check.label, async () => {
-          await check.check();
+          await executeCheck(check);
         });
       }
     });
@@ -688,7 +740,7 @@ async function executeLeafWithContext(
       // Execute checks as activities (with spinners)
       for (const check of checks) {
         await groupReporter.activity(check.label, async () => {
-          await check.check();
+          await executeCheck(check);
         });
       }
     });
@@ -771,7 +823,7 @@ async function executeAllChildrenWithContext(
     await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
       for (const check of allChecks) {
         await groupReporter.activity(check.label, async () => {
-          await check.check();
+          await executeCheck(check);
         });
       }
     });
@@ -924,9 +976,13 @@ async function selectFromMenu(
     // Now resolve context for the selected command
     const config = currentNode.config;
     const contextDef = config.context || {};
+    const errorContext: ErrorContext = {
+      appName,
+      commandPath: currentNode.path.split('.'),
+    };
 
     // Parse context from args (empty since we're in menu mode)
-    const parsed = parseContext([], contextDef);
+    const parsed = parseContext([], contextDef, { errorContext });
 
     // Extract choices for interactive prompts
     const choices = extractChoices(contextDef);
@@ -941,7 +997,7 @@ async function selectFromMenu(
     );
 
     // Validate required context fields
-    validateRequiredContext(resolvedContext, contextDef);
+    validateRequiredContext(resolvedContext, contextDef, { errorContext });
 
     // Mark selection as complete
     reporter.success('Selected');
@@ -1002,6 +1058,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     const tree = await buildCommandTree(commandsDir);
 
     const resolvedAppName = appName ?? path.basename(projectRoot);
+    currentAppName = resolvedAppName;
 
     // Check for --help or -h flag at root level (before any command)
     if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
@@ -1051,9 +1108,19 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     }
 
     if (!match) {
-      reporter.error(`Unknown command: ${args[0]}`);
-      reporter.info('Run without arguments for interactive menu');
-      throw new RouterError(`Unknown command: ${args[0]}`);
+      const unknownCommand = args[0];
+      const availableCommands = Array.from(tree.keys());
+      const suggestion = findClosestMatch(unknownCommand ?? '', availableCommands);
+
+      let errorMessage = `Unknown command: ${unknownCommand}`;
+      if (suggestion) {
+        errorMessage += `\n\nDid you mean '${suggestion}'?`;
+      }
+      errorMessage += `\n\nAvailable commands: ${availableCommands.join(', ')}`;
+      errorMessage += `\n\nRun '${resolvedAppName} --help' for usage.`;
+
+      reporter.error(errorMessage);
+      throw new RouterError(errorMessage);
     }
 
     // Check if the next segment is "all" - run all children
@@ -1069,6 +1136,13 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
     // Execute the command with remaining args
     await executeNode(match.node, tree, match.remainingArgs);
+  } catch (error) {
+    // Format CLIError with usage hints
+    if (error instanceof CLIError) {
+      console.error(error.format());
+      throw new RouterError(error.message);
+    }
+    throw error;
   } finally {
     // Stop the reporter adapter when done
     currentAdapterController?.stop();

@@ -365,7 +365,7 @@ export function parseContext<C extends ContextDef>(
         if (!result.success) {
           const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
           throw createError(
-            `Invalid value for --${flagName}: '${value}'.${choicesMsg}`,
+            `Invalid value for --${flagName}: ${value}.${choicesMsg}`,
             contextDef,
             errorContext
           );

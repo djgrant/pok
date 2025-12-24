@@ -135,10 +135,12 @@ function StatusBar({
   tabCount,
   quitConfirmPending,
   focusMode,
+  showHelpHint,
 }: {
   tabCount: number;
   quitConfirmPending: boolean;
   focusMode: boolean;
+  showHelpHint: boolean;
 }) {
   if (quitConfirmPending) {
     return (
@@ -167,6 +169,7 @@ function StatusBar({
     <Box>
       <Text dimColor>
         [↑↓] scroll | [Tab/1-{tabCount}] switch | [i]nput | [r]estart | [k]ill | [q]uit
+        {showHelpHint && ' | Press ? for help'}
       </Text>
     </Box>
   );
@@ -185,8 +188,18 @@ export function TabbedView({
   onEnterFocusMode,
   onExitFocusMode,
   onSendInput,
+  helpVisible,
+  onToggleHelp,
+  onCloseHelp,
 }: TabbedViewProps) {
   const { stdout } = useStdout();
+
+  // Show help hint for first 5 seconds
+  const [showHelpHint, setShowHelpHint] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHelpHint(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(() => new Map());
   const [autoScroll, setAutoScroll] = useState<Map<string, boolean>>(
@@ -263,6 +276,8 @@ export function TabbedView({
   const onEnterFocusModeRef = useRef(onEnterFocusMode);
   const onExitFocusModeRef = useRef(onExitFocusMode);
   const onSendInputRef = useRef(onSendInput);
+  const onToggleHelpRef = useRef(onToggleHelp);
+  const onCloseHelpRef = useRef(onCloseHelp);
 
   useEffect(() => {
     onQuitRef.current = onQuit;
@@ -272,10 +287,29 @@ export function TabbedView({
     onEnterFocusModeRef.current = onEnterFocusMode;
     onExitFocusModeRef.current = onExitFocusMode;
     onSendInputRef.current = onSendInput;
-  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput]);
+    onToggleHelpRef.current = onToggleHelp;
+    onCloseHelpRef.current = onCloseHelp;
+  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput, onToggleHelp, onCloseHelp]);
 
   // Keyboard handling via useInput - always active
   useInput((input, key) => {
+    // Help overlay takes priority
+    if (input === '?') {
+      onToggleHelpRef.current();
+      return;
+    }
+
+    // Escape closes help if visible
+    if (key.escape && helpVisible) {
+      onCloseHelpRef.current();
+      return;
+    }
+
+    // Don't process other keys when help is visible
+    if (helpVisible) {
+      return;
+    }
+
     // Focus mode: forward most input to child process
     if (focusMode) {
       // Escape exits focus mode
@@ -433,7 +467,22 @@ export function TabbedView({
         tabCount={tabs.length}
         quitConfirmPending={quitConfirmPending}
         focusMode={focusMode}
+        showHelpHint={showHelpHint}
       />
+
+      {/* Help overlay - rendered on top */}
+      {helpVisible && (
+        <Box
+          position="absolute"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          width="100%"
+          height="100%"
+        >
+          <HelpOverlay onClose={onCloseHelp} />
+        </Box>
+      )}
     </Box>
   );
 }

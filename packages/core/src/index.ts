@@ -107,6 +107,13 @@ export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
 
 // =============================================================================
+// CLI Error (with usage hints)
+// =============================================================================
+
+export { CLIError, generateUsageLine } from './lib/cli-error';
+export type { ErrorContext } from './lib/cli-error';
+
+// =============================================================================
 // Help generation
 // =============================================================================
 
