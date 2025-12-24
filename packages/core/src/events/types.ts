@@ -64,6 +64,10 @@ export type CLIEvent =
       type: 'activity:failure';
       id: ActivityId;
       error: Error | string;
+      /** Remediation steps when the failure has fix instructions */
+      remediation?: string[];
+      /** Documentation URL for more information about the failure */
+      documentationUrl?: string;
     }
 
   // --- The "Update" (Data) ---

@@ -14,7 +14,7 @@ export { defineTask } from './lib/task';
 export { defineEnv, getEnvKeys } from './lib/env';
 export { defineEnvResolver } from './lib/resolver';
 export { defineCompositeResolver } from './lib/resolver.composite';
-export { defineCheck } from './lib/check';
+export { defineCheck, CheckError } from './lib/check';
 
 // =============================================================================
 // Command types

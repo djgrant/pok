@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import type { ContextDef, InferContext } from './command';
 import type { Prompter } from '../prompter';
+import { findClosestMatch } from './string-distance';
+import { CLIError, type ErrorContext } from './cli-error';
+
+/**
+ * Options for parsing context with error context
+ */
+export type ParseContextOptions = {
+  /** Error context for rich error messages */
+  errorContext?: ErrorContext;
+};
 
 /**
  * Convert kebab-case to camelCase
@@ -251,6 +261,23 @@ export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefine
 }
 
 /**
+ * Convert camelCase to kebab-case for CLI flags
+ */
+function camelToKebab(str: string): string {
+  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+/**
+ * Create an error - CLIError if errorContext is provided, otherwise regular Error
+ */
+function createError(message: string, contextDef: ContextDef, errorContext?: ErrorContext): Error {
+  if (errorContext) {
+    return new CLIError(message, { ...errorContext, contextDef });
+  }
+  return new Error(message);
+}
+
+/**
  * Parse command line arguments against context definitions
  *
  * Supports:
@@ -260,17 +287,30 @@ export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefine
  *
  * @param args - Raw command line arguments
  * @param contextDef - Context field definitions
+ * @param options - Optional parsing options including error context
  * @returns Parsed context and remaining positional arguments
  */
-export function parseContext<C extends ContextDef>(args: string[], contextDef: C): ParsedArgs<C> {
+export function parseContext<C extends ContextDef>(
+  args: string[],
+  contextDef: C,
+  options?: ParseContextOptions
+): ParsedArgs<C> {
   const context: Record<string, unknown> = {};
   const rest: string[] = [];
+  const errorContext = options?.errorContext;
 
-  // Build schema info cache
+  // Build schema info cache and known flag names for typo detection
   const schemaInfoCache = new Map<string, SchemaInfo>();
+  const knownFlags: string[] = [];
   for (const [name, fieldDef] of Object.entries(contextDef)) {
     const info = getSchemaInfo(fieldDef.schema);
     schemaInfoCache.set(name, info);
+    knownFlags.push(name);
+    // Also add kebab-case version for matching
+    const kebabName = camelToKebab(name);
+    if (kebabName !== name) {
+      knownFlags.push(kebabName);
+    }
 
     // Initialize with defaults
     if (info.default !== undefined) {
@@ -299,7 +339,13 @@ export function parseContext<C extends ContextDef>(args: string[], contextDef: C
       const fieldDef = contextDef[flagName];
 
       if (!fieldDef) {
-        throw new Error(`Unknown flag: ${arg}`);
+        // Try to find a close match for typo detection
+        const suggestion = findClosestMatch(rawFlagName, knownFlags);
+        let errorMessage = `Unknown flag: ${arg}`;
+        if (suggestion) {
+          errorMessage += `\n\nDid you mean --${suggestion}?`;
+        }
+        throw createError(errorMessage, contextDef, errorContext);
       }
 
       const info = schemaInfoCache.get(flagName)!;
@@ -311,14 +357,18 @@ export function parseContext<C extends ContextDef>(args: string[], contextDef: C
         // String/enum flag - next arg is the value
         const value = args[i + 1];
         if (value === undefined || value.startsWith('--')) {
-          throw new Error(`Flag --${flagName} requires a value`);
+          throw createError(`Flag --${flagName} requires a value`, contextDef, errorContext);
         }
 
         // Validate the value against the schema
         const result = fieldDef.schema.safeParse(value);
         if (!result.success) {
           const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
-          throw new Error(`Invalid value for --${flagName}: ${value}.${choicesMsg}`);
+          throw createError(
+            `Invalid value for --${flagName}: '${value}'.${choicesMsg}`,
+            contextDef,
+            errorContext
+          );
         }
 
         context[flagName] = value;
@@ -423,22 +473,34 @@ export async function resolveInteractiveContext<C extends ContextDef>(
 }
 
 /**
+ * Options for validating context
+ */
+export type ValidateContextOptions = {
+  /** Error context for rich error messages */
+  errorContext?: ErrorContext;
+};
+
+/**
  * Validate that all required context fields have values
  *
  * @param context - Parsed context values
  * @param contextDef - Context field definitions
+ * @param options - Optional validation options including error context
  * @throws Error if a required field is missing
  */
 export function validateRequiredContext<C extends ContextDef>(
   context: InferContext<C>,
-  contextDef: C
+  contextDef: C,
+  options?: ValidateContextOptions
 ): void {
+  const errorContext = options?.errorContext;
+
   for (const [name, fieldDef] of Object.entries(contextDef)) {
     const info = getSchemaInfo(fieldDef.schema);
     if (!info.isOptional) {
       const value = context[name as keyof typeof context];
       if (value === undefined || value === '') {
-        throw new Error(`Required flag --${name} is missing`);
+        throw createError(`Required flag --${name} is missing`, contextDef, errorContext);
       }
     }
   }
