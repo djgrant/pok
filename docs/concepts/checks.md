@@ -35,8 +35,7 @@ export const dockerInstalled = defineCheck({
   check: async () => {
     if (!(await commandExists('docker'))) {
       throw new Error(
-        'Docker is not installed.\n' +
-        'Install from: https://docs.docker.com/get-docker/'
+        'Docker is not installed.\n' + 'Install from: https://docs.docker.com/get-docker/'
       );
     }
   },
@@ -51,10 +50,7 @@ export const dockerRunning = defineCheck({
   check: async () => {
     const result = await $`docker info`.nothrow().quiet();
     if (result.exitCode !== 0) {
-      throw new Error(
-        'Docker daemon is not running.\n' +
-        'Please start Docker Desktop.'
-      );
+      throw new Error('Docker daemon is not running.\n' + 'Please start Docker Desktop.');
     }
   },
 });
@@ -71,8 +67,7 @@ export const nodeVersion = defineCheck({
     const version = await getNodeMajorVersion();
     if (version < 20) {
       throw new Error(
-        `Node.js 20+ is required. Current version: ${version}\n` +
-        'Use nvm or volta to upgrade.'
+        `Node.js 20+ is required. Current version: ${version}\n` + 'Use nvm or volta to upgrade.'
       );
     }
   },
@@ -88,10 +83,7 @@ export const envFileExists = defineCheck({
   label: '.env file exists',
   check: async () => {
     if (!(await exists('.env'))) {
-      throw new Error(
-        '.env file not found.\n' +
-        'Copy .env.example to .env and fill in values.'
-      );
+      throw new Error('.env file not found.\n' + 'Copy .env.example to .env and fill in values.');
     }
   },
 });
@@ -105,10 +97,7 @@ export const awsAuthenticated = defineCheck({
   check: async () => {
     const result = await $`aws sts get-caller-identity`.nothrow().quiet();
     if (result.exitCode !== 0) {
-      throw new Error(
-        'Not authenticated with AWS.\n' +
-        'Run: aws configure sso'
-      );
+      throw new Error('Not authenticated with AWS.\n' + 'Run: aws configure sso');
     }
   },
 });
@@ -128,7 +117,7 @@ export const canReachApi = defineCheck({
     } catch {
       throw new Error(
         'Cannot reach API at https://api.example.com\n' +
-        'Check your network connection and VPN status.'
+          'Check your network connection and VPN status.'
       );
     }
   },
@@ -176,12 +165,12 @@ export const command = defineCommand({
   },
   pre: (ctx) => {
     const checks = [awsAuthenticated];
-    
+
     if (ctx.env === 'prod') {
       checks.push(prodConfirmation);
       checks.push(cleanGitStatus);
     }
-    
+
     return checks;
   },
   run: async (r, ctx) => {
@@ -195,15 +184,15 @@ export const command = defineCommand({
 ```typescript
 pre: async (ctx) => {
   const isCI = process.env.CI === 'true';
-  
+
   if (isCI) {
     return []; // Skip interactive checks in CI
   }
-  
+
   if (ctx.env === 'prod') {
     return [prodConfirmation];
   }
-  
+
   return [];
 },
 ```
@@ -219,11 +208,11 @@ Good error messages include:
 ```typescript
 throw new Error(
   'Docker is not running.\n\n' +
-  'The deployment requires Docker to build container images.\n\n' +
-  'To fix:\n' +
-  '1. Open Docker Desktop\n' +
-  '2. Wait for "Docker is running" status\n' +
-  '3. Run this command again'
+    'The deployment requires Docker to build container images.\n\n' +
+    'To fix:\n' +
+    '1. Open Docker Desktop\n' +
+    '2. Wait for "Docker is running" status\n' +
+    '3. Run this command again'
 );
 ```
 
@@ -242,14 +231,18 @@ export const command = defineCommand({
 export const command = defineCommand({
   label: 'Lint',
   pre: [nodeVersion],
-  run: async (r) => { await r.exec('npm run lint'); },
+  run: async (r) => {
+    await r.exec('npm run lint');
+  },
 });
 
 // commands/check.types.ts
 export const command = defineCommand({
   label: 'Types',
   pre: [nodeVersion], // Same check
-  run: async (r) => { await r.exec('npm run typecheck'); },
+  run: async (r) => {
+    await r.exec('npm run typecheck');
+  },
 });
 ```
 
@@ -291,11 +284,7 @@ export const command = defineCommand({
 ### Check Factories
 
 ```typescript
-function createVersionCheck(
-  command: string,
-  minVersion: number,
-  label: string
-) {
+function createVersionCheck(command: string, minVersion: number, label: string) {
   return defineCheck({
     label,
     check: async () => {
@@ -347,7 +336,7 @@ pre: [
 // Good
 throw new Error(
   'Cannot connect to PostgreSQL at localhost:5432.\n' +
-  'Ensure the database is running: docker compose up -d db'
+    'Ensure the database is running: docker compose up -d db'
 );
 
 // Bad

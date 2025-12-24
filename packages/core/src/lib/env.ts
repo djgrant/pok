@@ -1,8 +1,4 @@
-import type {
-  AnyEnvResolver,
-  TypedEnvResolver,
-  InferResolverContext,
-} from './resolver';
+import type { AnyEnvResolver, TypedEnvResolver, InferResolverContext } from './resolver';
 
 /**
  * Environment definition - selects which variables to retrieve from a resolver.
@@ -27,8 +23,7 @@ export type Env<
  * Infer the env vars type from an Env
  * Produces Record<TVar, string> for each selected var
  */
-export type InferEnvVars<T> =
-  T extends Env<any, infer V> ? Record<V, string> : never;
+export type InferEnvVars<T> = T extends Env<any, infer V> ? Record<V, string> : never;
 
 /**
  * Infer the required context from an Env (delegates to resolver)

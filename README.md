@@ -61,11 +61,7 @@ await r.group('Database Setup', async (g) => {
 Run multiple processes side-by-side with a tabbed terminal interface:
 
 ```typescript
-await r.tabs([
-  r.exec('vite dev'),
-  r.exec('stripe listen'),
-  r.exec('inngest dev'),
-]);
+await r.tabs([r.exec('vite dev'), r.exec('stripe listen'), r.exec('inngest dev')]);
 ```
 
 ### Composable Tasks
@@ -95,14 +91,14 @@ bun add @openpok/core zod
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| `@openpok/core` | Core framework—command routing, task execution, event system |
-| `@openpok/create` | Project scaffolding CLI |
-| `@openpok/prompter-clack` | Interactive prompts adapter (Clack) |
-| `@openpok/reporter-clack` | Terminal output adapter (Clack) |
-| `@openpok/tabs-ink` | Tabbed terminal UI (Ink/React) |
-| `@openpok/tabs-core` | Shared tabs state management |
+| Package                   | Description                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| `@openpok/core`           | Core framework—command routing, task execution, event system |
+| `@openpok/create`         | Project scaffolding CLI                                      |
+| `@openpok/prompter-clack` | Interactive prompts adapter (Clack)                          |
+| `@openpok/reporter-clack` | Terminal output adapter (Clack)                              |
+| `@openpok/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
+| `@openpok/tabs-core`      | Shared tabs state management                                 |
 
 ## Documentation
 

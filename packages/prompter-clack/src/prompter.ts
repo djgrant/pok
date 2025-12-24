@@ -21,9 +21,7 @@ export function createPrompter(): Prompter {
     async select<T>(options: SelectOptions<T>): Promise<T> {
       const result = await p.select({
         message: options.message,
-        options: options.options as Parameters<
-          typeof p.select<T>
-        >[0]['options'],
+        options: options.options as Parameters<typeof p.select<T>>[0]['options'],
         initialValue: options.initialValue,
       });
 
@@ -37,9 +35,7 @@ export function createPrompter(): Prompter {
     async multiselect<T>(options: MultiselectOptions<T>): Promise<T[]> {
       const result = await p.multiselect({
         message: options.message,
-        options: options.options as Parameters<
-          typeof p.multiselect<T>
-        >[0]['options'],
+        options: options.options as Parameters<typeof p.multiselect<T>>[0]['options'],
         initialValues: options.initialValues,
         required: options.required,
       });

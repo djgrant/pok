@@ -5,6 +5,7 @@ The Prompter interface defines the contract for interactive user input.
 ## Overview
 
 pok uses a Prompter for interactive input:
+
 - Select menus (single choice)
 - Multiselect (multiple choices)
 - Confirm (yes/no)
@@ -104,13 +105,13 @@ defineCommand({
       from: 'flag',
       schema: z.enum(['dev', 'staging', 'prod']),
     },
-    
+
     // Boolean → Confirm prompt
     verbose: {
       from: 'flag',
       schema: z.boolean(),
     },
-    
+
     // String → Text input
     name: {
       from: 'flag',
@@ -207,17 +208,17 @@ const myPrompter: Prompter = {
     // Your implementation
     return selectedValue;
   },
-  
+
   async multiselect(options) {
     // Your implementation
     return selectedValues;
   },
-  
+
   async confirm(options) {
     // Your implementation
     return true;
   },
-  
+
   async text(options) {
     // Your implementation
     return inputText;

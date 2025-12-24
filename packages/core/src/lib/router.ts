@@ -10,12 +10,7 @@
  */
 import { Glob } from 'bun';
 import * as path from 'path';
-import type {
-  CommandConfig,
-  CommandNode,
-  CommandTree,
-  HookContext,
-} from './command';
+import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
 import type { CheckConfig } from './check';
 import {
   parseContext,
@@ -26,13 +21,22 @@ import {
 import { createRunner, AbortError } from './runner';
 import type { Prompter } from '../prompter';
 import type { TabsAdapter } from '../tabs';
-import type {
-  ReporterAdapter,
-  ReporterAdapterController,
-  Reporter,
-  EventBus,
-} from '../events';
+import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
 import { createEventBus, ScopedReporter } from '../events';
+
+/**
+ * Error class for router-level failures.
+ * These errors indicate the command cannot proceed and the CLI should exit.
+ */
+export class RouterError extends Error {
+  constructor(
+    message: string,
+    public readonly exitCode: number = 1
+  ) {
+    super(message);
+    this.name = 'RouterError';
+  }
+}
 
 /**
  * Router configuration
@@ -98,9 +102,7 @@ function getTabs(): TabsAdapter | undefined {
 /**
  * Load all command files and build a command tree
  */
-export async function buildCommandTree(
-  commandsDir: string
-): Promise<CommandTree> {
+export async function buildCommandTree(commandsDir: string): Promise<CommandTree> {
   const tree: CommandTree = new Map();
   const glob = new Glob('*.{ts,tsx}');
   const reporter = getReporter();
@@ -148,11 +150,7 @@ export async function buildCommandTree(
 /**
  * Insert a command into the tree, creating intermediate nodes as needed
  */
-function insertIntoTree(
-  tree: CommandTree,
-  segments: string[],
-  config: CommandConfig
-): void {
+function insertIntoTree(tree: CommandTree, segments: string[], config: CommandConfig): void {
   let currentLevel = tree;
   let currentPath = '';
 
@@ -294,8 +292,7 @@ async function executeNode(
   const children = Array.from(node.children.values());
 
   if (children.length === 0) {
-    reporter.error(`Command "${node.path}" has no implementation or children`);
-    process.exit(1);
+    throw new RouterError(`Command "${node.path}" has no implementation or children`);
   }
 
   // If not already in a menu group, wrap in one
@@ -336,9 +333,7 @@ async function showParentSubmenu(
   }
 
   // Add child commands
-  for (const child of children.sort((a, b) =>
-    a.segment.localeCompare(b.segment)
-  )) {
+  for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
     options.push({
       value: child.segment,
       label: `${child.segment} - ${child.config.label}`,
@@ -359,8 +354,7 @@ async function showParentSubmenu(
 
   const selectedChild = node.children.get(String(selected));
   if (!selectedChild) {
-    reporter.error(`Child command not found: ${String(selected)}`);
-    process.exit(1);
+    throw new RouterError(`Child command not found: ${String(selected)}`);
   }
 
   // Recurse into selected child (menu stays open through navigation)
@@ -395,13 +389,7 @@ async function executeLeaf(
   args: string[],
   options: ExecuteLeafOptions
 ): Promise<void> {
-  const {
-    fromMenu,
-    menuOpen = false,
-    quiet = false,
-    signal,
-    skipPreChecks = false,
-  } = options;
+  const { fromMenu, menuOpen = false, quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
   const contextDef = config.context || {};
   const projectRoot = getProjectRoot();
@@ -447,36 +435,30 @@ async function executeLeaf(
 
   // Run pre checks as a group (unless already run by batch executor)
   if (config.pre && !skipPreChecks) {
-    await reporter.group(
-      'Pre-flight Checks',
-      { layout: 'sequence' },
-      async (groupReporter) => {
-        // Resolve checks - either static or from function
-        let checks: CheckConfig[];
-        if (typeof config.pre === 'function') {
-          const result = await config.pre(hookCtx);
-          if (!result) {
-            checks = [];
-          } else if (Array.isArray(result)) {
-            checks = result.filter(Boolean) as CheckConfig[];
-          } else {
-            checks = [result];
-          }
+    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+      // Resolve checks - either static or from function
+      let checks: CheckConfig[];
+      if (typeof config.pre === 'function') {
+        const result = await config.pre(hookCtx);
+        if (!result) {
+          checks = [];
+        } else if (Array.isArray(result)) {
+          checks = result.filter(Boolean) as CheckConfig[];
         } else {
-          const preChecks = Array.isArray(config.pre)
-            ? config.pre
-            : [config.pre];
-          checks = preChecks.filter(Boolean) as CheckConfig[];
+          checks = [result];
         }
-
-        // Execute checks as activities (with spinners)
-        for (const check of checks) {
-          await groupReporter.activity(check.label, async () => {
-            await check.check();
-          });
-        }
+      } else {
+        const preChecks = Array.isArray(config.pre) ? config.pre : [config.pre];
+        checks = preChecks.filter(Boolean) as CheckConfig[];
       }
-    );
+
+      // Execute checks as activities (with spinners)
+      for (const check of checks) {
+        await groupReporter.activity(check.label, async () => {
+          await check.check();
+        });
+      }
+    });
   }
 
   // Build run context
@@ -530,15 +512,13 @@ async function executeAllChildren(
   const projectRoot = getProjectRoot();
 
   if (!mode) {
-    reporter.error('enableRunAllChildren not configured');
-    process.exit(1);
+    throw new RouterError('enableRunAllChildren not configured');
   }
 
   const leaves = getLeafNodes(node);
 
   if (leaves.length === 0) {
-    reporter.error(`No executable children found under "${node.path}"`);
-    process.exit(1);
+    throw new RouterError(`No executable children found under "${node.path}"`);
   }
 
   // Close menu if open before running multiple commands
@@ -592,17 +572,13 @@ async function executeAllChildren(
 
   // Phase 3: Run all pre-checks in one group
   if (allChecks.length > 0) {
-    await reporter.group(
-      'Pre-flight Checks',
-      { layout: 'sequence' },
-      async (groupReporter) => {
-        for (const check of allChecks) {
-          await groupReporter.activity(check.label, async () => {
-            await check.check();
-          });
-        }
+    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+      for (const check of allChecks) {
+        await groupReporter.activity(check.label, async () => {
+          await check.check();
+        });
       }
-    );
+    });
   }
 
   // Phase 4: Run all leaves as activities within a single group
@@ -610,11 +586,7 @@ async function executeAllChildren(
 
   if (mode === 'sequential') {
     await reporter.group(groupLabel, { layout: 'sequence' }, async (grp) => {
-      for (const {
-        node: leaf,
-        resolvedContext,
-        extraArgs,
-      } of leavesWithContext) {
+      for (const { node: leaf, resolvedContext, extraArgs } of leavesWithContext) {
         await grp.activity(leaf.config.label, async () => {
           await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
             quiet,
@@ -631,28 +603,25 @@ async function executeAllChildren(
       let firstError: unknown = null;
 
       await Promise.allSettled(
-        leavesWithContext.map(
-          async ({ node: leaf, resolvedContext, extraArgs }) => {
-            if (controller.signal.aborted) return;
+        leavesWithContext.map(async ({ node: leaf, resolvedContext, extraArgs }) => {
+          if (controller.signal.aborted) return;
 
-            try {
-              await grp.activity(leaf.config.label, async () => {
-                await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
-                  quiet,
-                  skipPreChecks: true,
-                  signal: controller.signal,
-                });
+          try {
+            await grp.activity(leaf.config.label, async () => {
+              await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
+                quiet,
+                skipPreChecks: true,
+                signal: controller.signal,
               });
-            } catch (error) {
-              if (error instanceof AbortError || controller.signal.aborted)
-                return;
-              if (!firstError) {
-                firstError = error;
-                controller.abort();
-              }
+            });
+          } catch (error) {
+            if (error instanceof AbortError || controller.signal.aborted) return;
+            if (!firstError) {
+              firstError = error;
+              controller.abort();
             }
           }
-        )
+        })
       );
 
       if (firstError) {
@@ -698,36 +667,30 @@ async function executeLeafWithContext(
 
   // Run pre checks as a group (unless already run by batch executor)
   if (config.pre && !skipPreChecks) {
-    await reporter.group(
-      'Pre-flight Checks',
-      { layout: 'sequence' },
-      async (groupReporter) => {
-        // Resolve checks - either static or from function
-        let checks: CheckConfig[];
-        if (typeof config.pre === 'function') {
-          const result = await config.pre(hookCtx);
-          if (!result) {
-            checks = [];
-          } else if (Array.isArray(result)) {
-            checks = result.filter(Boolean) as CheckConfig[];
-          } else {
-            checks = [result];
-          }
+    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+      // Resolve checks - either static or from function
+      let checks: CheckConfig[];
+      if (typeof config.pre === 'function') {
+        const result = await config.pre(hookCtx);
+        if (!result) {
+          checks = [];
+        } else if (Array.isArray(result)) {
+          checks = result.filter(Boolean) as CheckConfig[];
         } else {
-          const preChecks = Array.isArray(config.pre)
-            ? config.pre
-            : [config.pre];
-          checks = preChecks.filter(Boolean) as CheckConfig[];
+          checks = [result];
         }
-
-        // Execute checks as activities (with spinners)
-        for (const check of checks) {
-          await groupReporter.activity(check.label, async () => {
-            await check.check();
-          });
-        }
+      } else {
+        const preChecks = Array.isArray(config.pre) ? config.pre : [config.pre];
+        checks = preChecks.filter(Boolean) as CheckConfig[];
       }
-    );
+
+      // Execute checks as activities (with spinners)
+      for (const check of checks) {
+        await groupReporter.activity(check.label, async () => {
+          await check.check();
+        });
+      }
+    });
   }
 
   // Build run context
@@ -771,15 +734,13 @@ async function executeAllChildrenWithContext(
   const projectRoot = getProjectRoot();
 
   if (!mode) {
-    reporter.error('enableRunAllChildren not configured');
-    process.exit(1);
+    throw new RouterError('enableRunAllChildren not configured');
   }
 
   const leaves = getLeafNodes(node);
 
   if (leaves.length === 0) {
-    reporter.error(`No executable children found under "${node.path}"`);
-    process.exit(1);
+    throw new RouterError(`No executable children found under "${node.path}"`);
   }
 
   const quiet = node.config.quietRunAll !== false;
@@ -806,17 +767,13 @@ async function executeAllChildrenWithContext(
 
   // Phase 2: Run all pre-checks in one group
   if (allChecks.length > 0) {
-    await reporter.group(
-      'Pre-flight Checks',
-      { layout: 'sequence' },
-      async (groupReporter) => {
-        for (const check of allChecks) {
-          await groupReporter.activity(check.label, async () => {
-            await check.check();
-          });
-        }
+    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+      for (const check of allChecks) {
+        await groupReporter.activity(check.label, async () => {
+          await check.check();
+        });
       }
-    );
+    });
   }
 
   // Phase 3: Run all leaves as activities within a single group
@@ -853,8 +810,7 @@ async function executeAllChildrenWithContext(
               });
             });
           } catch (error) {
-            if (error instanceof AbortError || controller.signal.aborted)
-              return;
+            if (error instanceof AbortError || controller.signal.aborted) return;
             if (!firstError) {
               firstError = error;
               controller.abort();
@@ -890,9 +846,7 @@ async function selectFromMenu(
 ): Promise<MenuSelectionResult | null> {
   const reporter = getReporter();
   const prompter = getPrompter();
-  const topLevel = Array.from(tree.values()).sort((a, b) =>
-    a.segment.localeCompare(b.segment)
-  );
+  const topLevel = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
 
   if (topLevel.length === 0) {
     reporter.error('No commands available');
@@ -926,9 +880,7 @@ async function selectFromMenu(
       const children = Array.from(currentNode.children.values());
 
       if (children.length === 0) {
-        reporter.error(
-          `Command "${currentNode.path}" has no implementation or children`
-        );
+        reporter.error(`Command "${currentNode.path}" has no implementation or children`);
         return null;
       }
 
@@ -944,9 +896,7 @@ async function selectFromMenu(
       }
 
       // Add child commands
-      for (const child of children.sort((a, b) =>
-        a.segment.localeCompare(b.segment)
-      )) {
+      for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
         options.push({
           value: child.segment,
           label: `${child.segment} - ${child.config.label}`,
@@ -1011,7 +961,7 @@ async function runMenu(tree: CommandTree, appName: string): Promise<void> {
   const selection = await selectFromMenu(tree, appName);
 
   if (!selection) {
-    process.exit(1);
+    throw new RouterError('No command selected');
   }
 
   const { node, context, extraArgs } = selection;
@@ -1062,7 +1012,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     if (!match) {
       reporter.error(`Unknown command: ${args[0]}`);
       reporter.info('Run without arguments for interactive menu');
-      process.exit(1);
+      throw new RouterError(`Unknown command: ${args[0]}`);
     }
 
     // Check if the next segment is "all" - run all children

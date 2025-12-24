@@ -16,8 +16,6 @@ export const command = defineCommand({
     },
   },
   run: async (r, { context }) => {
-    await r.exec(
-      `echo "Running in ${context.env} mode, verbose=${context.verbose}"`
-    );
+    await r.exec(`echo "Running in ${context.env} mode, verbose=${context.verbose}"`);
   },
 });

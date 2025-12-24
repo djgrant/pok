@@ -31,8 +31,12 @@ Handles spawning and managing tab processes:
 import { ProcessManager } from '@openpok/tabs-core';
 
 const pm = new ProcessManager({
-  onOutput: (tabId, data) => { /* handle output */ },
-  onExit: (tabId, code) => { /* handle exit */ },
+  onOutput: (tabId, data) => {
+    /* handle output */
+  },
+  onExit: (tabId, code) => {
+    /* handle exit */
+  },
 });
 
 pm.spawn({ id: 'dev', exec: 'npm run dev', cwd, env });
@@ -43,11 +47,11 @@ pm.killAll();
 
 ```typescript
 import type {
-  TabStatus,       // 'running' | 'success' | 'error' | 'killed'
-  TabProcess,      // Process state
-  ActivityNode,    // Event-driven activity
-  GroupNode,       // Event-driven group
-  EventDrivenState,// Full UI state
+  TabStatus, // 'running' | 'success' | 'error' | 'killed'
+  TabProcess, // Process state
+  ActivityNode, // Event-driven activity
+  GroupNode, // Event-driven group
+  EventDrivenState, // Full UI state
 } from '@openpok/tabs-core';
 ```
 
@@ -101,7 +105,7 @@ type Action =
 ```typescript
 class ProcessManager {
   constructor(callbacks: ProcessManagerCallbacks);
-  
+
   spawn(spec: TabSpec & { id: string; cwd: string; env: Record<string, string> }): void;
   kill(id: string): void;
   killAll(): void;
@@ -122,17 +126,13 @@ const OUTPUT_BATCH_MS = 16;
 ## Usage in Adapter
 
 ```typescript
-import {
-  createInitialState,
-  reducer,
-  ProcessManager,
-} from '@openpok/tabs-core';
+import { createInitialState, reducer, ProcessManager } from '@openpok/tabs-core';
 
 function createTabsAdapter(): TabsAdapter {
   return {
     async run(items, options) {
       let state = createInitialState();
-      
+
       const pm = new ProcessManager({
         onOutput: (tabId, data) => {
           state = reducer(state, { type: 'TAB_OUTPUT', tabId, lines: [data] });
@@ -143,12 +143,12 @@ function createTabsAdapter(): TabsAdapter {
           render(state);
         },
       });
-      
+
       // Spawn processes
       for (const item of items) {
         pm.spawn({ ...item, cwd: options.cwd, env: options.env });
       }
-      
+
       // Wait for completion
       await waitForExit(pm);
     },

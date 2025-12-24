@@ -69,11 +69,7 @@ export type HookContext<C extends ContextDef = ContextDef> = InferContext<C> & {
  */
 export type HookFn<C extends ContextDef = ContextDef> = (
   ctx: HookContext<C>
-) =>
-  | Promise<CheckConfig | CheckConfig[] | void>
-  | CheckConfig
-  | CheckConfig[]
-  | void;
+) => Promise<CheckConfig | CheckConfig[] | void> | CheckConfig | CheckConfig[] | void;
 
 /**
  * Context passed to run function
@@ -192,9 +188,7 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
  * });
  * ```
  */
-export function defineCommand<C extends ContextDef>(
-  config: CommandConfig<C>
-): CommandConfig<C> {
+export function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandConfig<C> {
   return config;
 }
 

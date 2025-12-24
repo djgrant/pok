@@ -3,6 +3,17 @@ import type { ContextDef, InferContext } from './command';
 import type { Prompter } from '../prompter';
 
 /**
+ * Convert kebab-case to camelCase
+ *
+ * @example
+ * kebabToCamel('dry-run') // 'dryRun'
+ * kebabToCamel('no-git-checks') // 'noGitChecks'
+ */
+function kebabToCamel(str: string): string {
+  return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
  * Parsed arguments result
  */
 export type ParsedArgs<C extends ContextDef> = {
@@ -30,8 +41,7 @@ type SchemaInfo = {
 function getSchemaInfo(schema: z.ZodType): SchemaInfo {
   // Check if it has a default by parsing undefined
   const undefinedResult = schema.safeParse(undefined);
-  const hasDefault =
-    undefinedResult.success && undefinedResult.data !== undefined;
+  const hasDefault = undefinedResult.success && undefinedResult.data !== undefined;
   const defaultValue = hasDefault ? undefinedResult.data : undefined;
 
   // Check if optional (accepts undefined)
@@ -83,15 +93,7 @@ function getSchemaInfo(schema: z.ZodType): SchemaInfo {
  */
 function extractEnumChoices(schema: z.ZodType): string[] | undefined {
   // Common environment values to test
-  const testValues = [
-    'dev',
-    'staging',
-    'prod',
-    'production',
-    'development',
-    'test',
-    'local',
-  ];
+  const testValues = ['dev', 'staging', 'prod', 'production', 'development', 'test', 'local'];
 
   const validValues: string[] = [];
   let hasStringRestriction = false;
@@ -127,10 +129,7 @@ function extractEnumChoices(schema: z.ZodType): string[] | undefined {
  * @param contextDef - Context field definitions
  * @returns Parsed context and remaining positional arguments
  */
-export function parseContext<C extends ContextDef>(
-  args: string[],
-  contextDef: C
-): ParsedArgs<C> {
+export function parseContext<C extends ContextDef>(args: string[], contextDef: C): ParsedArgs<C> {
   const context: Record<string, unknown> = {};
   const rest: string[] = [];
 
@@ -161,7 +160,9 @@ export function parseContext<C extends ContextDef>(
     // Check for --flag or --no-flag
     if (arg.startsWith('--')) {
       const isNegated = arg.startsWith('--no-');
-      const flagName = isNegated ? arg.slice(5) : arg.slice(2);
+      const rawFlagName = isNegated ? arg.slice(5) : arg.slice(2);
+      // Support both kebab-case (--dry-run) and camelCase (--dryRun)
+      const flagName = kebabToCamel(rawFlagName);
       const fieldDef = contextDef[flagName];
 
       if (!fieldDef) {
@@ -183,12 +184,8 @@ export function parseContext<C extends ContextDef>(
         // Validate the value against the schema
         const result = fieldDef.schema.safeParse(value);
         if (!result.success) {
-          const choicesMsg = info.choices
-            ? ` Valid: ${info.choices.join(', ')}`
-            : '';
-          throw new Error(
-            `Invalid value for --${flagName}: ${value}.${choicesMsg}`
-          );
+          const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
+          throw new Error(`Invalid value for --${flagName}: ${value}.${choicesMsg}`);
         }
 
         context[flagName] = value;
@@ -315,36 +312,12 @@ export function validateRequiredContext<C extends ContextDef>(
 }
 
 /**
- * Validate context values against their Zod schemas
- *
- * @param context - Parsed context values
- * @param contextDef - Context field definitions
- * @returns Validated context
- * @throws ZodError if validation fails
- */
-export function validateContext<C extends ContextDef>(
-  context: InferContext<C>,
-  contextDef: C
-): InferContext<C> {
-  const validated: Record<string, unknown> = {};
-
-  for (const [name, fieldDef] of Object.entries(contextDef)) {
-    const value = context[name as keyof typeof context];
-    validated[name] = fieldDef.schema.parse(value);
-  }
-
-  return validated as InferContext<C>;
-}
-
-/**
  * Extract choices from context field definitions
  *
  * This is used during command loading to extract enum choices
  * before interactive prompting (since we can't reliably probe schemas).
  */
-export function extractChoices<C extends ContextDef>(
-  contextDef: C
-): Map<string, string[]> {
+export function extractChoices<C extends ContextDef>(contextDef: C): Map<string, string[]> {
   const result = new Map<string, string[]>();
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {

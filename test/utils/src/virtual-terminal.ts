@@ -51,8 +51,7 @@ export function createVirtualTerminal(cols = 80, rows = 24): VirtualTerminal {
   const original = process.stdout.write.bind(process.stdout);
 
   process.stdout.write = (chunk: string | Uint8Array): boolean => {
-    const str =
-      typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
+    const str = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString();
     chunks.push(str);
 
     // xterm.write is async - we need to track when it completes

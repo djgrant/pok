@@ -84,9 +84,7 @@ export type ExecTaskConfig<
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
           TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
-          TEnvWriter extends AnyEnv
-            ? WriteEnvsFn<TEnvWriter['vars'][number]>
-            : undefined
+          TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
       ) => string);
 };
@@ -114,9 +112,7 @@ export type RunTaskConfig<
     ctx: TaskContext<
       TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
       TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
-      TEnvWriter extends AnyEnv
-        ? WriteEnvsFn<TEnvWriter['vars'][number]>
-        : undefined
+      TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
     >
   ) => Promise<TReturn> | TReturn;
 };
@@ -151,9 +147,7 @@ export function defineTask<
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
           TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
-          TEnvWriter extends AnyEnv
-            ? WriteEnvsFn<TEnvWriter['vars'][number]>
-            : undefined
+          TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
       ) => string);
 }): ExecTaskConfig<TEnv, TParams, TEnvWriter>;
@@ -175,9 +169,7 @@ export function defineTask<
     ctx: TaskContext<
       TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
       TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
-      TEnvWriter extends AnyEnv
-        ? WriteEnvsFn<TEnvWriter['vars'][number]>
-        : undefined
+      TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
     >
   ) => Promise<TReturn> | TReturn;
 }): RunTaskConfig<TEnv, TParams, TEnvWriter, TReturn>;
@@ -190,24 +182,17 @@ export function defineTask(config: {
   envWriter?: AnyEnv;
   params?: z.ZodType;
   exec?: string | ((ctx: TaskContext<any, any, any>) => string);
-  run?: (
-    runner: RunnerLike,
-    ctx: TaskContext<any, any, any>
-  ) => Promise<any> | any;
+  run?: (runner: RunnerLike, ctx: TaskContext<any, any, any>) => Promise<any> | any;
 }): AnyTaskConfig {
   const hasExec = 'exec' in config && config.exec !== undefined;
   const hasRun = 'run' in config && config.run !== undefined;
 
   if (!hasExec && !hasRun) {
-    throw new Error(
-      `Task "${config.label}" must have either 'exec' or 'run' property`
-    );
+    throw new Error(`Task "${config.label}" must have either 'exec' or 'run' property`);
   }
 
   if (hasExec && hasRun) {
-    throw new Error(
-      `Task "${config.label}" cannot have both 'exec' and 'run' properties`
-    );
+    throw new Error(`Task "${config.label}" cannot have both 'exec' and 'run' properties`);
   }
 
   return config as AnyTaskConfig;
@@ -233,10 +218,6 @@ export type InferTaskEnvs<T> = T extends { env: infer E }
     : InferEnvVarsFromConfig<E>
   : EmptyObject;
 
-export type InferTaskParams<T> = T extends { params: z.ZodType<infer P> }
-  ? P
-  : EmptyObject;
+export type InferTaskParams<T> = T extends { params: z.ZodType<infer P> } ? P : EmptyObject;
 
-export type InferTaskReturn<T> = T extends { run: (...args: any[]) => infer R }
-  ? Awaited<R>
-  : void;
+export type InferTaskReturn<T> = T extends { run: (...args: any[]) => infer R } ? Awaited<R> : void;

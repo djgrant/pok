@@ -21,25 +21,13 @@ describe('Tasks', () => {
     });
 
     it('uses correct environment based on context', async () => {
-      const { error } = await captureEvents([
-        'with-env-task',
-        '--env',
-        'staging',
-      ]);
+      const { error } = await captureEvents(['with-env-task', '--env', 'staging']);
       expect(error).toBeUndefined();
     });
 
     it('resolves different values for different environments', async () => {
-      const { error: devError } = await captureEvents([
-        'with-env-task',
-        '--env',
-        'dev',
-      ]);
-      const { error: stagingError } = await captureEvents([
-        'with-env-task',
-        '--env',
-        'staging',
-      ]);
+      const { error: devError } = await captureEvents(['with-env-task', '--env', 'dev']);
+      const { error: stagingError } = await captureEvents(['with-env-task', '--env', 'staging']);
       expect(devError).toBeUndefined();
       expect(stagingError).toBeUndefined();
     });

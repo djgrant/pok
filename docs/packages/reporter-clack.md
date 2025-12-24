@@ -99,16 +99,16 @@ Structured, beautiful terminal output:
 
 The adapter subscribes to CLI events:
 
-| Event | Rendering |
-|-------|-----------|
-| `group:start` | Opens a group box with intro |
-| `group:end` | Closes the group with outro |
-| `activity:start` | Shows spinner |
-| `activity:success` | Shows checkmark |
-| `activity:failure` | Shows X mark |
-| `log` | Prints styled message |
-| `reporter:suspend` | Pauses output |
-| `reporter:resume` | Resumes output |
+| Event              | Rendering                    |
+| ------------------ | ---------------------------- |
+| `group:start`      | Opens a group box with intro |
+| `group:end`        | Closes the group with outro  |
+| `activity:start`   | Shows spinner                |
+| `activity:success` | Shows checkmark              |
+| `activity:failure` | Shows X mark                 |
+| `log`              | Prints styled message        |
+| `reporter:suspend` | Pauses output                |
+| `reporter:resume`  | Resumes output               |
 
 ## Features
 
@@ -122,7 +122,7 @@ The adapter subscribes to CLI events:
 ### createReporterAdapter
 
 ```typescript
-function createReporterAdapter(): ReporterAdapter
+function createReporterAdapter(): ReporterAdapter;
 ```
 
 Returns a ReporterAdapter that renders events using Clack.

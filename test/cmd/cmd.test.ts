@@ -10,10 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-const CMD_BIN = path.resolve(
-  import.meta.dir,
-  '../../packages/cmd/bin/pok.ts'
-);
+const CMD_BIN = path.resolve(import.meta.dir, '../../packages/cmd/bin/pok.ts');
 
 describe('@openpok/cmd', () => {
   describe('when used in a project with commands', () => {
@@ -51,12 +48,9 @@ export const command = defineCommand({
       // Link to the workspace packages by creating node_modules symlinks
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@openpok');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
-      
+
       const packagesDir = path.resolve(import.meta.dir, '../../packages');
-      fs.symlinkSync(
-        path.join(packagesDir, 'core'),
-        path.join(nodeModulesDir, 'core')
-      );
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
       fs.symlinkSync(
         path.join(packagesDir, 'reporter-clack'),
         path.join(nodeModulesDir, 'reporter-clack')
@@ -100,12 +94,9 @@ export const command = defineCommand({
       // Link core so it can be imported
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@openpok');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
-      
+
       const packagesDir = path.resolve(import.meta.dir, '../../packages');
-      fs.symlinkSync(
-        path.join(packagesDir, 'core'),
-        path.join(nodeModulesDir, 'core')
-      );
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
     });
 
     afterAll(() => {

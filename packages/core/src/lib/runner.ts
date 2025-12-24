@@ -7,12 +7,7 @@ import {
 import { type Env, getEnvKeys } from './env';
 import { $ } from 'bun';
 import type { TabsAdapter, TabSpec } from '../tabs';
-import type {
-  EventBus,
-  Reporter,
-  CommandReporter,
-  GroupOptions,
-} from '../events';
+import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
 import type { Prompter } from '../prompter';
 
@@ -85,9 +80,7 @@ export type TabsRunnerOptions = {
   name?: string;
 };
 
-export interface Runner<
-  _TContext extends Record<string, unknown> = Record<string, unknown>,
-> {
+export interface Runner<_TContext extends Record<string, unknown> = Record<string, unknown>> {
   cwd: string;
 
   /**
@@ -153,10 +146,7 @@ export interface Runner<
    * // Pass to tabs for tabbed execution
    * await r.tabs([r.run(startViteDev), r.run(startStripeListener)]);
    */
-  run<TReturn = void>(
-    task: AnyTaskConfig,
-    params?: Record<string, unknown>
-  ): DeferredTask<TReturn>;
+  run<TReturn = void>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
 
   /**
    * Create a visual group for organizing related activities.
@@ -329,9 +319,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
                 // Collect output for error reporting
                 const stdout = await new Response(proc.stdout).text();
                 const stderr = await new Response(proc.stderr).text();
-                const output = [stdout.trim(), stderr.trim()]
-                  .filter(Boolean)
-                  .join('\n');
+                const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
                 throw new CommandError(`Command failed: ${finalCmd}`, output);
               }
             } else {
@@ -342,12 +330,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
             if (error instanceof AbortError || error instanceof CommandError) {
               throw error;
             }
-            if (
-              quiet &&
-              error &&
-              typeof error === 'object' &&
-              'stdout' in error
-            ) {
+            if (quiet && error && typeof error === 'object' && 'stdout' in error) {
               // Bun shell error includes stdout/stderr
               const shellError = error as {
                 stdout: Buffer;
@@ -394,11 +377,12 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
         activeProcesses.add(proc);
 
-        return proc.exited.then((exitCode) => {
+        return proc.exited.then(async (exitCode) => {
           activeProcesses.delete(proc);
           if (exitCode !== 0 && exitCode !== null) {
-            throw new Error(
-              `Command failed with exit code ${exitCode}: ${item.cmd}`
+            throw new CommandError(
+              `Command failed with exit code ${exitCode}: ${item.cmd}`,
+              '' // parallel mode doesn't capture output
             );
           }
         });
@@ -406,9 +390,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
         // Execute the deferred task (runs via executeTask which tracks processes)
         return item.then(() => {});
       } else {
-        throw new Error(
-          'r.parallel() only accepts commands (r.exec) or tasks (r.run).'
-        );
+        throw new Error('r.parallel() only accepts commands (r.exec) or tasks (r.run).');
       }
     });
 
@@ -454,16 +436,12 @@ export function createRunner<TContext extends Record<string, unknown>>(
     const taskParams = task.params ? task.params.parse(params ?? {}) : {};
 
     // Build writeEnvs function if task declares envWriter
-    let writeEnvs:
-      | ((values: Partial<Record<string, string>>) => Promise<void>)
-      | undefined;
+    let writeEnvs: ((values: Partial<Record<string, string>>) => Promise<void>) | undefined;
     if (task.envWriter) {
       const envWriter = task.envWriter as AnyEnv;
       const declaredVars = new Set(envWriter.vars);
 
-      writeEnvs = async (
-        values: Partial<Record<string, string>>
-      ): Promise<void> => {
+      writeEnvs = async (values: Partial<Record<string, string>>): Promise<void> => {
         // Filter out undefined values and validate keys
         const definedValues: Record<string, string> = {};
         for (const [key, value] of Object.entries(values)) {
@@ -492,12 +470,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
     // Task uses the runner's reporter directly (no extra activity wrapper)
     // The caller is responsible for activity management if needed
-    const taskContext: TaskContext<
-      unknown,
-      unknown,
-      typeof writeEnvs,
-      typeof context
-    > = {
+    const taskContext: TaskContext<unknown, unknown, typeof writeEnvs, typeof context> = {
       context,
       cwd,
       envs: taskEnvs,
@@ -510,9 +483,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     if ('exec' in task) {
       const execTask = task as ExecTaskConfig;
       const cmd =
-        typeof execTask.exec === 'function'
-          ? execTask.exec(taskContext as any)
-          : execTask.exec;
+        typeof execTask.exec === 'function' ? execTask.exec(taskContext as any) : execTask.exec;
 
       const allEnv = getAllCachedEnv();
       const mergedEnv = { ...process.env, ...allEnv };
@@ -543,9 +514,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
             // Collect output for error reporting
             const stdout = await new Response(proc.stdout).text();
             const stderr = await new Response(proc.stderr).text();
-            const output = [stdout.trim(), stderr.trim()]
-              .filter(Boolean)
-              .join('\n');
+            const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
             throw new CommandError(`Command failed: ${cmd}`, output);
           }
         } else {
@@ -582,10 +551,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     };
   };
 
-  const tabs = async (
-    items: RunnerItem[],
-    options?: TabsRunnerOptions
-  ): Promise<void> => {
+  const tabs = async (items: RunnerItem[], options?: TabsRunnerOptions): Promise<void> => {
     if (!tabsAdapter) {
       throw new Error(
         'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
@@ -608,9 +574,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
           );
         }
       } else if (!isCommand(item)) {
-        throw new Error(
-          'r.tabs() only accepts commands (r.exec) or tasks (r.run).'
-        );
+        throw new Error('r.tabs() only accepts commands (r.exec) or tasks (r.run).');
       }
     }
 
@@ -618,9 +582,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     const envsToResolve: AnyEnv[] = [];
     for (const item of items) {
       if (isDeferredTask(item) && item.task.env) {
-        const taskEnvs: AnyEnv[] = Array.isArray(item.task.env)
-          ? item.task.env
-          : [item.task.env];
+        const taskEnvs: AnyEnv[] = Array.isArray(item.task.env) ? item.task.env : [item.task.env];
         for (const env of taskEnvs) {
           envsToResolve.push(env);
         }
@@ -629,32 +591,28 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
     // Resolve envs with UI feedback if there are any
     if (envsToResolve.length > 0) {
-      await reporter.group(
-        'Loading Secrets',
-        { layout: 'sequence' },
-        async (groupReporter) => {
-          for (const env of envsToResolve) {
-            const keys = getEnvKeys(env);
-            // Skip if all keys are already cached
-            const uncachedKeys = keys.filter((k) => !envCache.has(k));
-            if (uncachedKeys.length === 0) continue;
+      await reporter.group('Loading Secrets', { layout: 'sequence' }, async (groupReporter) => {
+        for (const env of envsToResolve) {
+          const keys = getEnvKeys(env);
+          // Skip if all keys are already cached
+          const uncachedKeys = keys.filter((k) => !envCache.has(k));
+          if (uncachedKeys.length === 0) continue;
 
-            // Build descriptive label showing which secrets are being loaded
-            const label =
-              uncachedKeys.length <= 3
-                ? uncachedKeys.join(', ')
-                : `${uncachedKeys.slice(0, 2).join(', ')} +${uncachedKeys.length - 2} more`;
+          // Build descriptive label showing which secrets are being loaded
+          const label =
+            uncachedKeys.length <= 3
+              ? uncachedKeys.join(', ')
+              : `${uncachedKeys.slice(0, 2).join(', ')} +${uncachedKeys.length - 2} more`;
 
-            await groupReporter.activity(label, async () => {
-              const resolver = env.resolver;
-              const rawEnv = await resolver.resolve(keys, context);
-              for (const [key, value] of Object.entries(rawEnv)) {
-                envCache.set(key, value);
-              }
-            });
-          }
+          await groupReporter.activity(label, async () => {
+            const resolver = env.resolver;
+            const rawEnv = await resolver.resolve(keys, context);
+            for (const [key, value] of Object.entries(rawEnv)) {
+              envCache.set(key, value);
+            }
+          });
         }
-      );
+      });
     }
 
     const allEnv = getAllCachedEnv();
@@ -677,9 +635,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
         // Build task context for exec function
         const taskEnvs: Record<string, unknown> = {};
         if (execTask.env) {
-          const envs: AnyEnv[] = Array.isArray(execTask.env)
-            ? execTask.env
-            : [execTask.env];
+          const envs: AnyEnv[] = Array.isArray(execTask.env) ? execTask.env : [execTask.env];
           for (const env of envs) {
             for (const key of env.vars) {
               const value = envCache.get(key);
@@ -689,9 +645,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
             }
           }
         }
-        const taskParams = execTask.params
-          ? execTask.params.parse(params ?? {})
-          : {};
+        const taskParams = execTask.params ? execTask.params.parse(params ?? {}) : {};
         const taskContext = {
           context,
           cwd,
@@ -716,8 +670,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     });
 
     // Derive name from tab labels if not provided
-    const name =
-      options?.name ?? tabSpecs.map((t) => t.label).join(' + ') ?? 'console';
+    const name = options?.name ?? tabSpecs.map((t) => t.label).join(' + ') ?? 'console';
 
     // Single item - just run it directly with inherited stdio
     if (tabSpecs.length === 1) {
@@ -733,8 +686,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
       activeProcesses.delete(proc);
 
       if (exitCode !== 0 && exitCode !== null) {
-        throw new Error(
-          `Command failed with exit code ${exitCode}: ${item.exec}`
+        throw new CommandError(
+          `Command failed with exit code ${exitCode}: ${item.exec}`,
+          '' // tabs single-item mode doesn't capture output
         );
       }
       return;

@@ -40,10 +40,10 @@ const setupTask = defineTask({
   label: 'Setup',
   run: async (r, ctx) => {
     ctx.reporter.info('Setting up...');
-    
+
     await r.exec('npm install');
     await r.exec('npm run db:setup');
-    
+
     ctx.reporter.success('Ready!');
   },
 });
@@ -200,13 +200,13 @@ The full TaskContext:
 
 ```typescript
 type TaskContext = {
-  context: TContext;      // From parent command
-  cwd: string;            // Project root
-  envs: TEnvs;            // Resolved env vars
-  params: TParams;        // Validated parameters
-  extraArgs: string[];    // Remaining CLI args
+  context: TContext; // From parent command
+  cwd: string; // Project root
+  envs: TEnvs; // Resolved env vars
+  params: TParams; // Validated parameters
+  extraArgs: string[]; // Remaining CLI args
   reporter: TaskReporter; // Event emission
-  writeEnvs: TWriteEnvs;  // Write function (if envWriter)
+  writeEnvs: TWriteEnvs; // Write function (if envWriter)
 };
 ```
 
@@ -272,11 +272,11 @@ const releaseTask = defineTask({
   }),
   run: async (r, ctx) => {
     await r.run(buildTask);
-    
+
     if (!ctx.params.skipTests) {
       await r.run(testTask);
     }
-    
+
     await r.run(publishTask);
   },
 });
@@ -288,11 +288,7 @@ const releaseTask = defineTask({
 const setupTask = defineTask({
   label: 'Setup',
   run: async (r, ctx) => {
-    await r.parallel([
-      r.run(installDepsTask),
-      r.run(setupDbTask),
-      r.run(generateTypesTask),
-    ]);
+    await r.parallel([r.run(installDepsTask), r.run(setupDbTask), r.run(generateTypesTask)]);
   },
 });
 ```

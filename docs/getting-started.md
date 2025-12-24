@@ -13,6 +13,7 @@ bun install
 ```
 
 This creates a project with:
+
 - `commands/` directory with example commands
 - Pre-configured `package.json` with dependencies
 - TypeScript configuration
@@ -164,7 +165,7 @@ export const command = defineCommand({
       await g.activity('Install npm packages', () => r.exec('bun install'));
       await g.activity('Setup database', () => r.exec('bun db:setup'));
     });
-    
+
     r.reporter.success('Ready to develop!');
   },
 });

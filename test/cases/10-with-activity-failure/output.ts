@@ -1,9 +1,1 @@
-export const lines: string[] = [
-  '┌  Work',
-  '│',
-  '◇  Succeeds',
-  '│',
-  '■  Fails',
-  '│',
-  '└  ✖ Failed',
-];
+export const lines: string[] = ['┌  Work', '│', '◇  Succeeds', '│', '■  Fails', '│', '└  ✖ Failed'];

@@ -24,11 +24,8 @@ In commands:
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
-    r.exec('npm run dev'),
-    r.exec('stripe listen'),
-  ], { name: 'Development' });
-}
+  await r.tabs([r.exec('npm run dev'), r.exec('stripe listen')], { name: 'Development' });
+};
 ```
 
 ## Features

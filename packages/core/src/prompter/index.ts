@@ -15,10 +15,5 @@ export type {
 } from './types';
 
 // Raw Prompter (for testing and non-TTY environments)
-export type {
-  PromptCall,
-  ResponseProvider,
-  RawPrompterOptions,
-  RawPrompter,
-} from './prompter.raw';
+export type { PromptCall, ResponseProvider, RawPrompterOptions, RawPrompter } from './prompter.raw';
 export { createRawPrompter } from './prompter.raw';

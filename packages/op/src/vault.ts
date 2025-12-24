@@ -48,8 +48,8 @@ export function parseOpRef(ref: OpVaultRef): { item: string; field: string } {
  * });
  * ```
  */
-export function defineOpVault<
-  const TSecrets extends Record<string, OpVaultRef>,
->(secrets: TSecrets): OpVault<TSecrets> {
+export function defineOpVault<const TSecrets extends Record<string, OpVaultRef>>(
+  secrets: TSecrets
+): OpVault<TSecrets> {
   return { secrets };
 }

@@ -68,13 +68,7 @@ function ActivityTabBar({
   );
 }
 
-function ActivityView({
-  activity,
-  viewHeight,
-}: {
-  activity: ActivityNode;
-  viewHeight: number;
-}) {
+function ActivityView({ activity, viewHeight }: { activity: ActivityNode; viewHeight: number }) {
   const logs = activity.logs.slice(-viewHeight);
 
   return (
@@ -249,10 +243,7 @@ export function EventDrivenApp({ bus, onExit }: EventDrivenAppProps) {
       >
         <ActivityView activity={activeActivity} viewHeight={viewHeight} />
       </Box>
-      <StatusBar
-        activityCount={activities.length}
-        quitConfirmPending={quitConfirmPending}
-      />
+      <StatusBar activityCount={activities.length} quitConfirmPending={quitConfirmPending} />
     </Box>
   );
 }

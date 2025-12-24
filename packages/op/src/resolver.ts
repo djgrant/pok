@@ -9,10 +9,7 @@ type KeyMapping = {
   field: string;
 };
 
-export type OpResolverConfig<
-  TVault extends OpVault<any>,
-  TEnvs extends string,
-> = {
+export type OpResolverConfig<TVault extends OpVault<any>, TEnvs extends string> = {
   vault: TVault;
   vaults: Record<TEnvs, string>;
 };
@@ -37,10 +34,7 @@ export type OpResolverConfig<
  * });
  * ```
  */
-export function defineOpResolver<
-  TVault extends OpVault<any>,
-  const TEnvs extends string,
->(
+export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extends string>(
   config: OpResolverConfig<TVault, TEnvs>
 ): TypedEnvResolver<InferOpVaultKeys<TVault> & string> {
   type VaultKey = InferOpVaultKeys<TVault> & string;
@@ -90,17 +84,13 @@ export function defineOpResolver<
       for (const { key, item, field } of keyMappings) {
         const opItem = items.get(item);
         if (!opItem) {
-          missingSecrets.push(
-            `op://${vaultName}/${item}/${field} (item not found)`
-          );
+          missingSecrets.push(`op://${vaultName}/${item}/${field} (item not found)`);
           continue;
         }
 
         const value = opItem.fields[field];
         if (value === undefined) {
-          missingSecrets.push(
-            `op://${vaultName}/${item}/${field} (field not found)`
-          );
+          missingSecrets.push(`op://${vaultName}/${item}/${field} (field not found)`);
           continue;
         }
 
@@ -129,8 +119,7 @@ export function defineOpResolver<
         const ref = config.vault.secrets[key];
         if (!ref) {
           throw new Error(
-            `Unknown variable "${key}". ` +
-              `Ensure it is declared in the vault configuration.`
+            `Unknown variable "${key}". ` + `Ensure it is declared in the vault configuration.`
           );
         }
 

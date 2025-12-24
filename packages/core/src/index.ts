@@ -90,7 +90,7 @@ export type {
 // Router
 // =============================================================================
 
-export { run, buildCommandTree } from './lib/router';
+export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
 
 // =============================================================================

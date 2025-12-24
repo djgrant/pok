@@ -66,9 +66,7 @@ describe('Error Handling', () => {
       const { events } = await captureEvents(['with-activity-failure']);
 
       const activityStarts = events.filter((e) => e.type === 'activity:start');
-      const labels = activityStarts.map((e) =>
-        e.type === 'activity:start' ? e.label : ''
-      );
+      const labels = activityStarts.map((e) => (e.type === 'activity:start' ? e.label : ''));
 
       expect(labels).toContain('Succeeds');
       expect(labels).toContain('Fails');

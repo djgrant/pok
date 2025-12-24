@@ -106,11 +106,7 @@ export function isGroupEvent(
 export function isActivityEvent(event: CLIEvent): event is Extract<
   CLIEvent,
   {
-    type:
-      | 'activity:start'
-      | 'activity:success'
-      | 'activity:failure'
-      | 'activity:update';
+    type: 'activity:start' | 'activity:success' | 'activity:failure' | 'activity:update';
   }
 > {
   return (
@@ -121,8 +117,6 @@ export function isActivityEvent(event: CLIEvent): event is Extract<
   );
 }
 
-export function isLogEvent(
-  event: CLIEvent
-): event is Extract<CLIEvent, { type: 'log' }> {
+export function isLogEvent(event: CLIEvent): event is Extract<CLIEvent, { type: 'log' }> {
   return event.type === 'log';
 }

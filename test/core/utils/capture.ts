@@ -5,12 +5,7 @@
  * emitted events for assertions.
  */
 
-import {
-  run,
-  createRawReporterAdapter,
-  createRawPrompter,
-  type CLIEvent,
-} from '@openpok/core';
+import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '@openpok/core';
 import { normalizeEvents } from '@openpok/test-utils';
 import { COMMANDS_DIR, PROJECT_ROOT } from './paths';
 

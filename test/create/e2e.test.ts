@@ -32,29 +32,17 @@ const TEST_PROJECTS_DIR = path.join(WORKSPACE_ROOT, '.test-projects');
 /**
  * Scaffold a project manually (simulates what init.ts does without spawning)
  */
-function scaffoldProject(
-  projectPath: string,
-  options: { name: string; plugins: string[] }
-): void {
+function scaffoldProject(projectPath: string, options: { name: string; plugins: string[] }): void {
   // Create directories
   fs.mkdirSync(projectPath, { recursive: true });
   fs.mkdirSync(path.join(projectPath, 'commands'), { recursive: true });
 
   // Generate files
-  fs.writeFileSync(
-    path.join(projectPath, 'package.json'),
-    generatePackageJson(options)
-  );
+  fs.writeFileSync(path.join(projectPath, 'package.json'), generatePackageJson(options));
   fs.writeFileSync(path.join(projectPath, 'tsconfig.json'), generateTsConfig());
   fs.writeFileSync(path.join(projectPath, '.gitignore'), generateGitignore());
-  fs.writeFileSync(
-    path.join(projectPath, 'commands', 'hello.ts'),
-    generateExampleCommand()
-  );
-  fs.writeFileSync(
-    path.join(projectPath, 'commands', 'build.ts'),
-    generateBuildCommand()
-  );
+  fs.writeFileSync(path.join(projectPath, 'commands', 'hello.ts'), generateExampleCommand());
+  fs.writeFileSync(path.join(projectPath, 'commands', 'build.ts'), generateBuildCommand());
 }
 
 /**
@@ -66,11 +54,7 @@ function patchPackageJsonForWorkspace(projectPath: string): void {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
   // Replace 'latest' with workspace:* for local packages
-  const localPackages = [
-    '@openpok/core',
-    '@openpok/prompter-clack',
-    '@openpok/reporter-clack',
-  ];
+  const localPackages = ['@openpok/core', '@openpok/prompter-clack', '@openpok/reporter-clack'];
 
   for (const pkgName of localPackages) {
     if (pkg.dependencies?.[pkgName]) {
@@ -86,13 +70,10 @@ function patchPackageJsonForWorkspace(projectPath: string): void {
  * Uses pnpm because it properly respects workspace configuration
  * from the parent directory.
  */
-async function pnpmInstall(
-  projectPath: string
-): Promise<{ success: boolean; output: string }> {
+async function pnpmInstall(projectPath: string): Promise<{ success: boolean; output: string }> {
   try {
     const result = await $`pnpm install`.cwd(projectPath).nothrow();
-    const output =
-      result.stdout.toString() + '\n' + result.stderr.toString();
+    const output = result.stdout.toString() + '\n' + result.stderr.toString();
     return {
       success: result.exitCode === 0,
       output,
@@ -104,8 +85,6 @@ async function pnpmInstall(
     };
   }
 }
-
-
 
 /**
  * Clean up a directory, ignoring errors
@@ -141,24 +120,14 @@ describe('@openpok/create end-to-end', () => {
         });
 
         expect(fs.existsSync(projectPath)).toBe(true);
-        expect(fs.existsSync(path.join(projectPath, 'package.json'))).toBe(
-          true
-        );
-        expect(fs.existsSync(path.join(projectPath, 'tsconfig.json'))).toBe(
-          true
-        );
+        expect(fs.existsSync(path.join(projectPath, 'package.json'))).toBe(true);
+        expect(fs.existsSync(path.join(projectPath, 'tsconfig.json'))).toBe(true);
         expect(fs.existsSync(path.join(projectPath, '.gitignore'))).toBe(true);
-        expect(fs.existsSync(path.join(projectPath, 'commands/hello.ts'))).toBe(
-          true
-        );
-        expect(fs.existsSync(path.join(projectPath, 'commands/build.ts'))).toBe(
-          true
-        );
+        expect(fs.existsSync(path.join(projectPath, 'commands/hello.ts'))).toBe(true);
+        expect(fs.existsSync(path.join(projectPath, 'commands/build.ts'))).toBe(true);
 
         // Verify package.json has plugins
-        const pkg = JSON.parse(
-          fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8')
-        );
+        const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.name).toBe(projectName);
         expect(pkg.dependencies['@openpok/core']).toBeDefined();
         expect(pkg.dependencies['@openpok/prompter-clack']).toBeDefined();
@@ -179,9 +148,7 @@ describe('@openpok/create end-to-end', () => {
           plugins: [],
         });
 
-        const pkg = JSON.parse(
-          fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8')
-        );
+        const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.dependencies['@openpok/core']).toBeDefined();
         expect(pkg.dependencies['@openpok/prompter-clack']).toBeUndefined();
         expect(pkg.dependencies['@openpok/reporter-clack']).toBeUndefined();
@@ -201,16 +168,12 @@ describe('@openpok/create end-to-end', () => {
         });
 
         // Before patching
-        let pkg = JSON.parse(
-          fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8')
-        );
+        let pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.dependencies['@openpok/core']).toBe('latest');
 
         // After patching
         patchPackageJsonForWorkspace(projectPath);
-        pkg = JSON.parse(
-          fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8')
-        );
+        pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.dependencies['@openpok/core']).toBe('workspace:*');
         expect(pkg.dependencies['@openpok/prompter-clack']).toBe('workspace:*');
         expect(pkg.dependencies['@openpok/reporter-clack']).toBe('workspace:*');
@@ -239,9 +202,7 @@ describe('@openpok/create end-to-end', () => {
         expect(installResult.success).toBe(true);
 
         // Verify node_modules was created with linked packages
-        expect(
-          fs.existsSync(path.join(projectPath, 'node_modules/@openpok/core'))
-        ).toBe(true);
+        expect(fs.existsSync(path.join(projectPath, 'node_modules/@openpok/core'))).toBe(true);
       } finally {
         cleanupDir(projectPath);
       }
@@ -295,19 +256,13 @@ describe('@openpok/create workspace integration', () => {
       expect(installResult.success).toBe(true);
 
       // Verify all workspace packages are installed
-      expect(
-        fs.existsSync(path.join(projectPath, 'node_modules/@openpok/core'))
-      ).toBe(true);
-      expect(
-        fs.existsSync(
-          path.join(projectPath, 'node_modules/@openpok/prompter-clack')
-        )
-      ).toBe(true);
-      expect(
-        fs.existsSync(
-          path.join(projectPath, 'node_modules/@openpok/reporter-clack')
-        )
-      ).toBe(true);
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@openpok/core'))).toBe(true);
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@openpok/prompter-clack'))).toBe(
+        true
+      );
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@openpok/reporter-clack'))).toBe(
+        true
+      );
     } finally {
       cleanupDir(projectPath);
     }

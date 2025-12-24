@@ -52,17 +52,10 @@ export function normalizeEvents(events: CLIEvent[]): CLIEvent[] {
       (normalized as { id: string }).id = normalizeId(normalized.id);
     }
     if ('parentId' in normalized && typeof normalized.parentId === 'string') {
-      (normalized as { parentId: string }).parentId = normalizeId(
-        normalized.parentId
-      );
+      (normalized as { parentId: string }).parentId = normalizeId(normalized.parentId);
     }
-    if (
-      'activityId' in normalized &&
-      typeof normalized.activityId === 'string'
-    ) {
-      (normalized as { activityId: string }).activityId = normalizeId(
-        normalized.activityId
-      );
+    if ('activityId' in normalized && typeof normalized.activityId === 'string') {
+      (normalized as { activityId: string }).activityId = normalizeId(normalized.activityId);
     }
 
     // Normalize error messages that might contain paths
@@ -89,9 +82,7 @@ export function filterEvents<T extends CLIEvent['type']>(
   events: CLIEvent[],
   types: T[]
 ): Extract<CLIEvent, { type: T }>[] {
-  return events.filter((e): e is Extract<CLIEvent, { type: T }> =>
-    types.includes(e.type as T)
-  );
+  return events.filter((e): e is Extract<CLIEvent, { type: T }> => types.includes(e.type as T));
 }
 
 /**

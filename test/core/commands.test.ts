@@ -19,45 +19,25 @@ describe('Commands', () => {
     it('runs with default flag values', async () => {
       const { events, error } = await captureEvents(['with-context']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithContext.events
-      );
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with explicit --env flag', async () => {
-      const { events, error } = await captureEvents([
-        'with-context',
-        '--env',
-        'staging',
-      ]);
+      const { events, error } = await captureEvents(['with-context', '--env', 'staging']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithContext.events
-      );
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with --verbose flag', async () => {
-      const { events, error } = await captureEvents([
-        'with-context',
-        '--verbose',
-      ]);
+      const { events, error } = await captureEvents(['with-context', '--verbose']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithContext.events
-      );
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with multiple flags', async () => {
-      const { events, error } = await captureEvents([
-        'with-context',
-        '--env',
-        'prod',
-        '--verbose',
-      ]);
+      const { events, error } = await captureEvents(['with-context', '--env', 'prod', '--verbose']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(
-        fixtures.commandWithContext.events
-      );
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
     });
   });
 

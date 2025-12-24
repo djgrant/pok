@@ -1,7 +1,1 @@
-export const lines: string[] = [
-  '┌  cli-test',
-  '│',
-  '◆  Selected',
-  '│',
-  '└  ✔ Done',
-];
+export const lines: string[] = ['┌  cli-test', '│', '◆  Selected', '│', '└  ✔ Done'];

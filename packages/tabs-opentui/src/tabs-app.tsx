@@ -59,10 +59,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
     const scroll = scrollBoxRef.current;
     if (!scroll) return true;
 
-    const maxScrollTop = Math.max(
-      0,
-      scroll.scrollHeight - scroll.viewport.height
-    );
+    const maxScrollTop = Math.max(0, scroll.scrollHeight - scroll.viewport.height);
     if (maxScrollTop <= 0) return true; // Content fits in viewport
 
     const distanceFromBottom = maxScrollTop - scroll.scrollTop;
@@ -127,9 +124,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
 
         const newOutput = [...tab.output, ...lines];
         const trimmed =
-          newOutput.length > MAX_OUTPUT_LINES
-            ? newOutput.slice(-MAX_OUTPUT_LINES)
-            : newOutput;
+          newOutput.length > MAX_OUTPUT_LINES ? newOutput.slice(-MAX_OUTPUT_LINES) : newOutput;
 
         next[index] = { ...tab, output: trimmed };
       }

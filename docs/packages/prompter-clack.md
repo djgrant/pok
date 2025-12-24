@@ -135,7 +135,7 @@ if (p.isCancel(result)) {
 ### createPrompter
 
 ```typescript
-function createPrompter(): Prompter
+function createPrompter(): Prompter;
 ```
 
 Returns a Prompter implementation using Clack.

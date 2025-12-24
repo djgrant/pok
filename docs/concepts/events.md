@@ -99,10 +99,14 @@ Activities are units of work:
 
 ```typescript
 // Suspend output (for fullscreen TUI)
-{ type: 'reporter:suspend' }
+{
+  type: 'reporter:suspend';
+}
 
 // Resume output
-{ type: 'reporter:resume' }
+{
+  type: 'reporter:resume';
+}
 ```
 
 ## Using the Reporter
@@ -117,18 +121,18 @@ run: async (r) => {
   r.reporter.success('Done!');
   r.reporter.error('Something failed');
   r.reporter.step('Step 1 of 3');
-  
+
   // Grouped activities
   await r.reporter.group('Build', { layout: 'sequence' }, async (g) => {
     await g.activity('Compile', async () => {
       await r.exec('tsc');
     });
-    
+
     await g.activity('Bundle', async () => {
       await r.exec('esbuild');
     });
   });
-}
+};
 ```
 
 ### In Tasks
@@ -138,13 +142,13 @@ const myTask = defineTask({
   label: 'My Task',
   run: async (r, ctx) => {
     ctx.reporter.info('Task starting...');
-    
+
     // Update progress
     for (let i = 0; i <= 100; i += 10) {
       await doWork();
       ctx.reporter.update({ progress: i });
     }
-    
+
     ctx.reporter.success('Task complete');
   },
 });
@@ -162,7 +166,7 @@ const myAdapter: ReporterAdapter = {
     const unsubscribe = eventBus.subscribe((event: CLIEvent) => {
       renderEvent(event);
     });
-    
+
     return {
       stop() {
         unsubscribe();
@@ -183,19 +187,19 @@ function renderEvent(event: CLIEvent) {
       }[event.level];
       console.log(`${prefix} ${event.message}`);
       break;
-      
+
     case 'group:start':
       console.log(`\n◆ ${event.label}`);
       break;
-      
+
     case 'activity:start':
       process.stdout.write(`  ◇ ${event.label}...`);
       break;
-      
+
     case 'activity:success':
       console.log(' ✔');
       break;
-      
+
     case 'activity:failure':
       console.log(' ✖');
       break;
@@ -209,7 +213,7 @@ function renderEvent(event: CLIEvent) {
 const spinnerAdapter: ReporterAdapter = {
   start(eventBus) {
     const spinners = new Map<string, Spinner>();
-    
+
     const unsubscribe = eventBus.subscribe((event) => {
       switch (event.type) {
         case 'activity:start':
@@ -217,26 +221,26 @@ const spinnerAdapter: ReporterAdapter = {
           spinners.set(event.id, spinner);
           spinner.start();
           break;
-          
+
         case 'activity:update':
           const s = spinners.get(event.id);
           if (s && event.payload.message) {
             s.message = event.payload.message;
           }
           break;
-          
+
         case 'activity:success':
           spinners.get(event.id)?.success();
           spinners.delete(event.id);
           break;
-          
+
         case 'activity:failure':
           spinners.get(event.id)?.fail();
           spinners.delete(event.id);
           break;
       }
     });
-    
+
     return {
       stop() {
         for (const spinner of spinners.values()) {
@@ -258,21 +262,21 @@ import { createRawReporterAdapter } from '@openpok/core';
 
 test('command emits correct events', async () => {
   const { adapter, getEvents } = createRawReporterAdapter();
-  
+
   await run(['build'], {
     reporterAdapter: adapter,
     // ...
   });
-  
+
   const events = getEvents();
-  
+
   expect(events).toContainEqual({
     type: 'log',
     level: 'success',
     message: 'Build complete!',
   });
-  
-  expect(events.filter(e => e.type === 'activity:success')).toHaveLength(3);
+
+  expect(events.filter((e) => e.type === 'activity:success')).toHaveLength(3);
 });
 ```
 
@@ -282,12 +286,12 @@ test('command emits correct events', async () => {
 const events = getEvents();
 
 // Check sequence
-const groupStart = events.find(e => e.type === 'group:start');
-const groupEnd = events.find(e => e.type === 'group:end');
+const groupStart = events.find((e) => e.type === 'group:start');
+const groupEnd = events.find((e) => e.type === 'group:end');
 expect(events.indexOf(groupStart)).toBeLessThan(events.indexOf(groupEnd));
 
 // Check all activities succeeded
-const failures = events.filter(e => e.type === 'activity:failure');
+const failures = events.filter((e) => e.type === 'activity:failure');
 expect(failures).toHaveLength(0);
 ```
 
@@ -298,16 +302,16 @@ For fullscreen TUI takeover:
 ```typescript
 run: async (r) => {
   r.reporter.info('Opening console...');
-  
+
   // Suspend normal output
   r.reporter.suspend();
-  
+
   // Fullscreen TUI runs
   await tabsAdapter.run([...]);
-  
+
   // Resume normal output
   r.reporter.resume();
-  
+
   r.reporter.success('Console closed');
 }
 ```
@@ -335,12 +339,12 @@ await r.group('Tasks', { layout: 'parallel' }, async (g) => {
 });
 ```
 
-| Layout | Meaning |
-|--------|---------|
+| Layout     | Meaning                          |
+| ---------- | -------------------------------- |
 | `sequence` | Activities run one after another |
-| `parallel` | Activities run concurrently |
-| `tabs` | Each activity is a tab |
-| `grid` | Arrange in grid layout |
+| `parallel` | Activities run concurrently      |
+| `tabs`     | Each activity is a tab           |
+| `grid`     | Arrange in grid layout           |
 
 Adapters can use or ignore these hints.
 

@@ -14,17 +14,17 @@ Command → Events → EventBus → ReporterAdapter → Terminal
 import {
   // Event Bus
   createEventBus,
-  
+
   // Reporter
   ScopedReporter,
   createRootReporter,
-  
+
   // Type Guards
   isRootEvent,
   isGroupEvent,
   isActivityEvent,
   isLogEvent,
-  
+
   // Types
   type CLIEvent,
   type EventBus,
@@ -40,20 +40,26 @@ type CLIEvent =
   // Lifecycle
   | { type: 'root:start'; appName: string; version?: string }
   | { type: 'root:end'; exitCode: number }
-  
+
   // Grouping
   | { type: 'group:start'; id: GroupId; parentId?: GroupId; label: string; layout: GroupLayout }
   | { type: 'group:end'; id: GroupId }
-  
+
   // Activities
-  | { type: 'activity:start'; id: ActivityId; parentId?: GroupId | ActivityId; label: string; meta?: Record<string, unknown> }
+  | {
+      type: 'activity:start';
+      id: ActivityId;
+      parentId?: GroupId | ActivityId;
+      label: string;
+      meta?: Record<string, unknown>;
+    }
   | { type: 'activity:success'; id: ActivityId; result?: unknown }
   | { type: 'activity:failure'; id: ActivityId; error: Error | string }
   | { type: 'activity:update'; id: ActivityId; payload: ActivityUpdatePayload }
-  
+
   // Logging
   | { type: 'log'; activityId?: ActivityId; level: LogLevel; message: string }
-  
+
   // TUI Control
   | { type: 'reporter:suspend' }
   | { type: 'reporter:resume' };
@@ -107,14 +113,14 @@ interface Reporter {
   error(message: string): void;
   success(message: string): void;
   step(message: string): void;
-  
+
   // Grouping
   group<T>(
     label: string,
     options: GroupOptions,
     fn: (reporter: Reporter) => Promise<T> | T
   ): Promise<T>;
-  
+
   // Activities
   activity<T>(label: string, fn: () => Promise<T> | T): Promise<T>;
 }
@@ -126,8 +132,8 @@ Extended reporter available in commands:
 
 ```typescript
 interface CommandReporter extends Reporter {
-  suspend(): void;   // Suspend output for TUI takeover
-  resume(): void;    // Resume output
+  suspend(): void; // Suspend output for TUI takeover
+  resume(): void; // Resume output
 }
 ```
 
@@ -138,20 +144,20 @@ run: async (r) => {
   // Simple logging
   r.reporter.info('Starting process...');
   r.reporter.warn('This may take a while');
-  
+
   // Grouped activities
   await r.reporter.group('Build', { layout: 'sequence' }, async (g) => {
     await g.activity('Compile', async () => {
       await r.exec('tsc');
     });
-    
+
     await g.activity('Bundle', async () => {
       await r.exec('esbuild');
     });
   });
-  
+
   r.reporter.success('Build complete!');
-}
+};
 ```
 
 ## ReporterAdapter
@@ -188,33 +194,28 @@ Activities can report progress and status:
 
 ```typescript
 type ActivityUpdatePayload = {
-  progress?: number;  // 0-100
-  message?: string;   // "Processing file 3/10"
-  [key: string]: unknown;  // Custom data
+  progress?: number; // 0-100
+  message?: string; // "Processing file 3/10"
+  [key: string]: unknown; // Custom data
 };
 
 // In a task
 run: async (r, ctx) => {
   // The task reporter supports updates
   ctx.reporter.update({ progress: 50, message: 'Halfway done' });
-}
+};
 ```
 
 ## Type Guards
 
 ```typescript
-import {
-  isRootEvent,
-  isGroupEvent,
-  isActivityEvent,
-  isLogEvent,
-} from '@openpok/core';
+import { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from '@openpok/core';
 
 eventBus.subscribe((event) => {
   if (isLogEvent(event)) {
     console.log(`[${event.level}] ${event.message}`);
   }
-  
+
   if (isActivityEvent(event)) {
     if (event.type === 'activity:success') {
       console.log(`Activity ${event.id} completed`);

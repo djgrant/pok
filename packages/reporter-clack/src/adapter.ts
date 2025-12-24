@@ -172,9 +172,9 @@ export function createReporterAdapter(): ReporterAdapter {
             // If this was a parallel group, show completion results and clean up
             if (group?.layout === 'parallel') {
               // Collect activities for this group
-              const activities = Array.from(
-                state.parallelActivities.entries()
-              ).filter(([, a]) => a.groupId === event.id);
+              const activities = Array.from(state.parallelActivities.entries()).filter(
+                ([, a]) => a.groupId === event.id
+              );
 
               // Sort: successes first, then failures (so failures are more visible at end)
               const sorted = activities.sort(([, a], [, b]) => {
@@ -184,13 +184,8 @@ export function createReporterAdapter(): ReporterAdapter {
               });
 
               // Stop the parallel spinner - use first success as the message
-              if (
-                state.parallelSpinner &&
-                state.parallelSpinnerGroupId === event.id
-              ) {
-                const firstSuccess = sorted.find(
-                  ([, a]) => a.status === 'success'
-                );
+              if (state.parallelSpinner && state.parallelSpinnerGroupId === event.id) {
+                const firstSuccess = sorted.find(([, a]) => a.status === 'success');
                 if (firstSuccess) {
                   // Show first success via spinner stop
                   state.parallelSpinner.spinner.stop(firstSuccess[1].label, 0);
@@ -199,10 +194,7 @@ export function createReporterAdapter(): ReporterAdapter {
                   // All failed - show first failure label (not error) via spinner stop
                   const firstFailure = sorted[0];
                   if (firstFailure) {
-                    state.parallelSpinner.spinner.stop(
-                      firstFailure[1].label,
-                      1
-                    );
+                    state.parallelSpinner.spinner.stop(firstFailure[1].label, 1);
                     hasFailures = true;
                     // Defer the error message to print after outro
                     if (firstFailure[1].error) {
@@ -259,9 +251,7 @@ export function createReporterAdapter(): ReporterAdapter {
             if (state.suspended) break;
 
             // Find the parent group to determine layout
-            const parentGroup = event.parentId
-              ? state.groups.get(event.parentId as GroupId)
-              : null;
+            const parentGroup = event.parentId ? state.groups.get(event.parentId as GroupId) : null;
 
             if (parentGroup?.layout === 'parallel') {
               // Track this activity for the parallel group
@@ -316,9 +306,7 @@ export function createReporterAdapter(): ReporterAdapter {
             if (entry) {
               const text =
                 event.payload.message ||
-                (event.payload.progress !== undefined
-                  ? `${event.payload.progress}%`
-                  : null);
+                (event.payload.progress !== undefined ? `${event.payload.progress}%` : null);
               if (text) {
                 entry.currentMessage = text;
                 entry.spinner.message(text);
@@ -354,9 +342,7 @@ export function createReporterAdapter(): ReporterAdapter {
 
           case 'activity:failure': {
             const errorMessage =
-              event.error instanceof Error
-                ? event.error.message
-                : String(event.error);
+              event.error instanceof Error ? event.error.message : String(event.error);
 
             // Check if this is a parallel activity
             const parallelActivity = state.parallelActivities.get(event.id);
@@ -402,8 +388,7 @@ export function createReporterAdapter(): ReporterAdapter {
             // Suppress logs while inside a group with active spinners
             // Per design principle: "process logs should never show inside a group"
             // Logs only show for single command execution (no active groups)
-            const hasActiveSpinners =
-              state.spinners.size > 0 || state.parallelSpinner !== null;
+            const hasActiveSpinners = state.spinners.size > 0 || state.parallelSpinner !== null;
             if (hasActiveSpinners) {
               // Swallow the log - it would interfere with spinner display
               break;

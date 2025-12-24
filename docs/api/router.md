@@ -15,19 +15,19 @@ Main entry point for the CLI.
 ### Signature
 
 ```typescript
-function run(args: string[], config: RouterConfig): Promise<void>
+function run(args: string[], config: RouterConfig): Promise<void>;
 ```
 
 ### RouterConfig
 
 ```typescript
 type RouterConfig = {
-  commandsDir: string;           // Directory containing command files
-  projectRoot: string;           // Project root for shell commands
-  appName?: string;              // App name for intro (defaults to dir name)
+  commandsDir: string; // Directory containing command files
+  projectRoot: string; // Project root for shell commands
+  appName?: string; // App name for intro (defaults to dir name)
   reporterAdapter: ReporterAdapter;
   prompter: Prompter;
-  tabs?: TabsAdapter;            // Optional tabs adapter
+  tabs?: TabsAdapter; // Optional tabs adapter
 };
 ```
 
@@ -104,8 +104,8 @@ Commands form a tree structure:
 
 ```typescript
 type CommandNode = {
-  path: string;              // e.g., 'db.migrate'
-  segment: string;           // e.g., 'migrate'
+  path: string; // e.g., 'db.migrate'
+  segment: string; // e.g., 'migrate'
   config: CommandConfig;
   children: Map<string, CommandNode>;
 };
@@ -208,7 +208,7 @@ Control output capture when running all children:
 export const command = defineCommand({
   label: 'Run all checks',
   enableRunAllChildren: 'sequential',
-  quietRunAll: true,  // Default: capture output, show on failure
+  quietRunAll: true, // Default: capture output, show on failure
   // quietRunAll: false,  // Stream output to terminal
 });
 ```

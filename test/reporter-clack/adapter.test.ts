@@ -77,45 +77,35 @@ describe('ClackReporterAdapter', () => {
 
   describe('log events', () => {
     it('renders info log', async () => {
-      const events: CLIEvent[] = [
-        { type: 'log', level: 'info', message: 'Information message' },
-      ];
+      const events: CLIEvent[] = [{ type: 'log', level: 'info', message: 'Information message' }];
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.logInfo.lines);
     });
 
     it('renders success log', async () => {
-      const events: CLIEvent[] = [
-        { type: 'log', level: 'success', message: 'Success message' },
-      ];
+      const events: CLIEvent[] = [{ type: 'log', level: 'success', message: 'Success message' }];
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.logSuccess.lines);
     });
 
     it('renders error log', async () => {
-      const events: CLIEvent[] = [
-        { type: 'log', level: 'error', message: 'Error message' },
-      ];
+      const events: CLIEvent[] = [{ type: 'log', level: 'error', message: 'Error message' }];
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.logError.lines);
     });
 
     it('renders warn log', async () => {
-      const events: CLIEvent[] = [
-        { type: 'log', level: 'warn', message: 'Warning message' },
-      ];
+      const events: CLIEvent[] = [{ type: 'log', level: 'warn', message: 'Warning message' }];
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.logWarn.lines);
     });
 
     it('renders step log', async () => {
-      const events: CLIEvent[] = [
-        { type: 'log', level: 'step', message: 'Step message' },
-      ];
+      const events: CLIEvent[] = [{ type: 'log', level: 'step', message: 'Step message' }];
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.logStep.lines);

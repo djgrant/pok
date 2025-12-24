@@ -107,20 +107,20 @@ type CLIEvent =
   // Lifecycle
   | { type: 'root:start'; appName: string }
   | { type: 'root:end'; exitCode: number }
-  
+
   // Grouping
   | { type: 'group:start'; id: string; label: string; layout: GroupLayout }
   | { type: 'group:end'; id: string }
-  
+
   // Activities
   | { type: 'activity:start'; id: string; label: string }
   | { type: 'activity:success'; id: string }
   | { type: 'activity:failure'; id: string; error: Error }
   | { type: 'activity:update'; id: string; payload: UpdatePayload }
-  
+
   // Logging
   | { type: 'log'; level: LogLevel; message: string }
-  
+
   // TUI Control
   | { type: 'reporter:suspend' }
   | { type: 'reporter:resume' };
@@ -183,6 +183,7 @@ Context Definition (Zod)
 ```
 
 This ensures:
+
 - Flags are typed based on their Zod schema
 - Tasks can only run if the command's context satisfies requirements
 - Environment variables are typed based on resolver declarations

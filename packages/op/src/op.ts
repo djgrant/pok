@@ -1,5 +1,34 @@
 import { $ } from 'bun';
 
+// =============================================================================
+// Input Validation
+// =============================================================================
+
+/**
+ * Valid characters for 1Password identifiers (vault, item, field names).
+ * Allows alphanumeric, spaces, dashes, underscores, and periods.
+ */
+const VALID_IDENTIFIER_PATTERN = /^[a-zA-Z0-9 _.-]+$/;
+
+/**
+ * Validate a 1Password identifier (vault name, item name, or field name).
+ * Throws if the identifier contains invalid characters.
+ */
+function validateIdentifier(value: string, type: 'vault' | 'item' | 'field'): void {
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${type} name cannot be empty`);
+  }
+  if (!VALID_IDENTIFIER_PATTERN.test(value)) {
+    throw new Error(
+      `Invalid ${type} name: "${value}". Only alphanumeric characters, spaces, dashes, underscores, and periods are allowed.`
+    );
+  }
+}
+
+// =============================================================================
+// Authentication
+// =============================================================================
+
 /**
  * Check if 1Password CLI is installed
  */
@@ -37,6 +66,7 @@ export function getAuthErrorMessage(): string {
  * Check if a vault exists
  */
 export async function vaultExists(vault: string): Promise<boolean> {
+  validateIdentifier(vault, 'vault');
   const result = await $`op vault get ${vault} --format=json`.nothrow().quiet();
   return result.exitCode === 0;
 }
@@ -45,6 +75,7 @@ export async function vaultExists(vault: string): Promise<boolean> {
  * Create a vault
  */
 export async function createVault(vault: string): Promise<void> {
+  validateIdentifier(vault, 'vault');
   await $`op vault create ${vault}`.quiet();
 }
 
@@ -70,27 +101,21 @@ export interface OpItem {
 /**
  * Check if an item exists in a vault
  */
-export async function itemExists(
-  vault: string,
-  item: string
-): Promise<boolean> {
-  const result = await $`op item get ${item} --vault=${vault} --format=json`
-    .nothrow()
-    .quiet();
+export async function itemExists(vault: string, item: string): Promise<boolean> {
+  validateIdentifier(vault, 'vault');
+  validateIdentifier(item, 'item');
+  const result = await $`op item get ${item} --vault=${vault} --format=json`.nothrow().quiet();
   return result.exitCode === 0;
 }
 
 /**
  * Get a field value from a 1Password item
  */
-export async function getField(
-  vault: string,
-  item: string,
-  field: string
-): Promise<string | null> {
-  const result = await $`op read op://${vault}/${item}/${field}`
-    .nothrow()
-    .quiet();
+export async function getField(vault: string, item: string, field: string): Promise<string | null> {
+  validateIdentifier(vault, 'vault');
+  validateIdentifier(item, 'item');
+  validateIdentifier(field, 'field');
+  const result = await $`op read op://${vault}/${item}/${field}`.nothrow().quiet();
   if (result.exitCode !== 0) {
     return null;
   }
@@ -100,13 +125,10 @@ export async function getField(
 /**
  * Get all fields from a 1Password item
  */
-export async function getItem(
-  vault: string,
-  item: string
-): Promise<OpItem | null> {
-  const result = await $`op item get ${item} --vault=${vault} --format=json`
-    .nothrow()
-    .quiet();
+export async function getItem(vault: string, item: string): Promise<OpItem | null> {
+  validateIdentifier(vault, 'vault');
+  validateIdentifier(item, 'item');
+  const result = await $`op item get ${item} --vault=${vault} --format=json`.nothrow().quiet();
 
   if (result.exitCode !== 0) {
     return null;
@@ -142,6 +164,11 @@ export async function getItemsBatch(
   vault: string,
   itemNames: string[]
 ): Promise<Map<string, OpItem>> {
+  validateIdentifier(vault, 'vault');
+  for (const itemName of itemNames) {
+    validateIdentifier(itemName, 'item');
+  }
+
   const results = new Map<string, OpItem>();
 
   // Fetch items in parallel
@@ -178,6 +205,12 @@ export async function setFieldsBatch(
   item: string,
   fields: Record<string, string>
 ): Promise<void> {
+  validateIdentifier(vault, 'vault');
+  validateIdentifier(item, 'item');
+  for (const fieldName of Object.keys(fields)) {
+    validateIdentifier(fieldName, 'field');
+  }
+
   const exists = await itemExists(vault, item);
 
   // Build field arguments for all fields
