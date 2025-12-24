@@ -5,6 +5,8 @@ import {
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
+  extractEnumChoices,
+  unwrapSchema,
 } from '../../packages/core/src/lib/args';
 import type { ContextDef, Prompter } from '@openpok/core';
 
@@ -359,11 +361,9 @@ describe('extractChoices', () => {
     const choices = extractChoices(simpleContextDef);
     const envChoices = choices.get('env');
 
-    // The function uses heuristics, so we check if known values are detected
+    // The function now extracts exact enum values
     expect(envChoices).toBeDefined();
-    expect(envChoices).toContain('dev');
-    expect(envChoices).toContain('staging');
-    expect(envChoices).toContain('prod');
+    expect(envChoices).toEqual(['dev', 'staging', 'prod']);
   });
 
   it('does not extract choices for boolean fields', () => {
@@ -384,5 +384,236 @@ describe('extractChoices', () => {
 
     const choices = extractChoices(noEnumContext);
     expect(choices.size).toBe(0);
+  });
+
+  it('uses explicit choices when provided', () => {
+    const contextDef = {
+      mode: {
+        from: 'flag' as const,
+        schema: z.string(),
+        choices: ['custom', 'values'],
+        description: 'Mode selection',
+      },
+    } satisfies ContextDef;
+
+    const choices = extractChoices(contextDef);
+    expect(choices.get('mode')).toEqual(['custom', 'values']);
+  });
+
+  it('prefers explicit choices over schema extraction', () => {
+    const contextDef = {
+      mode: {
+        from: 'flag' as const,
+        schema: z.enum(['a', 'b', 'c']),
+        choices: ['override', 'values'],
+        description: 'Mode selection',
+      },
+    } satisfies ContextDef;
+
+    const choices = extractChoices(contextDef);
+    expect(choices.get('mode')).toEqual(['override', 'values']);
+  });
+});
+
+// =============================================================================
+// extractEnumChoices Tests (WP-004: Improved Enum Value Extraction)
+// =============================================================================
+
+describe('extractEnumChoices', () => {
+  describe('basic enum extraction', () => {
+    it('extracts choices from z.enum', () => {
+      const choices = extractEnumChoices(z.enum(['alpha', 'beta', 'gamma']));
+      expect(choices).toEqual(['alpha', 'beta', 'gamma']);
+    });
+
+    it('extracts choices from custom enums (not just common values)', () => {
+      const choices = extractEnumChoices(z.enum(['custom1', 'custom2', 'custom3']));
+      expect(choices).toEqual(['custom1', 'custom2', 'custom3']);
+    });
+
+    it('extracts choices from single-value enum', () => {
+      const choices = extractEnumChoices(z.enum(['only']));
+      expect(choices).toEqual(['only']);
+    });
+  });
+
+  describe('wrapped enum extraction', () => {
+    it('extracts through optional wrapper', () => {
+      const choices = extractEnumChoices(z.enum(['a', 'b']).optional());
+      expect(choices).toEqual(['a', 'b']);
+    });
+
+    it('extracts through default wrapper', () => {
+      const choices = extractEnumChoices(z.enum(['x', 'y', 'z']).default('x'));
+      expect(choices).toEqual(['x', 'y', 'z']);
+    });
+
+    it('extracts through nullable wrapper', () => {
+      const choices = extractEnumChoices(z.enum(['foo', 'bar']).nullable());
+      expect(choices).toEqual(['foo', 'bar']);
+    });
+
+    it('extracts through multiple wrappers', () => {
+      const choices = extractEnumChoices(z.enum(['one', 'two']).optional().default('one'));
+      expect(choices).toEqual(['one', 'two']);
+    });
+
+    it('extracts through nested wrappers (optional -> nullable)', () => {
+      const choices = extractEnumChoices(z.enum(['p', 'q']).optional().nullable());
+      expect(choices).toEqual(['p', 'q']);
+    });
+  });
+
+  describe('native enum extraction', () => {
+    it('extracts from native enum', () => {
+      enum Mode {
+        Dev = 'dev',
+        Prod = 'prod',
+      }
+      const choices = extractEnumChoices(z.nativeEnum(Mode));
+      expect(choices).toEqual(['dev', 'prod']);
+    });
+
+    it('extracts from native enum with more values', () => {
+      enum Status {
+        Pending = 'pending',
+        Active = 'active',
+        Completed = 'completed',
+        Archived = 'archived',
+      }
+      const choices = extractEnumChoices(z.nativeEnum(Status));
+      expect(choices).toEqual(['pending', 'active', 'completed', 'archived']);
+    });
+
+    it('extracts from wrapped native enum', () => {
+      enum Level {
+        Low = 'low',
+        High = 'high',
+      }
+      const choices = extractEnumChoices(z.nativeEnum(Level).optional());
+      expect(choices).toEqual(['low', 'high']);
+    });
+  });
+
+  describe('union of literals extraction', () => {
+    it('extracts from union of two literals', () => {
+      const schema = z.literal('a').or(z.literal('b'));
+      const choices = extractEnumChoices(schema);
+      expect(choices).toEqual(['a', 'b']);
+    });
+
+    it('extracts from union of multiple literals', () => {
+      const schema = z.literal('x').or(z.literal('y')).or(z.literal('z'));
+      const choices = extractEnumChoices(schema);
+      expect(choices).toEqual(['x', 'y', 'z']);
+    });
+
+    it('extracts from z.union with literal array', () => {
+      const schema = z.union([z.literal('first'), z.literal('second'), z.literal('third')]);
+      const choices = extractEnumChoices(schema);
+      expect(choices).toEqual(['first', 'second', 'third']);
+    });
+
+    it('returns undefined for mixed union (not all string literals)', () => {
+      const schema = z.union([z.literal('a'), z.literal(123)]);
+      const choices = extractEnumChoices(schema);
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for union with non-literal types', () => {
+      const schema = z.union([z.literal('a'), z.string()]);
+      const choices = extractEnumChoices(schema);
+      expect(choices).toBeUndefined();
+    });
+  });
+
+  describe('non-enum schemas', () => {
+    it('returns undefined for plain string', () => {
+      const choices = extractEnumChoices(z.string());
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for boolean', () => {
+      const choices = extractEnumChoices(z.boolean());
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for number', () => {
+      const choices = extractEnumChoices(z.number());
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for object', () => {
+      const choices = extractEnumChoices(z.object({ name: z.string() }));
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for array', () => {
+      const choices = extractEnumChoices(z.array(z.string()));
+      expect(choices).toBeUndefined();
+    });
+
+    it('returns undefined for string with refinement', () => {
+      const choices = extractEnumChoices(z.string().refine((v) => ['a', 'b'].includes(v)));
+      expect(choices).toBeUndefined();
+    });
+  });
+});
+
+// =============================================================================
+// unwrapSchema Tests
+// =============================================================================
+
+// Helper to get type name from schema (works with both Zod v3 and v4)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getTypeName(schema: any): string {
+  // Zod v3 uses typeName, Zod v4 uses type
+  return schema._def?.typeName || schema._def?.type || 'unknown';
+}
+
+describe('unwrapSchema', () => {
+  it('returns the schema as-is when no wrapper', () => {
+    const schema = z.string();
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
+  });
+
+  it('unwraps optional', () => {
+    const schema = z.string().optional();
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
+  });
+
+  it('unwraps default', () => {
+    const schema = z.string().default('hello');
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
+  });
+
+  it('unwraps nullable', () => {
+    const schema = z.string().nullable();
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
+  });
+
+  it('unwraps multiple layers', () => {
+    const schema = z.string().optional().nullable().default('test');
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
+  });
+
+  it('unwraps to enum', () => {
+    const schema = z.enum(['a', 'b']).optional().default('a');
+    const unwrapped = unwrapSchema(schema);
+    const typeName = getTypeName(unwrapped);
+    expect(typeName === 'ZodEnum' || typeName === 'enum').toBe(true);
+    // Verify we can extract the enum values from the unwrapped schema
+    const choices = extractEnumChoices(unwrapped);
+    expect(choices).toEqual(['a', 'b']);
   });
 });

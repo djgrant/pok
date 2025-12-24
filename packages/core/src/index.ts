@@ -40,7 +40,13 @@ export type {
 // Args (context parsing)
 // =============================================================================
 
-export { getSchemaInfo, getEnumChoicesFromSchema } from './lib/args';
+export {
+  getSchemaInfo,
+  getEnumChoicesFromSchema,
+  extractEnumChoices,
+  extractChoices,
+  unwrapSchema,
+} from './lib/args';
 export type { SchemaInfo } from './lib/args';
 
 // =============================================================================
@@ -189,6 +195,13 @@ export { createRawPrompter } from './prompter';
 // =============================================================================
 
 export type { TabsAdapter, TabSpec, TabsOptions } from './tabs';
+
+// =============================================================================
+// Output Configuration
+// =============================================================================
+
+export { detectOutputConfig, extractOutputFlags, OUTPUT_FLAGS } from './lib/output-config';
+export type { OutputConfig } from './lib/output-config';
 
 // =============================================================================
 // CLI entry point
