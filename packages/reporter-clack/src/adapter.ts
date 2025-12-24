@@ -62,6 +62,10 @@ type ParallelActivity = {
   groupId: GroupId;
   status: 'pending' | 'success' | 'failure';
   error?: string;
+  /** Remediation steps for failed checks */
+  remediation?: string[];
+  /** Documentation URL for failed checks */
+  documentationUrl?: string;
 };
 
 /**
@@ -235,8 +239,13 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             state.groups.delete(event.id);
 
             let hasFailures = group?.hasFailure ?? false;
-            // Collect errors to print after the group closes
-            const deferredErrors: string[] = [];
+            // Collect errors with remediation info to print after the group closes
+            type DeferredError = {
+              error: string;
+              remediation?: string[];
+              documentationUrl?: string;
+            };
+            const deferredErrors: DeferredError[] = [];
 
             // If this was a parallel group, show completion results and clean up
             if (group?.layout === 'parallel') {
@@ -267,9 +276,13 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                   if (firstFailure) {
                     state.parallelSpinner.spinner.stop(firstFailure[1].label, 1);
                     hasFailures = true;
-                    // Defer the error message to print after outro
+                    // Defer the error message with remediation to print after outro
                     if (firstFailure[1].error) {
-                      deferredErrors.push(firstFailure[1].error);
+                      deferredErrors.push({
+                        error: firstFailure[1].error,
+                        remediation: firstFailure[1].remediation,
+                        documentationUrl: firstFailure[1].documentationUrl,
+                      });
                     }
                     // Flush buffered logs for this activity
                     flushLogsForActivity(state, firstFailure[0]);
@@ -289,10 +302,14 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                   p.log.success(activity.label);
                 } else if (activity.status === 'failure') {
                   hasFailures = true;
-                  // Show label inside group, defer error message
+                  // Show label inside group, defer error message with remediation
                   p.log.error(activity.label);
                   if (activity.error) {
-                    deferredErrors.push(activity.error);
+                    deferredErrors.push({
+                      error: activity.error,
+                      remediation: activity.remediation,
+                      documentationUrl: activity.documentationUrl,
+                    });
                   }
                 }
                 // Flush any buffered logs for this parallel activity
@@ -314,9 +331,24 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               p.outro(pc.green('\u2714 Done'));
             }
 
-            // Print deferred error messages after the group closes
-            for (const error of deferredErrors) {
-              p.log.error(error);
+            // Print deferred error messages with remediation after the group closes
+            for (const deferred of deferredErrors) {
+              p.log.error(deferred.error);
+
+              // Display remediation steps if available
+              if (deferred.remediation && deferred.remediation.length > 0) {
+                console.log('');
+                console.log('  To fix:');
+                for (const step of deferred.remediation) {
+                  console.log(`    - ${step}`);
+                }
+              }
+
+              // Display documentation link if available
+              if (deferred.documentationUrl) {
+                console.log('');
+                console.log(`  More info: ${deferred.documentationUrl}`);
+              }
             }
             break;
           }
@@ -428,6 +460,8 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             if (parallelActivity) {
               parallelActivity.status = 'failure';
               parallelActivity.error = errorMessage;
+              parallelActivity.remediation = event.remediation;
+              parallelActivity.documentationUrl = event.documentationUrl;
               // Mark the parent group as having failures
               const parentGroup = state.groups.get(parallelActivity.groupId);
               if (parentGroup) {
@@ -449,6 +483,21 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               }
               entry.spinner.stop(errorMessage, 1);
               state.spinners.delete(event.id);
+
+              // Display remediation steps if available
+              if (event.remediation && event.remediation.length > 0) {
+                console.log('\u2502');
+                console.log('\u2502     To fix:');
+                for (const step of event.remediation) {
+                  console.log(`\u2502       - ${step}`);
+                }
+              }
+
+              // Display documentation link if available
+              if (event.documentationUrl) {
+                console.log('\u2502');
+                console.log(`\u2502     More info: ${event.documentationUrl}`);
+              }
 
               // Flush any buffered logs for this activity
               flushLogsForActivity(state, event.id);
