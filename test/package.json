@@ -8,7 +8,11 @@
   "dependencies": {
     "@openpok/core": "workspace:*",
     "@openpok/reporter-clack": "workspace:*",
+    "@openpok/prompter-clack": "workspace:*",
+    "@openpok/op": "workspace:*",
+    "@openpok/tabs-core": "workspace:*",
     "@openpok/test-utils": "workspace:*",
+    "@clack/prompts": "^0.11.0",
     "zod": "^4.0.0"
   }
 }

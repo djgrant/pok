@@ -6,11 +6,23 @@
     "noEmit": true,
     "types": ["bun"]
   },
-  "include": ["core/**/*", "reporter-clack/**/*", "cases/**/*", "commands/**/*", "shared/**/*"],
+  "include": [
+    "core/**/*",
+    "reporter-clack/**/*",
+    "prompter-clack/**/*",
+    "op/**/*",
+    "tabs-core/**/*",
+    "cases/**/*",
+    "commands/**/*",
+    "shared/**/*"
+  ],
   "exclude": ["utils/**/*"],
   "references": [
     { "path": "../packages/core" },
     { "path": "../packages/reporter-clack" },
+    { "path": "../packages/prompter-clack" },
+    { "path": "../packages/op" },
+    { "path": "../packages/tabs-core" },
     { "path": "./utils" }
   ]
 }
