@@ -35,6 +35,22 @@ export type ContextFieldDef = {
   schema: z.ZodType;
   /** Human-readable description for help text */
   description?: string;
+  /**
+   * Explicit choices for select prompts (escape hatch)
+   *
+   * Use this when automatic enum extraction from the schema fails,
+   * such as with custom refinements or complex schema compositions.
+   *
+   * @example
+   * ```ts
+   * mode: {
+   *   from: 'flag',
+   *   schema: z.string().refine(v => ['a', 'b', 'c'].includes(v)),
+   *   choices: ['a', 'b', 'c'],  // Explicit fallback
+   * }
+   * ```
+   */
+  choices?: string[];
 };
 
 /**
