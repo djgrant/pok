@@ -1,0 +1,36 @@
+{
+  "name": "@openpok/cmd",
+  "version": "0.0.1",
+  "description": "Global CLI launcher for pok - install once, run anywhere",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notation-dev/openpok.git",
+    "directory": "packages/cmd"
+  },
+  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "bugs": {
+    "url": "https://github.com/notation-dev/openpok/issues"
+  },
+  "bin": {
+    "pok": "./bin/pok.ts"
+  },
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "cli",
+    "pok",
+    "openpok"
+  ]
+}

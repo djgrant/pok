@@ -1,0 +1,31 @@
+{
+  "name": "@openpok/op",
+  "version": "0.0.1",
+  "description": "Operation utilities for pok CLI applications",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notation-dev/openpok.git",
+    "directory": "packages/op"
+  },
+  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "bugs": {
+    "url": "https://github.com/notation-dev/openpok/issues"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@openpok/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  }
+}

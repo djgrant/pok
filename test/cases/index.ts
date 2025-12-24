@@ -1,0 +1,17 @@
+export * as simple from './01-simple/command';
+export * as withContext from './02-with-context/command';
+export * as withPre from './03-with-pre/command';
+export * as withDynamicPre from './04-with-dynamic-pre/command';
+export * as withFailingPre from './05-with-failing-pre/command';
+export * as withTasks from './06-with-tasks/command';
+export * as withEnvTask from './07-with-env-task/command';
+export * as withReporter from './08-with-reporter/command';
+export * as withLogLevels from './09-with-log-levels/command';
+export * as withActivityFailure from './10-with-activity-failure/command';
+export * as withNestedGroups from './11-with-nested-groups/command';
+export * as parent from './12-parent/command';
+export * as parentChildA from './13-parent-child-a/command';
+export * as parentChildB from './14-parent-child-b/command';
+export * as runAll from './15-run-all/command';
+export * as runAllTaskA from './16-run-all-task-a/command';
+export * as runAllTaskB from './17-run-all-task-b/command';

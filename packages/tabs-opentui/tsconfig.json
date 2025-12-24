@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": ["bun", "react"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react"
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../core" },
+    { "path": "../tabs-core" }
+  ]
+}

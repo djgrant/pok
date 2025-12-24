@@ -1,0 +1,17 @@
+export const lines: string[] = [
+  '┌  Build Pipeline',
+  '│',
+  '◇  Prepare',
+  '│',
+  '┌  Compile Phase',
+  '│',
+  '◇  Compile TypeScript',
+  '│',
+  '◇  Bundle assets',
+  '│',
+  '└  ✔ Done',
+  '│',
+  '◇  Finalize',
+  '│',
+  '└  ✔ Done',
+];

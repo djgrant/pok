@@ -1,0 +1,28 @@
+{
+  "name": "@openpok/tabs-core",
+  "version": "0.0.1",
+  "description": "Core tab management utilities for pok CLI applications",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notation-dev/openpok.git",
+    "directory": "packages/tabs-core"
+  },
+  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "bugs": {
+    "url": "https://github.com/notation-dev/openpok/issues"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@openpok/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

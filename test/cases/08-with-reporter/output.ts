@@ -1,0 +1,16 @@
+export const lines: string[] = [
+  '┌  Setup Phase',
+  '│',
+  '◇  Initialize',
+  '│',
+  '◇  Configure',
+  '│',
+  '└  ✔ Done',
+  '',
+  '│',
+  '●  Starting task...',
+  '│',
+  '●  Processing data...',
+  '│',
+  '◆  Task completed successfully',
+];
