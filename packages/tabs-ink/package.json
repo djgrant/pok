@@ -29,5 +29,8 @@
   },
   "peerDependencies": {
     "@openpok/core": "workspace:*"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

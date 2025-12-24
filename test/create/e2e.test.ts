@@ -212,7 +212,6 @@ describe('@openpok/create end-to-end', () => {
   // Note: Direct command execution tests are skipped because bun's shell
   // has issues running nested bun processes in test environments.
   // The commands work correctly when run manually.
-  // See: https://github.com/oven-sh/bun/issues/XXXX (if there's an issue)
 
   describe('generated command content', () => {
     it('hello command uses correct reporter API', () => {

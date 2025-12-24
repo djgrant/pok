@@ -25,8 +25,3 @@ export const SHARED_DIR = path.resolve(import.meta.dir, '../../shared');
  * Project root for CLI execution context.
  */
 export const PROJECT_ROOT = path.resolve(import.meta.dir, '../../..');
-
-/**
- * @deprecated Use COMMANDS_DIR instead. Kept for backwards compatibility.
- */
-export const EXAMPLES_DIR = COMMANDS_DIR;
