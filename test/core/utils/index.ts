@@ -20,13 +20,7 @@ export {
 } from './capture';
 
 // Path constants
-export {
-  COMMANDS_DIR,
-  CASES_DIR,
-  SHARED_DIR,
-  PROJECT_ROOT,
-  EXAMPLES_DIR, // deprecated
-} from './paths';
+export { COMMANDS_DIR, CASES_DIR, SHARED_DIR, PROJECT_ROOT } from './paths';
 
 // Re-export from test-utils package
 export { normalizeEvents, filterEvents, eventTypes } from '@openpok/test-utils';

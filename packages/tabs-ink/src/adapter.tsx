@@ -34,12 +34,6 @@ export function createTabsAdapter(): TabsAdapter {
       // This preserves the main terminal content and provides a clean canvas
       process.stdout.write('\x1b[?1049h\x1b[H');
 
-      // DEBUG: Log stdin state
-      const fs = await import('node:fs');
-      const debugLog = (msg: string) => {
-        fs.appendFileSync('/tmp/tabs-debug.log', `${new Date().toISOString()} [adapter] ${msg}\n`);
-      };
-
       // Ensure stdin is not paused - previous CLI operations (prompts, spinners)
       // may have left it in a paused state
       if (process.stdin.isPaused()) {
@@ -50,8 +44,6 @@ export function createTabsAdapter(): TabsAdapter {
       // out of sync if previous CLI operations (clack prompts/spinners) didn't
       // properly balance their setRawMode calls
       process.stdin.setRawMode(true);
-
-      debugLog(`stdin.isRaw after our setRawMode: ${process.stdin.isRaw}`);
 
       return new Promise<void>((resolve) => {
         const { unmount, waitUntilExit, clear } = render(

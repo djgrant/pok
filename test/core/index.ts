@@ -34,7 +34,6 @@ export {
   CASES_DIR,
   SHARED_DIR,
   PROJECT_ROOT,
-  EXAMPLES_DIR, // deprecated
   // Event normalization and filtering
   normalizeEvents,
   filterEvents,

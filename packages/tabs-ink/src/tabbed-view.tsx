@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useInput, useStdout, useStdin } from 'ink';
-import { appendFileSync } from 'node:fs';
 import type { TabProcess } from './types.js';
-
-// DEBUG: Write to a log file since console output is hidden in alternate screen
-const debugLog = (msg: string) => {
-  appendFileSync('/tmp/tabs-debug.log', `${new Date().toISOString()} ${msg}\n`);
-};
 
 type TabbedViewProps = {
   tabs: TabProcess[];
@@ -191,12 +185,6 @@ export function TabbedView({
   const { stdout } = useStdout();
   const { isRawModeSupported, stdin } = useStdin();
 
-  // DEBUG: Log stdin state from inside the component
-  useEffect(() => {
-    debugLog(`[TabbedView] isRawModeSupported: ${isRawModeSupported}`);
-    debugLog(`[TabbedView] stdin.isRaw: ${stdin?.isRaw}`);
-    debugLog(`[TabbedView] stdin.isPaused: ${stdin?.isPaused?.()}`);
-  }, [isRawModeSupported, stdin]);
   const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(() => new Map());
   const [autoScroll, setAutoScroll] = useState<Map<string, boolean>>(
     () => new Map(tabs.map((t) => [t.id, true]))
@@ -283,13 +271,8 @@ export function TabbedView({
     onSendInputRef.current = onSendInput;
   }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput]);
 
-  // DEBUG: Log that useInput callback is being registered
-  debugLog('useInput hook registered');
-
   // Keyboard handling via useInput - always active
   useInput((input, key) => {
-    // DEBUG: Log every keypress
-    debugLog(`useInput received: ${JSON.stringify({ input, key })}`);
     // Focus mode: forward most input to child process
     if (focusMode) {
       // Escape exits focus mode

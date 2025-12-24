@@ -42,6 +42,7 @@ export function defineCompositeResolver<
     resolve: async (keys, context) => {
       const result: Record<string, string> = {};
       const remainingKeys = new Set(keys);
+      const errors: Array<{ resolver: string; keys: string[]; error: string }> = [];
 
       for (const resolver of config.resolvers) {
         if (remainingKeys.size === 0) break;
@@ -67,16 +68,25 @@ export function defineCompositeResolver<
             }
           }
         } catch (error) {
-          // Log resolver failures for debugging (silent in production)
-          if (process.env.DEBUG) {
-            const resolverName = 'name' in resolver ? resolver.name : 'unnamed resolver';
-            console.error(
-              `[composite-resolver] ${resolverName} failed for keys [${keysForThisResolver.join(', ')}]:`,
-              error instanceof Error ? error.message : error
-            );
-          }
+          const resolverName = 'name' in resolver ? (resolver.name as string) : 'unnamed resolver';
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push({
+            resolver: resolverName,
+            keys: keysForThisResolver,
+            error: errorMessage,
+          });
           // Continue to next resolver
           continue;
+        }
+      }
+
+      // Log warnings for unresolved keys if there were errors
+      if (remainingKeys.size > 0 && errors.length > 0 && process.env.DEBUG) {
+        console.warn(
+          `[composite-resolver] Failed to resolve keys [${[...remainingKeys].join(', ')}]. Errors encountered:`
+        );
+        for (const { resolver, keys, error } of errors) {
+          console.warn(`  - ${resolver} (keys: ${keys.join(', ')}): ${error}`);
         }
       }
 
