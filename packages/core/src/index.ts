@@ -37,6 +37,13 @@ export type {
 } from './lib/command';
 
 // =============================================================================
+// Args (context parsing)
+// =============================================================================
+
+export { getSchemaInfo, getEnumChoicesFromSchema } from './lib/args';
+export type { SchemaInfo } from './lib/args';
+
+// =============================================================================
 // Task types
 // =============================================================================
 
@@ -92,6 +99,13 @@ export type {
 
 export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
+
+// =============================================================================
+// Help generation
+// =============================================================================
+
+export { generateHelp, generateRootHelp, hasHelpFlag } from './lib/help';
+export type { HelpOptions, RootHelpOptions } from './lib/help';
 
 // =============================================================================
 // Utils - Shell
