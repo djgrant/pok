@@ -22,7 +22,15 @@ import {
 import { CLIError, type ErrorContext } from './cli-error';
 import { findClosestMatch } from './string-distance';
 import { createRunner, AbortError } from './runner';
-import { generateHelp, generateRootHelp, hasHelpFlag } from './help';
+import { generateHelp, generateRootHelp, hasHelpFlag, hasVersionFlag } from './help';
+import {
+  generateCompletionScript,
+  generateCompletions,
+  detectShell,
+  getInstallInstructions,
+  isValidShell,
+  type Shell,
+} from './completion';
 import type { Prompter } from '../prompter';
 import type { TabsAdapter } from '../tabs';
 import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
@@ -58,6 +66,8 @@ export type RouterConfig = {
   prompter: Prompter;
   /** Optional tabs adapter for tabbed console */
   tabs?: TabsAdapter;
+  /** Optional version string (auto-discovered from package.json if not provided) */
+  version?: string;
 };
 
 // Module-level state set by run()
@@ -115,6 +125,49 @@ function getTabs(): TabsAdapter | undefined {
 }
 
 /**
+ * Validate that there are no alias conflicts within a command tree level.
+ *
+ * Rules:
+ * 1. Command names must be unique
+ * 2. Aliases must not conflict with any command name
+ * 3. Aliases must not conflict with other aliases
+ *
+ * @throws Error if any conflict is detected
+ */
+function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
+  // Map of name/alias -> command that owns it
+  const seen = new Map<string, string>();
+
+  for (const [segment, node] of tree) {
+    const fullPath = pathPrefix ? `${pathPrefix}.${segment}` : segment;
+
+    // Check command name
+    if (seen.has(segment)) {
+      throw new Error(
+        `Command name "${segment}" at "${fullPath}" conflicts with "${seen.get(segment)}"`
+      );
+    }
+    seen.set(segment, fullPath);
+
+    // Check aliases
+    const aliases = node.config.aliases || [];
+    for (const alias of aliases) {
+      if (seen.has(alias)) {
+        throw new Error(
+          `Alias "${alias}" of command "${fullPath}" conflicts with "${seen.get(alias)}"`
+        );
+      }
+      seen.set(alias, fullPath);
+    }
+
+    // Recursively validate children
+    if (node.children.size > 0) {
+      validateAliases(node.children, fullPath);
+    }
+  }
+}
+
+/**
  * Load all command files and build a command tree
  */
 export async function buildCommandTree(commandsDir: string): Promise<CommandTree> {
@@ -159,6 +212,9 @@ export async function buildCommandTree(commandsDir: string): Promise<CommandTree
     }
   }
 
+  // Validate aliases after building the tree
+  validateAliases(tree);
+
   return tree;
 }
 
@@ -195,7 +251,32 @@ function insertIntoTree(tree: CommandTree, segments: string[], config: CommandCo
 }
 
 /**
+ * Find a node in a tree level by name or alias.
+ *
+ * Exact name matches take precedence over alias matches.
+ *
+ * @returns The matched node, or undefined if not found
+ */
+function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | undefined {
+  // First, try exact match by name
+  const exactMatch = level.get(name);
+  if (exactMatch) return exactMatch;
+
+  // Then, try aliases
+  for (const node of level.values()) {
+    if (node.config.aliases?.includes(name)) {
+      return node;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Find a node in the tree by path segments
+ *
+ * Supports both exact command names and aliases.
+ * Exact names always take precedence over aliases.
  *
  * @returns The node and any remaining (unmatched) segments
  */
@@ -210,7 +291,7 @@ function findNode(
   let matchedCount = 0;
 
   for (const segment of segments) {
-    const node = currentLevel.get(segment);
+    const node = findNodeByNameOrAlias(currentLevel, segment);
     if (!node) break;
 
     lastMatchedNode = node;
@@ -889,6 +970,20 @@ type MenuSelectionResult = {
 };
 
 /**
+ * Format a breadcrumb trail for display.
+ * Shows the app name followed by the navigation path, joined by ' > '.
+ *
+ * @param appName - The CLI application name
+ * @param path - The current navigation path segments
+ * @returns Formatted breadcrumb string (empty if at root level)
+ */
+function formatBreadcrumb(appName: string, path: string[]): string {
+  if (path.length === 0) return '';
+  const parts = [appName, ...path];
+  return parts.join(' > ');
+}
+
+/**
  * Handle interactive menu selection, including any context prompts.
  * Returns the selected node and resolved context, or null if selection fails.
  * This function handles ONLY the selection phase - execution happens afterward.
@@ -911,6 +1006,8 @@ async function selectFromMenu(
     // Navigate through the menu tree until we reach a leaf or runAllChildren
     let currentNode: CommandNode | null = null;
     let runAll = false;
+    // Track the navigation path for breadcrumb display
+    const navigationPath: string[] = [];
 
     // Initial selection
     const selected = await prompter.select({
@@ -927,6 +1024,9 @@ async function selectFromMenu(
       reporter.error(`Command not found: ${String(selected)}`);
       return null;
     }
+
+    // Add the selected node to the navigation path
+    navigationPath.push(currentNode.segment);
 
     // Navigate through parent nodes until we reach a leaf
     while (currentNode && !currentNode.config.run && !runAll) {
@@ -956,6 +1056,12 @@ async function selectFromMenu(
         });
       }
 
+      // Show breadcrumb before submenu selection
+      const breadcrumb = formatBreadcrumb(appName, navigationPath);
+      if (breadcrumb) {
+        reporter.info(breadcrumb);
+      }
+
       const childSelected = await prompter.select({
         message: `Select ${currentNode.segment}:`,
         options,
@@ -970,6 +1076,8 @@ async function selectFromMenu(
           return null;
         }
         currentNode = nextNode;
+        // Update navigation path with the new selection
+        navigationPath.push(nextNode.segment);
       }
     }
 
@@ -1035,6 +1143,22 @@ async function runMenu(tree: CommandTree, appName: string): Promise<void> {
 }
 
 /**
+ * Auto-discover version from package.json if not provided
+ */
+async function discoverVersion(projectRoot: string): Promise<string | undefined> {
+  const packageJsonPath = path.join(projectRoot, 'package.json');
+
+  try {
+    const file = Bun.file(packageJsonPath);
+    const content = await file.text();
+    const pkg = JSON.parse(content);
+    return pkg.version;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Main router entry point
  *
  * @param args - Command line arguments (without 'node' and script name)
@@ -1044,6 +1168,20 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
   currentConfig = config;
 
   const { commandsDir, projectRoot, appName, reporterAdapter } = config;
+
+  // Version check first - before any reporter setup or command tree building
+  if (hasVersionFlag(args)) {
+    const resolvedAppName = appName ?? path.basename(projectRoot);
+    const version = config.version ?? (await discoverVersion(projectRoot));
+
+    if (version) {
+      console.log(`${resolvedAppName} ${version}`);
+    } else {
+      console.log(resolvedAppName);
+    }
+
+    return;
+  }
 
   // Create event bus and start reporter adapter
   const eventBus = createEventBus();
@@ -1059,6 +1197,26 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
     const resolvedAppName = appName ?? path.basename(projectRoot);
     currentAppName = resolvedAppName;
+
+    // Handle hidden __complete command for dynamic shell completions
+    if (args[0] === '__complete') {
+      const completionArgs = args.slice(1);
+      const completions = generateCompletions(completionArgs, tree);
+      console.log(completions.join('\n'));
+      return;
+    }
+
+    // Handle completion script generation command
+    if (args[0] === 'completion') {
+      const shellArg = args[1];
+      const shell: Shell = shellArg && isValidShell(shellArg) ? shellArg : detectShell();
+
+      const script = generateCompletionScript(resolvedAppName, shell);
+      console.log(script);
+      console.error('');
+      console.error(getInstallInstructions(resolvedAppName, shell));
+      return;
+    }
 
     // Check for --help or -h flag at root level (before any command)
     if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
@@ -1114,10 +1272,16 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
       let errorMessage = `Unknown command: ${unknownCommand}`;
       if (suggestion) {
-        errorMessage += `\n\nDid you mean '${suggestion}'?`;
+        errorMessage += `
+
+Did you mean '${suggestion}'?`;
       }
-      errorMessage += `\n\nAvailable commands: ${availableCommands.join(', ')}`;
-      errorMessage += `\n\nRun '${resolvedAppName} --help' for usage.`;
+      errorMessage += `
+
+Available commands: ${availableCommands.join(', ')}`;
+      errorMessage += `
+
+Run '${resolvedAppName} --help' for usage.`;
 
       reporter.error(errorMessage);
       throw new RouterError(errorMessage);
