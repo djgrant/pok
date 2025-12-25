@@ -20,6 +20,49 @@ describe('Navigation', () => {
     });
   });
 
+  describe('breadcrumbs', () => {
+    it('shows breadcrumb when navigating into submenu', async () => {
+      const { events, error } = await captureEvents([], {
+        selectResponses: ['parent', 'child-a'],
+      });
+      expect(error).toBeUndefined();
+
+      // Find breadcrumb event
+      const breadcrumbEvent = events.find(
+        (e) => e.type === 'log' && e.level === 'info' && e.message?.includes(' > ')
+      );
+      expect(breadcrumbEvent).toBeDefined();
+      expect(breadcrumbEvent?.type === 'log' && breadcrumbEvent.message).toBe('cli-test > parent');
+    });
+
+    it('does not show breadcrumb at root level', async () => {
+      const { events, error } = await captureEvents([], {
+        selectResponses: ['simple'],
+      });
+      expect(error).toBeUndefined();
+
+      // Should have no breadcrumb events (no submenus for leaf commands)
+      const breadcrumbEvents = events.filter(
+        (e) => e.type === 'log' && e.level === 'info' && e.message?.includes(' > ')
+      );
+      expect(breadcrumbEvents.length).toBe(0);
+    });
+
+    it('formats breadcrumb with app name and path', async () => {
+      const { events, error } = await captureEvents([], {
+        selectResponses: ['run-all', 'task-a'],
+      });
+      expect(error).toBeUndefined();
+
+      // Find breadcrumb event
+      const breadcrumbEvent = events.find(
+        (e) => e.type === 'log' && e.level === 'info' && e.message?.includes(' > ')
+      );
+      expect(breadcrumbEvent).toBeDefined();
+      expect(breadcrumbEvent?.type === 'log' && breadcrumbEvent.message).toBe('cli-test > run-all');
+    });
+  });
+
   describe('direct execution', () => {
     it('runs child directly via args (no menu events)', async () => {
       const { events, error } = await captureEvents(['parent', 'child-a']);

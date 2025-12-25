@@ -9,6 +9,11 @@ export const events: CLIEvent[] = [
   },
   {
     type: 'log',
+    level: 'info',
+    message: 'cli-test > parent',
+  },
+  {
+    type: 'log',
     level: 'success',
     message: 'Selected',
   },
