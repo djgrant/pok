@@ -126,6 +126,28 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
   /** Human-readable label for menus and help */
   label: string;
 
+  /**
+   * Alternative names for this command.
+   *
+   * Aliases allow users to invoke a command with shorter or alternative names.
+   * Exact command names always take precedence over aliases.
+   *
+   * @example
+   * ```ts
+   * export const command = defineCommand({
+   *   label: 'Deploy to environment',
+   *   aliases: ['d', 'dep'],
+   *   // ...
+   * });
+   *
+   * // Now accessible via:
+   * // mycli deploy --env staging
+   * // mycli d --env staging
+   * // mycli dep --env staging
+   * ```
+   */
+  aliases?: string[];
+
   /** Context definitions - fields derived from flags */
   context?: C;
 
