@@ -271,7 +271,7 @@ async function resolveChecks(
  */
 async function executeCheck(check: CheckConfig): Promise<void> {
   try {
-    await executeCheck(check);
+    await check.check();
   } catch (originalError) {
     // Normalize remediation to array
     const remediation = check.remediation
