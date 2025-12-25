@@ -182,6 +182,12 @@ export function generateHelp(options: HelpOptions): string {
   lines.push(command.label);
   lines.push('');
 
+  // Aliases (if any)
+  if (command.aliases && command.aliases.length > 0) {
+    lines.push(`Aliases: ${command.aliases.join(', ')}`);
+    lines.push('');
+  }
+
   // Usage line
   const fullPath = [appName, ...commandPath].join(' ');
   if (children && children.length > 0) {
@@ -305,4 +311,11 @@ export function generateRootHelp(options: RootHelpOptions): string {
  */
 export function hasHelpFlag(args: string[]): boolean {
   return args.includes('--help') || args.includes('-h');
+}
+
+/**
+ * Check if args contain version flag
+ */
+export function hasVersionFlag(args: string[]): boolean {
+  return args.includes('--version') || args.includes('-V');
 }
