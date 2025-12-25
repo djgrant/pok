@@ -46,6 +46,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
   const [quitConfirmPending, setQuitConfirmPending] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [helpVisible, setHelpVisible] = useState(false);
   const processesRef = useRef<(ChildProcess | null)[]>([]);
   const outputBuffersRef = useRef<Map<number, OutputBuffer>>(new Map());
   const flushScheduledRef = useRef(false);
@@ -336,6 +337,14 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
     [scrollToBottom]
   );
 
+  const handleToggleHelp = useCallback(() => {
+    setHelpVisible((prev) => !prev);
+  }, []);
+
+  const handleCloseHelp = useCallback(() => {
+    setHelpVisible(false);
+  }, []);
+
   return (
     <TabbedView
       tabs={tabs}
@@ -351,6 +360,9 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
       onExitFocusMode={handleExitFocusMode}
       onSendInput={handleSendInput}
       scrollRef={handleScrollRef}
+      helpVisible={helpVisible}
+      onToggleHelp={handleToggleHelp}
+      onCloseHelp={handleCloseHelp}
     />
   );
 }

@@ -4,10 +4,11 @@
  * UI components for the tabbed terminal interface using OpenTUI primitives.
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useKeyboard, useTerminalDimensions } from '@opentui/react';
 import type { KeyEvent, ScrollBoxRenderable } from '@opentui/core';
 import type { TabProcess } from '@openpok/tabs-core';
+import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {
   tabs: TabProcess[];
@@ -23,6 +24,9 @@ type TabbedViewProps = {
   onExitFocusMode: () => void;
   onSendInput: (data: string) => void;
   scrollRef?: (ref: ScrollBoxRenderable | null) => void;
+  helpVisible: boolean;
+  onToggleHelp: () => void;
+  onCloseHelp: () => void;
 };
 
 function getStatusIndicator({
@@ -112,10 +116,12 @@ function StatusBar({
   tabCount,
   quitConfirmPending,
   focusMode,
+  showHelpHint,
 }: {
   tabCount: number;
   quitConfirmPending: boolean;
   focusMode: boolean;
+  showHelpHint: boolean;
 }) {
   if (quitConfirmPending) {
     return (
@@ -142,7 +148,7 @@ function StatusBar({
     <box>
       <text fg="#666666">
         [{'\u2191\u2193'}] scroll | [Tab/1-{tabCount}] switch | [i]nput | [r]estart | [k]ill |
-        [q]uit
+        [q]uit{showHelpHint && ' | Press ? for help'}
       </text>
     </box>
   );
@@ -162,8 +168,18 @@ export function TabbedView({
   onExitFocusMode,
   onSendInput,
   scrollRef,
+  helpVisible,
+  onToggleHelp,
+  onCloseHelp,
 }: TabbedViewProps) {
   const { height: rows } = useTerminalDimensions();
+
+  // Show help hint for first 5 seconds
+  const [showHelpHint, setShowHelpHint] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHelpHint(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const terminalHeight = rows ?? 24;
   const viewHeight = Math.max(5, terminalHeight - 6);
@@ -186,6 +202,8 @@ export function TabbedView({
   const onEnterFocusModeRef = useRef(onEnterFocusMode);
   const onExitFocusModeRef = useRef(onExitFocusMode);
   const onSendInputRef = useRef(onSendInput);
+  const onToggleHelpRef = useRef(onToggleHelp);
+  const onCloseHelpRef = useRef(onCloseHelp);
 
   useEffect(() => {
     onQuitRef.current = onQuit;
@@ -195,10 +213,29 @@ export function TabbedView({
     onEnterFocusModeRef.current = onEnterFocusMode;
     onExitFocusModeRef.current = onExitFocusMode;
     onSendInputRef.current = onSendInput;
-  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput]);
+    onToggleHelpRef.current = onToggleHelp;
+    onCloseHelpRef.current = onCloseHelp;
+  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput, onToggleHelp, onCloseHelp]);
 
   useKeyboard((event: KeyEvent) => {
     const { name, ctrl, shift, meta, sequence } = event;
+
+    // Help overlay takes priority
+    if (sequence === '?') {
+      onToggleHelpRef.current();
+      return;
+    }
+
+    // Escape closes help if visible
+    if (name === 'escape' && helpVisible) {
+      onCloseHelpRef.current();
+      return;
+    }
+
+    // Don't process other keys when help is visible
+    if (helpVisible) {
+      return;
+    }
 
     if (focusMode) {
       if (name === 'escape') {
@@ -322,7 +359,22 @@ export function TabbedView({
         tabCount={tabs.length}
         quitConfirmPending={quitConfirmPending}
         focusMode={focusMode}
+        showHelpHint={showHelpHint}
       />
+
+      {/* Help overlay - rendered on top */}
+      {helpVisible && (
+        <box
+          position="absolute"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          width="100%"
+          height="100%"
+        >
+          <HelpOverlay onClose={onCloseHelp} />
+        </box>
+      )}
     </box>
   );
 }
