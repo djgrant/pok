@@ -211,6 +211,12 @@ export { detectOutputConfig, extractOutputFlags, OUTPUT_FLAGS } from './lib/outp
 export type { OutputConfig } from './lib/output-config';
 
 // =============================================================================
+// String Distance (Typo Detection)
+// =============================================================================
+
+export { levenshtein, findClosestMatch } from './lib/string-distance';
+
+// =============================================================================
 // CLI entry point
 // =============================================================================
 

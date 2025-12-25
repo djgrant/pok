@@ -173,6 +173,71 @@ describe('parseContext', () => {
     });
   });
 
+  describe('typo suggestions', () => {
+    it('suggests flag for single-character typo', () => {
+      expect(() => parseContext(['--vebose'], simpleContextDef)).toThrow(
+        /Did you mean --verbose\?/
+      );
+    });
+
+    it('suggests flag for missing character', () => {
+      expect(() => parseContext(['--verbos'], simpleContextDef)).toThrow(/Did you mean --verbose\?/);
+    });
+
+    it('suggests flag for extra character', () => {
+      expect(() => parseContext(['--verboose'], simpleContextDef)).toThrow(
+        /Did you mean --verbose\?/
+      );
+    });
+
+    it('suggests flag for typo with kebab-case normalization', () => {
+      const kebabContextDef = {
+        dryRun: {
+          from: 'flag' as const,
+          schema: z.boolean().default(false),
+          description: 'Dry run mode',
+        },
+      } satisfies ContextDef;
+      // When user types --dryrun (missing hyphen), suggests one of the known forms
+      // Both dryRun and dry-run are in knownFlags, so either could be suggested
+      expect(() => parseContext(['--dryrun'], kebabContextDef)).toThrow(/Did you mean --dry/);
+    });
+
+    it('does not suggest for very distant strings', () => {
+      try {
+        parseContext(['--completely-unrelated-flag'], simpleContextDef);
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        expect((error as Error).message).toContain('Unknown flag: --completely-unrelated-flag');
+        expect((error as Error).message).not.toContain('Did you mean');
+      }
+    });
+
+    it('includes both error and suggestion in message', () => {
+      try {
+        parseContext(['--tg'], simpleContextDef);
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        const message = (error as Error).message;
+        expect(message).toContain('Unknown flag: --tg');
+        // 'tg' is distance 1 from 'tag', should suggest
+        expect(message).toContain('Did you mean --tag?');
+      }
+    });
+
+    it('suggests for short flags with small distance', () => {
+      try {
+        parseContext(['--en'], simpleContextDef);
+        expect(true).toBe(false); // Should not reach here
+      } catch (error) {
+        const message = (error as Error).message;
+        expect(message).toContain('Unknown flag: --en');
+        // 'en' is distance 1 from 'env', should suggest
+        expect(message).toContain('Did you mean --env?');
+      }
+    });
+  });
+
   describe('defaults', () => {
     it('applies schema defaults', () => {
       const { context } = parseContext([], simpleContextDef);
