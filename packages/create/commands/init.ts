@@ -9,27 +9,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'bun';
 import { z } from 'zod';
-import { defineCommand, type MultiselectOption, type SelectOption } from '@openpok/core';
+import { defineCommand, type SelectOption } from '@openpok/core';
 import {
   generatePackageJson,
   generateTsConfig,
   generateExampleCommand,
   generateBuildCommand,
   generateGitignore,
+  TEMPLATES,
+  TEMPLATE_NAMES,
+  AVAILABLE_PLUGINS,
+  type TemplateName,
 } from '../src/templates';
 
-const AVAILABLE_PLUGINS: MultiselectOption<string>[] = [
-  {
-    value: '@openpok/prompter-clack',
-    label: 'Prompter (clack)',
-    hint: 'Interactive prompts for user input',
-  },
-  {
-    value: '@openpok/reporter-clack',
-    label: 'Reporter (clack)',
-    hint: 'Beautiful CLI output and spinners',
-  },
-];
+// =============================================================================
+// Install Options
+// =============================================================================
 
 const INSTALL_OPTIONS: SelectOption<'install' | 'skip'>[] = [
   {
@@ -52,6 +47,11 @@ export const command = defineCommand({
       schema: z.string().min(1),
       description: 'Project name',
     },
+    template: {
+      from: 'flag',
+      schema: z.enum(TEMPLATE_NAMES).optional(),
+      description: 'Project template (starter, minimal, full, custom)',
+    },
   },
   run: async (r, ctx) => {
     const projectName = ctx.context.name;
@@ -63,13 +63,48 @@ export const command = defineCommand({
       process.exit(1);
     }
 
-    // Prompt for plugins (cancellation is handled by the prompter)
-    const selectedPlugins = await r.prompter.multiselect({
-      message: 'Select plugins to install:',
-      options: AVAILABLE_PLUGINS,
-      initialValues: AVAILABLE_PLUGINS.map((plugin) => plugin.value),
-      required: false,
-    });
+    // Determine plugins based on template selection
+    let selectedPlugins: string[];
+
+    if (ctx.context.template) {
+      // Template specified via flag - use it directly
+      const template = TEMPLATES.find((t) => t.name === ctx.context.template);
+      if (ctx.context.template === 'custom') {
+        // Custom template: still prompt for plugins
+        selectedPlugins = await r.prompter.multiselect({
+          message: 'Select plugins to install:',
+          options: AVAILABLE_PLUGINS,
+          initialValues: ['@openpok/prompter-clack', '@openpok/reporter-clack'],
+          required: false,
+        });
+      } else {
+        selectedPlugins = template?.plugins ?? [];
+      }
+    } else {
+      // Interactive template selection
+      const templateChoice = await r.prompter.select({
+        message: 'Choose a template:',
+        options: TEMPLATES.map((t) => ({
+          value: t.name as TemplateName,
+          label: t.label,
+          hint: t.hint,
+        })),
+        initialValue: 'starter' as TemplateName,
+      });
+
+      if (templateChoice === 'custom') {
+        // Custom template: prompt for individual plugins
+        selectedPlugins = await r.prompter.multiselect({
+          message: 'Select plugins to install:',
+          options: AVAILABLE_PLUGINS,
+          initialValues: ['@openpok/prompter-clack', '@openpok/reporter-clack'],
+          required: false,
+        });
+      } else {
+        const template = TEMPLATES.find((t) => t.name === templateChoice);
+        selectedPlugins = template?.plugins ?? [];
+      }
+    }
 
     // Create project structure
     await r.group('Creating project', { layout: 'sequence' }, async (grp) => {

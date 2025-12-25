@@ -16,6 +16,9 @@ import {
   generateExampleCommand,
   generateBuildCommand,
   generateGitignore,
+  TEMPLATES,
+  TEMPLATE_NAMES,
+  AVAILABLE_PLUGINS,
 } from '../../packages/create/src/templates';
 
 describe('@openpok/create templates', () => {
@@ -171,5 +174,146 @@ describe('@openpok/create init command', () => {
     expect(packageJson.name).toBe(projectName);
     expect(packageJson.dependencies['@openpok/prompter-clack']).toBeDefined();
     expect(packageJson.dependencies['@openpok/reporter-clack']).toBeDefined();
+  });
+});
+
+describe('@openpok/create template presets', () => {
+  describe('TEMPLATES constant', () => {
+    it('has all four template types', () => {
+      expect(TEMPLATES).toHaveLength(4);
+      expect(TEMPLATE_NAMES).toEqual(['starter', 'minimal', 'full', 'custom']);
+    });
+
+    it('has starter template with correct plugins', () => {
+      const starter = TEMPLATES.find((t) => t.name === 'starter');
+      expect(starter).toBeDefined();
+      expect(starter!.label).toBe('Starter (recommended)');
+      expect(starter!.plugins).toEqual(['@openpok/prompter-clack', '@openpok/reporter-clack']);
+    });
+
+    it('has minimal template with no plugins', () => {
+      const minimal = TEMPLATES.find((t) => t.name === 'minimal');
+      expect(minimal).toBeDefined();
+      expect(minimal!.label).toBe('Minimal');
+      expect(minimal!.plugins).toEqual([]);
+    });
+
+    it('has full template with all plugins', () => {
+      const full = TEMPLATES.find((t) => t.name === 'full');
+      expect(full).toBeDefined();
+      expect(full!.label).toBe('Full');
+      expect(full!.plugins).toEqual([
+        '@openpok/prompter-clack',
+        '@openpok/reporter-clack',
+        '@openpok/tabs-ink',
+      ]);
+    });
+
+    it('has custom template with empty plugins array', () => {
+      const custom = TEMPLATES.find((t) => t.name === 'custom');
+      expect(custom).toBeDefined();
+      expect(custom!.label).toBe('Custom');
+      expect(custom!.plugins).toEqual([]);
+    });
+
+    it('all templates have required properties', () => {
+      for (const template of TEMPLATES) {
+        expect(template.name).toBeDefined();
+        expect(template.label).toBeDefined();
+        expect(template.hint).toBeDefined();
+        expect(Array.isArray(template.plugins)).toBe(true);
+      }
+    });
+  });
+
+  describe('AVAILABLE_PLUGINS constant', () => {
+    it('has all three plugins', () => {
+      expect(AVAILABLE_PLUGINS).toHaveLength(3);
+    });
+
+    it('has prompter-clack plugin', () => {
+      const prompter = AVAILABLE_PLUGINS.find((p) => p.value === '@openpok/prompter-clack');
+      expect(prompter).toBeDefined();
+      expect(prompter!.label).toBe('Prompter (clack)');
+    });
+
+    it('has reporter-clack plugin', () => {
+      const reporter = AVAILABLE_PLUGINS.find((p) => p.value === '@openpok/reporter-clack');
+      expect(reporter).toBeDefined();
+      expect(reporter!.label).toBe('Reporter (clack)');
+    });
+
+    it('has tabs-ink plugin', () => {
+      const tabs = AVAILABLE_PLUGINS.find((p) => p.value === '@openpok/tabs-ink');
+      expect(tabs).toBeDefined();
+      expect(tabs!.label).toBe('Tabs (ink)');
+    });
+
+    it('all plugins have required properties', () => {
+      for (const plugin of AVAILABLE_PLUGINS) {
+        expect(plugin.value).toBeDefined();
+        expect(plugin.label).toBeDefined();
+        expect(plugin.hint).toBeDefined();
+      }
+    });
+  });
+
+  describe('starter template', () => {
+    it('includes prompter-clack and reporter-clack plugins', () => {
+      const starter = TEMPLATES.find((t) => t.name === 'starter')!;
+      const config = {
+        name: 'starter-project',
+        plugins: starter.plugins,
+      };
+      const result = JSON.parse(generatePackageJson(config));
+
+      expect(result.dependencies['@openpok/prompter-clack']).toBe('latest');
+      expect(result.dependencies['@openpok/reporter-clack']).toBe('latest');
+      expect(result.dependencies['@openpok/tabs-ink']).toBeUndefined();
+    });
+  });
+
+  describe('minimal template', () => {
+    it('includes only core with no plugins', () => {
+      const minimal = TEMPLATES.find((t) => t.name === 'minimal')!;
+      const config = {
+        name: 'minimal-project',
+        plugins: minimal.plugins,
+      };
+      const result = JSON.parse(generatePackageJson(config));
+
+      expect(result.dependencies['@openpok/core']).toBe('latest');
+      expect(result.dependencies['@openpok/prompter-clack']).toBeUndefined();
+      expect(result.dependencies['@openpok/reporter-clack']).toBeUndefined();
+      expect(result.dependencies['@openpok/tabs-ink']).toBeUndefined();
+    });
+  });
+
+  describe('full template', () => {
+    it('includes all plugins including tabs-ink', () => {
+      const full = TEMPLATES.find((t) => t.name === 'full')!;
+      const config = {
+        name: 'full-project',
+        plugins: full.plugins,
+      };
+      const result = JSON.parse(generatePackageJson(config));
+
+      expect(result.dependencies['@openpok/prompter-clack']).toBe('latest');
+      expect(result.dependencies['@openpok/reporter-clack']).toBe('latest');
+      expect(result.dependencies['@openpok/tabs-ink']).toBe('latest');
+    });
+  });
+
+  describe('custom template', () => {
+    it('can include any combination of plugins', () => {
+      const config = {
+        name: 'custom-project',
+        plugins: ['@openpok/reporter-clack'], // Only reporter, no prompter
+      };
+      const result = JSON.parse(generatePackageJson(config));
+
+      expect(result.dependencies['@openpok/reporter-clack']).toBe('latest');
+      expect(result.dependencies['@openpok/prompter-clack']).toBeUndefined();
+    });
   });
 });

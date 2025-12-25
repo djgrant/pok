@@ -2,10 +2,79 @@
  * Template generators for scaffolding
  */
 
+import type { MultiselectOption } from '@openpok/core';
+
 export type ProjectConfig = {
   name: string;
   plugins: string[];
 };
+
+// =============================================================================
+// Template Definitions
+// =============================================================================
+
+export type Template = {
+  name: string;
+  label: string;
+  hint: string;
+  plugins: string[];
+};
+
+export const TEMPLATE_NAMES = ['starter', 'minimal', 'full', 'custom'] as const;
+export type TemplateName = (typeof TEMPLATE_NAMES)[number];
+
+export const TEMPLATES: Template[] = [
+  {
+    name: 'starter',
+    label: 'Starter (recommended)',
+    hint: 'Interactive prompts + beautiful output',
+    plugins: ['@openpok/prompter-clack', '@openpok/reporter-clack'],
+  },
+  {
+    name: 'minimal',
+    label: 'Minimal',
+    hint: 'Core only - add adapters later',
+    plugins: [],
+  },
+  {
+    name: 'full',
+    label: 'Full',
+    hint: 'All plugins including tabbed UI',
+    plugins: ['@openpok/prompter-clack', '@openpok/reporter-clack', '@openpok/tabs-ink'],
+  },
+  {
+    name: 'custom',
+    label: 'Custom',
+    hint: 'Choose plugins individually',
+    plugins: [], // Will prompt separately
+  },
+];
+
+// =============================================================================
+// Plugin Options (for custom template)
+// =============================================================================
+
+export const AVAILABLE_PLUGINS: MultiselectOption<string>[] = [
+  {
+    value: '@openpok/prompter-clack',
+    label: 'Prompter (clack)',
+    hint: 'Interactive prompts for user input',
+  },
+  {
+    value: '@openpok/reporter-clack',
+    label: 'Reporter (clack)',
+    hint: 'Beautiful CLI output and spinners',
+  },
+  {
+    value: '@openpok/tabs-ink',
+    label: 'Tabs (ink)',
+    hint: 'Tabbed UI for parallel processes',
+  },
+];
+
+// =============================================================================
+// File Generators
+// =============================================================================
 
 export function generatePackageJson(config: ProjectConfig): string {
   const deps: Record<string, string> = {
