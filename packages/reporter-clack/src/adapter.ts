@@ -37,7 +37,22 @@ import type {
   GroupId,
   GroupLayout,
   LogLevel,
+  OutputConfig,
 } from '@openpok/core';
+import { detectOutputConfig } from '@openpok/core';
+import { getSymbols, type SymbolSet } from './symbols';
+
+/**
+ * Helper to conditionally apply color.
+ * In no-color mode, returns text unchanged.
+ */
+function colorize(
+  text: string,
+  colorFn: (s: string) => string,
+  useColor: boolean
+): string {
+  return useColor ? colorFn(text) : text;
+}
 
 type SpinnerInstance = ReturnType<typeof p.spinner>;
 
@@ -103,6 +118,10 @@ type AdapterState = {
   bufferedLogs: BufferedLog[];
   /** Verbose mode - when true, all logs are displayed immediately (no buffering) */
   verbose: boolean;
+  /** Output configuration for color/unicode support */
+  outputConfig: OutputConfig;
+  /** Symbol set based on output config */
+  symbols: SymbolSet;
 };
 
 /**
@@ -133,13 +152,37 @@ function updateParallelSpinnerMessage(state: AdapterState): void {
 }
 
 /**
- * Display a log message using clack's log functions.
+ * Display a log message.
+ * Uses clack's log functions in unicode mode, plain console.log in plain mode.
  *
  * @param level - The log level
  * @param message - The message to display
+ * @param state - The adapter state (for output config)
  * @param indented - Whether to indent the log (for buffered logs inside activity context)
  */
-function displayLog(level: LogLevel, message: string, indented: boolean = false): void {
+function displayLog(
+  level: LogLevel,
+  message: string,
+  state: AdapterState,
+  indented: boolean = false
+): void {
+  const { outputConfig, symbols } = state;
+
+  // In plain mode (no unicode), use simple console output
+  if (!outputConfig.unicode) {
+    const prefix = indented ? `${symbols.groupLine}  ` : '';
+    const levelPrefix = {
+      info: symbols.info,
+      warn: symbols.warning,
+      error: symbols.error,
+      success: symbols.success,
+      step: symbols.step,
+    }[level];
+    console.log(`${prefix}${levelPrefix} ${message}`);
+    return;
+  }
+
+  // Unicode mode - use clack's decorative output
   const prefix = indented ? '\u2502  ' : ''; // │  for indented logs
   const formattedMessage = prefix + message;
 
@@ -176,7 +219,7 @@ function flushLogsForActivity(state: AdapterState, activityId: ActivityId): void
 
   // Display each buffered log with indentation
   for (const log of activityLogs) {
-    displayLog(log.level, log.message, true);
+    displayLog(log.level, log.message, state, true);
   }
 
   // Remove flushed logs from buffer
@@ -189,6 +232,8 @@ function flushLogsForActivity(state: AdapterState, activityId: ActivityId): void
 export type ReporterAdapterOptions = {
   /** When true, logs are displayed immediately instead of being buffered during spinners */
   verbose?: boolean;
+  /** Output configuration (color, unicode, verbose settings) */
+  output?: OutputConfig;
 };
 
 /**
@@ -197,6 +242,18 @@ export type ReporterAdapterOptions = {
  * @param options - Optional configuration for the adapter
  */
 export function createReporterAdapter(options?: ReporterAdapterOptions): ReporterAdapter {
+  // Get output config from options, or use defaults
+  const outputConfig: OutputConfig = options?.output ?? {
+    color: true,
+    unicode: true,
+    verbose: options?.verbose ?? false,
+  };
+  // Verbose can be set via options.verbose for backwards compatibility
+  if (options?.verbose !== undefined) {
+    outputConfig.verbose = options.verbose;
+  }
+  const symbols = getSymbols(outputConfig);
+
   return {
     start(bus: EventBus): ReporterAdapterController {
       const state: AdapterState = {
@@ -208,7 +265,9 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
         suspended: false,
         suspendedActivities: new Map(),
         bufferedLogs: [],
-        verbose: options?.verbose ?? false,
+        verbose: outputConfig.verbose,
+        outputConfig,
+        symbols,
       };
 
       const handleEvent = (event: CLIEvent): void => {
@@ -228,7 +287,14 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               layout: event.layout,
               hasFailure: false,
             });
-            p.intro(pc.bold(event.label));
+
+            // In plain mode, use simple bracket notation
+            if (!state.outputConfig.unicode) {
+              const label = colorize(event.label, pc.bold, state.outputConfig.color);
+              console.log(`${state.symbols.groupStart}${label}${state.symbols.groupEnd}`);
+            } else {
+              p.intro(colorize(event.label, pc.bold, state.outputConfig.color));
+            }
             break;
           }
 
@@ -325,15 +391,31 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             }
 
             // Show appropriate outro based on whether there were failures
-            if (hasFailures) {
-              p.outro(pc.red('\u2718 Failed'));
+            if (!state.outputConfig.unicode) {
+              // Plain mode - simple bracket notation
+              if (hasFailures) {
+                const failedText = colorize(state.symbols.failed, pc.red, state.outputConfig.color);
+                console.log(`${state.symbols.groupStart}${failedText}${state.symbols.groupEnd}`);
+              } else {
+                const doneText = colorize(state.symbols.done, pc.green, state.outputConfig.color);
+                console.log(`${state.symbols.groupStart}${doneText}${state.symbols.groupEnd}`);
+              }
             } else {
-              p.outro(pc.green('\u2714 Done'));
+              // Unicode mode - use clack's outro
+              if (hasFailures) {
+                p.outro(colorize(`${state.symbols.failed} Failed`, pc.red, state.outputConfig.color));
+              } else {
+                p.outro(colorize(`${state.symbols.done} Done`, pc.green, state.outputConfig.color));
+              }
             }
 
             // Print deferred error messages with remediation after the group closes
             for (const deferred of deferredErrors) {
-              p.log.error(deferred.error);
+              if (!state.outputConfig.unicode) {
+                console.log(`${state.symbols.error} ${deferred.error}`);
+              } else {
+                p.log.error(deferred.error);
+              }
 
               // Display remediation steps if available
               if (deferred.remediation && deferred.remediation.length > 0) {
@@ -518,7 +600,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
             // Verbose mode: always display logs immediately
             if (state.verbose) {
-              displayLog(event.level, event.message, false);
+              displayLog(event.level, event.message, state, false);
               break;
             }
 
@@ -531,11 +613,11 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 // Temporarily stop spinner, show error, resume
                 const currentMessage = spinner.currentMessage;
                 spinner.spinner.stop(currentMessage, 0);
-                displayLog(event.level, event.message, false);
+                displayLog(event.level, event.message, state, false);
                 spinner.spinner.start(currentMessage);
               } else {
                 // No spinner for this activity, just display
-                displayLog(event.level, event.message, false);
+                displayLog(event.level, event.message, state, false);
               }
               break;
             }
@@ -560,7 +642,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             }
 
             // No active spinners - display immediately
-            displayLog(event.level, event.message, false);
+            displayLog(event.level, event.message, state, false);
             break;
           }
 

@@ -14,6 +14,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { run, RouterError } from './lib/router';
+import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 
 /**
  * Find project root by looking for package.json
@@ -73,8 +74,12 @@ export async function runCli(
     process.exit(1);
   }
 
+  // Detect output configuration from args
+  const { outputArgs, remainingArgs } = extractOutputFlags(args);
+  const outputConfig = detectOutputConfig(outputArgs);
+
   // Dynamically import the adapters - they're peer dependencies
-  let createReporterAdapter: () => any;
+  let createReporterAdapter: (options?: { output?: typeof outputConfig }) => any;
   let createPrompter: () => any;
 
   try {
@@ -115,11 +120,11 @@ export async function runCli(
   }
 
   try {
-    await run(args, {
+    await run(remainingArgs, {
       commandsDir,
       projectRoot,
       appName,
-      reporterAdapter: createReporterAdapter(),
+      reporterAdapter: createReporterAdapter({ output: outputConfig }),
       prompter: createPrompter(),
     });
   } catch (error) {
