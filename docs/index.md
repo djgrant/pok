@@ -15,6 +15,7 @@ pok is a file-based CLI framework for building beautiful command-line interfaces
 ### Getting Started
 
 - [Installation & Quick Start](./getting-started.md)
+- [Terminal Requirements](./terminal-requirements.md)
 
 ### Core Concepts
 

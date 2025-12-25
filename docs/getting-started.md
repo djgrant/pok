@@ -171,6 +171,13 @@ export const command = defineCommand({
 });
 ```
 
+## Terminal Requirements
+
+pok works best in modern terminals with Unicode and color support.
+See [Terminal Requirements](./terminal-requirements.md) for details.
+
+If you experience display issues, try `--plain` mode.
+
 ## Next Steps
 
 - [Architecture](./architecture.md) - Understand how pok works
