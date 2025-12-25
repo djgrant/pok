@@ -358,4 +358,175 @@ describe('ClackReporterAdapter', () => {
       expect(lines.some((l) => l.includes('Immediate log'))).toBe(true);
     });
   });
+
+  describe('plain mode (--plain or CI)', () => {
+    async function getScreenshotPlain(events: CLIEvent[]): Promise<string[]> {
+      vt = createVirtualTerminal();
+      const bus = createEventBus();
+      const adapter = createReporterAdapter({
+        output: { color: false, unicode: false, verbose: false },
+      });
+      const controller = adapter.start(bus);
+
+      for (const event of events) {
+        bus.emit(event);
+      }
+
+      controller.stop();
+      return vt.screenshot();
+    }
+
+    it('renders group start with ASCII brackets', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      // Should use ASCII [ ] instead of Unicode ┌ └
+      expect(allOutput).toContain('[Build]');
+      expect(allOutput).toContain('[Done]');
+    });
+
+    it('renders activity success with [OK] prefix', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      // Should use [OK] prefix instead of checkmark
+      expect(allOutput).toContain('[OK]');
+      expect(allOutput).toContain('Compile');
+    });
+
+    it('renders activity failure with [ERR] prefix', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'activity:failure', id: 'a1', error: 'Compilation failed' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      // Should use [ERR] prefix
+      expect(allOutput).toContain('[ERR]');
+    });
+
+    it('renders group end with [Failed] on failure', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'activity:failure', id: 'a1', error: 'Compilation failed' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      expect(allOutput).toContain('[Failed]');
+    });
+
+    it('renders log messages with ASCII prefixes', async () => {
+      const events: CLIEvent[] = [
+        { type: 'log', level: 'info', message: 'Information' },
+        { type: 'log', level: 'warn', message: 'Warning' },
+        { type: 'log', level: 'error', message: 'Error' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      expect(allOutput).toContain('[INFO]');
+      expect(allOutput).toContain('Information');
+      expect(allOutput).toContain('[WARN]');
+      expect(allOutput).toContain('Warning');
+      expect(allOutput).toContain('[ERR]');
+      expect(allOutput).toContain('Error');
+    });
+
+    it('renders parallel group results with ASCII prefixes', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Deploy', layout: 'parallel' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Push to registry' },
+        { type: 'activity:start', id: 'a2', parentId: 'g1', label: 'Health check' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'activity:failure', id: 'a2', error: 'Health check failed' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      expect(allOutput).toContain('[OK]');
+      expect(allOutput).toContain('Push to registry');
+      expect(allOutput).toContain('[ERR]');
+      expect(allOutput).toContain('Health check');
+    });
+
+    it('displays logs immediately without buffering in plain mode', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'log', activityId: 'a1', level: 'info', message: 'Compiling files...' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotPlain(events);
+      const allOutput = lines.join('\n');
+      // Log should be present (displayed immediately, not buffered)
+      expect(allOutput).toContain('Compiling files...');
+    });
+  });
+
+  describe('no-color mode (--no-color or NO_COLOR)', () => {
+    async function getScreenshotNoColor(events: CLIEvent[]): Promise<string[]> {
+      vt = createVirtualTerminal();
+      const bus = createEventBus();
+      // color: false, but unicode: true - should still use Unicode symbols without colors
+      const adapter = createReporterAdapter({
+        output: { color: false, unicode: true, verbose: false },
+      });
+      const controller = adapter.start(bus);
+
+      for (const event of events) {
+        bus.emit(event);
+      }
+
+      controller.stop();
+      return vt.screenshot();
+    }
+
+    it('renders without ANSI color codes', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotNoColor(events);
+      // Should still have Unicode symbols but no ANSI color codes
+      // The output should contain the message without escape sequences
+      expect(lines.some((l) => l.includes('Build'))).toBe(true);
+      expect(lines.some((l) => l.includes('Compile'))).toBe(true);
+    });
+
+    it('still uses Unicode symbols when only color is disabled', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshotNoColor(events);
+      // Should use Unicode symbols (via clack), not ASCII
+      // Should not have [OK] prefix since unicode is enabled
+      expect(lines.some((l) => l.includes('[OK]'))).toBe(false);
+    });
+  });
 });

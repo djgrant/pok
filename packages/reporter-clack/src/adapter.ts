@@ -54,6 +54,15 @@ function colorize(
   return useColor ? colorFn(text) : text;
 }
 
+/**
+ * Write a line to stdout.
+ * Uses process.stdout.write to ensure proper capture in all environments.
+ * (Bun's console.log may not be captured by stdout interception)
+ */
+function writeLine(line: string): void {
+  process.stdout.write(line + '\n');
+}
+
 type SpinnerInstance = ReturnType<typeof p.spinner>;
 
 type SpinnerEntry = {
@@ -178,7 +187,7 @@ function displayLog(
       success: symbols.success,
       step: symbols.step,
     }[level];
-    console.log(`${prefix}${levelPrefix} ${message}`);
+    writeLine(`${prefix}${levelPrefix} ${message}`);
     return;
   }
 
@@ -291,7 +300,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             // In plain mode, use simple bracket notation
             if (!state.outputConfig.unicode) {
               const label = colorize(event.label, pc.bold, state.outputConfig.color);
-              console.log(`${state.symbols.groupStart}${label}${state.symbols.groupEnd}`);
+              writeLine(`${state.symbols.groupStart}${label}${state.symbols.groupEnd}`);
             } else {
               p.intro(colorize(event.label, pc.bold, state.outputConfig.color));
             }
@@ -365,11 +374,21 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               for (const [activityId, activity] of state.parallelActivities) {
                 if (activity.groupId !== event.id) continue;
                 if (activity.status === 'success') {
-                  p.log.success(activity.label);
+                  if (!state.outputConfig.unicode) {
+                    const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
+                    writeLine(`  ${prefix} ${activity.label}`);
+                  } else {
+                    p.log.success(activity.label);
+                  }
                 } else if (activity.status === 'failure') {
                   hasFailures = true;
                   // Show label inside group, defer error message with remediation
-                  p.log.error(activity.label);
+                  if (!state.outputConfig.unicode) {
+                    const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
+                    writeLine(`  ${prefix} ${activity.label}`);
+                  } else {
+                    p.log.error(activity.label);
+                  }
                   if (activity.error) {
                     deferredErrors.push({
                       error: activity.error,
@@ -395,10 +414,10 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Plain mode - simple bracket notation
               if (hasFailures) {
                 const failedText = colorize(state.symbols.failed, pc.red, state.outputConfig.color);
-                console.log(`${state.symbols.groupStart}${failedText}${state.symbols.groupEnd}`);
+                writeLine(`${state.symbols.groupStart}${failedText}${state.symbols.groupEnd}`);
               } else {
                 const doneText = colorize(state.symbols.done, pc.green, state.outputConfig.color);
-                console.log(`${state.symbols.groupStart}${doneText}${state.symbols.groupEnd}`);
+                writeLine(`${state.symbols.groupStart}${doneText}${state.symbols.groupEnd}`);
               }
             } else {
               // Unicode mode - use clack's outro
@@ -412,24 +431,24 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             // Print deferred error messages with remediation after the group closes
             for (const deferred of deferredErrors) {
               if (!state.outputConfig.unicode) {
-                console.log(`${state.symbols.error} ${deferred.error}`);
+                writeLine(`${state.symbols.error} ${deferred.error}`);
               } else {
                 p.log.error(deferred.error);
               }
 
               // Display remediation steps if available
               if (deferred.remediation && deferred.remediation.length > 0) {
-                console.log('');
-                console.log('  To fix:');
+                writeLine('');
+                writeLine('  To fix:');
                 for (const step of deferred.remediation) {
-                  console.log(`    - ${step}`);
+                  writeLine(`    - ${step}`);
                 }
               }
 
               // Display documentation link if available
               if (deferred.documentationUrl) {
-                console.log('');
-                console.log(`  More info: ${deferred.documentationUrl}`);
+                writeLine('');
+                writeLine(`  More info: ${deferred.documentationUrl}`);
               }
             }
             break;
@@ -450,28 +469,48 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 status: 'pending',
               });
 
-              // Create or update the parallel spinner
-              if (!state.parallelSpinner) {
+              // In plain mode, just track activities - results shown at group:end
+              if (!state.outputConfig.unicode) {
+                if (!state.parallelSpinnerGroupId) {
+                  state.parallelSpinnerGroupId = event.parentId as GroupId;
+                  const activities = state.parallelActivities.size;
+                  writeLine(`  Running ${activities} task${activities > 1 ? 's' : ''}...`);
+                }
+              } else {
+                // Unicode mode: create or update the parallel spinner
+                if (!state.parallelSpinner) {
+                  const spinner = p.spinner();
+                  state.parallelSpinner = {
+                    spinner,
+                    label: event.label,
+                    currentMessage: event.label,
+                  };
+                  state.parallelSpinnerGroupId = event.parentId as GroupId;
+                  spinner.start(event.label);
+                }
+                updateParallelSpinnerMessage(state);
+              }
+            } else {
+              // Sequential activity
+              if (!state.outputConfig.unicode) {
+                // Plain mode: track activity without spinner - result shown on completion
+                state.spinners.set(event.id, {
+                  spinner: null as unknown as SpinnerInstance, // Not used in plain mode
+                  label: event.label,
+                  currentMessage: event.label,
+                  parentGroupId: event.parentId as GroupId | undefined,
+                });
+              } else {
+                // Unicode mode: create individual spinner
                 const spinner = p.spinner();
-                state.parallelSpinner = {
+                state.spinners.set(event.id, {
                   spinner,
                   label: event.label,
                   currentMessage: event.label,
-                };
-                state.parallelSpinnerGroupId = event.parentId as GroupId;
+                  parentGroupId: event.parentId as GroupId | undefined,
+                });
                 spinner.start(event.label);
               }
-              updateParallelSpinnerMessage(state);
-            } else {
-              // Sequential: create individual spinner
-              const spinner = p.spinner();
-              state.spinners.set(event.id, {
-                spinner,
-                label: event.label,
-                currentMessage: event.label,
-                parentGroupId: event.parentId as GroupId | undefined,
-              });
-              spinner.start(event.label);
             }
             break;
           }
@@ -485,7 +524,9 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Update the activity label if message provided
               if (event.payload.message) {
                 parallelActivity.label = event.payload.message;
-                updateParallelSpinnerMessage(state);
+                if (state.outputConfig.unicode) {
+                  updateParallelSpinnerMessage(state);
+                }
               }
               break;
             }
@@ -498,7 +539,10 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 (event.payload.progress !== undefined ? `${event.payload.progress}%` : null);
               if (text) {
                 entry.currentMessage = text;
-                entry.spinner.message(text);
+                // Only update spinner in unicode mode
+                if (state.outputConfig.unicode && entry.spinner) {
+                  entry.spinner.message(text);
+                }
               }
             }
             break;
@@ -509,7 +553,9 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             const parallelActivity = state.parallelActivities.get(event.id);
             if (parallelActivity) {
               parallelActivity.status = 'success';
-              updateParallelSpinnerMessage(state);
+              if (state.outputConfig.unicode) {
+                updateParallelSpinnerMessage(state);
+              }
               // Note: For parallel activities, logs will be flushed at group:end
               break;
             }
@@ -517,7 +563,14 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             // Sequential activity
             const entry = state.spinners.get(event.id);
             if (entry) {
-              entry.spinner.stop(entry.label, 0);
+              if (!state.outputConfig.unicode) {
+                // Plain mode - print success line
+                const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
+                writeLine(`  ${prefix} ${entry.label}`);
+              } else if (entry.spinner) {
+                // Unicode mode - stop spinner
+                entry.spinner.stop(entry.label, 0);
+              }
               state.spinners.delete(event.id);
 
               // Flush any buffered logs for this activity
@@ -526,7 +579,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
               if (suspended && !state.suspended) {
-                p.log.success(suspended.label);
+                if (!state.outputConfig.unicode) {
+                  const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
+                  writeLine(`  ${prefix} ${suspended.label}`);
+                } else {
+                  p.log.success(suspended.label);
+                }
                 state.suspendedActivities.delete(event.id);
               }
             }
@@ -549,7 +607,9 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               if (parentGroup) {
                 parentGroup.hasFailure = true;
               }
-              updateParallelSpinnerMessage(state);
+              if (state.outputConfig.unicode) {
+                updateParallelSpinnerMessage(state);
+              }
               break;
             }
 
@@ -563,22 +623,31 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                   parentGroup.hasFailure = true;
                 }
               }
-              entry.spinner.stop(errorMessage, 1);
+
+              if (!state.outputConfig.unicode) {
+                // Plain mode - print error line
+                const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
+                writeLine(`  ${prefix} ${errorMessage}`);
+              } else if (entry.spinner) {
+                // Unicode mode - stop spinner with error
+                entry.spinner.stop(errorMessage, 1);
+              }
               state.spinners.delete(event.id);
 
               // Display remediation steps if available
+              const linePrefix = state.outputConfig.unicode ? '\u2502' : state.symbols.groupLine;
               if (event.remediation && event.remediation.length > 0) {
-                console.log('\u2502');
-                console.log('\u2502     To fix:');
+                writeLine(linePrefix);
+                writeLine(`${linePrefix}     To fix:`);
                 for (const step of event.remediation) {
-                  console.log(`\u2502       - ${step}`);
+                  writeLine(`${linePrefix}       - ${step}`);
                 }
               }
 
               // Display documentation link if available
               if (event.documentationUrl) {
-                console.log('\u2502');
-                console.log(`\u2502     More info: ${event.documentationUrl}`);
+                writeLine(linePrefix);
+                writeLine(`${linePrefix}     More info: ${event.documentationUrl}`);
               }
 
               // Flush any buffered logs for this activity
@@ -587,7 +656,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
               if (suspended && !state.suspended) {
-                p.log.error(`${suspended.label}: ${errorMessage}`);
+                if (!state.outputConfig.unicode) {
+                  const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
+                  writeLine(`  ${prefix} ${suspended.label}: ${errorMessage}`);
+                } else {
+                  p.log.error(`${suspended.label}: ${errorMessage}`);
+                }
                 state.suspendedActivities.delete(event.id);
               }
             }
@@ -606,10 +680,10 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
             const hasActiveSpinners = state.spinners.size > 0 || state.parallelSpinner !== null;
 
-            // Error logs interrupt spinners immediately
-            if (event.level === 'error' && hasActiveSpinners && event.activityId) {
+            // Error logs interrupt spinners immediately (only in unicode mode)
+            if (event.level === 'error' && hasActiveSpinners && event.activityId && state.outputConfig.unicode) {
               const spinner = state.spinners.get(event.activityId);
-              if (spinner) {
+              if (spinner && spinner.spinner) {
                 // Temporarily stop spinner, show error, resume
                 const currentMessage = spinner.currentMessage;
                 spinner.spinner.stop(currentMessage, 0);
@@ -649,25 +723,29 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
           // Reporter control events
           case 'reporter:suspend': {
             state.suspended = true;
-            // Stop all active spinners and track them for completion messages
-            for (const [id, entry] of state.spinners) {
-              try {
-                entry.spinner.stop(entry.label + '...', 0);
-                state.suspendedActivities.set(id, { label: entry.label });
-              } catch {
-                // Spinner may already be stopped
+            // Stop all active spinners and track them for completion messages (only in unicode mode)
+            if (state.outputConfig.unicode) {
+              for (const [id, entry] of state.spinners) {
+                try {
+                  if (entry.spinner) {
+                    entry.spinner.stop(entry.label + '...', 0);
+                  }
+                  state.suspendedActivities.set(id, { label: entry.label });
+                } catch {
+                  // Spinner may already be stopped
+                }
               }
-            }
-            state.spinners.clear();
+              state.spinners.clear();
 
-            // Also stop parallel spinner
-            if (state.parallelSpinner) {
-              try {
-                state.parallelSpinner.spinner.stop('Paused...', 0);
-              } catch {
-                // Spinner may already be stopped
+              // Also stop parallel spinner
+              if (state.parallelSpinner) {
+                try {
+                  state.parallelSpinner.spinner.stop('Paused...', 0);
+                } catch {
+                  // Spinner may already be stopped
+                }
+                state.parallelSpinner = null;
               }
-              state.parallelSpinner = null;
             }
             break;
           }
@@ -683,19 +761,23 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
       return {
         stop(): void {
-          // Stop all active spinners
-          for (const entry of state.spinners.values()) {
-            try {
-              entry.spinner.stop('Stopped', 1);
-            } catch {
-              // Spinner may already be stopped
+          // Stop all active spinners (only in unicode mode where spinners exist)
+          if (state.outputConfig.unicode) {
+            for (const entry of state.spinners.values()) {
+              try {
+                if (entry.spinner) {
+                  entry.spinner.stop('Stopped', 1);
+                }
+              } catch {
+                // Spinner may already be stopped
+              }
             }
-          }
-          if (state.parallelSpinner) {
-            try {
-              state.parallelSpinner.spinner.stop('Stopped', 1);
-            } catch {
-              // Spinner may already be stopped
+            if (state.parallelSpinner) {
+              try {
+                state.parallelSpinner.spinner.stop('Stopped', 1);
+              } catch {
+                // Spinner may already be stopped
+              }
             }
           }
           state.spinners.clear();
