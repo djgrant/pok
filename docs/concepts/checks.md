@@ -20,6 +20,10 @@ const myCheck = defineCheck({
     // Validation logic
     // Throw an Error with helpful message if check fails
   },
+  // Optional: enhanced error information
+  errorMessage: 'Custom error message',
+  remediation: ['Step 1 to fix', 'Step 2 to fix'],
+  documentationUrl: 'https://example.com/docs',
 });
 ```
 
@@ -42,7 +46,7 @@ export const dockerInstalled = defineCheck({
 });
 ```
 
-### Service Running
+### Service Running with Remediation
 
 ```typescript
 export const dockerRunning = defineCheck({
@@ -50,9 +54,16 @@ export const dockerRunning = defineCheck({
   check: async () => {
     const result = await $`docker info`.nothrow().quiet();
     if (result.exitCode !== 0) {
-      throw new Error('Docker daemon is not running.\n' + 'Please start Docker Desktop.');
+      throw new Error('Docker daemon is not running');
     }
   },
+  errorMessage: 'Docker daemon is not running',
+  remediation: [
+    "Start Docker Desktop, or",
+    "Run 'sudo systemctl start docker' (Linux)",
+    "Run 'open -a Docker' (macOS)",
+  ],
+  documentationUrl: 'https://docs.docker.com/get-started/',
 });
 ```
 
@@ -197,13 +208,68 @@ pre: async (ctx) => {
 },
 ```
 
-## Error Messages
+## Error Messages and Remediation
 
-Good error messages include:
+### Using Remediation Fields (Recommended)
 
-1. **What failed** - Clear description
-2. **Why it matters** - Context
-3. **How to fix** - Actionable steps
+The recommended approach is to use the `errorMessage`, `remediation`, and `documentationUrl` fields. These provide structured error information that renders consistently:
+
+```typescript
+export const dockerRunning = defineCheck({
+  label: 'Docker running',
+  check: async () => {
+    const result = await $`docker info`.nothrow().quiet();
+    if (result.exitCode !== 0) {
+      throw new Error('Docker not running');
+    }
+  },
+  errorMessage: 'Docker daemon is not running',
+  remediation: [
+    "Start Docker Desktop, or",
+    "Run 'sudo systemctl start docker' (Linux)",
+  ],
+  documentationUrl: 'https://docs.docker.com/get-started/',
+});
+```
+
+This renders as:
+
+```
+┌  Pre-flight Checks
+│
+■  Docker running
+│     Docker daemon is not running
+│     
+│     To fix:
+│       - Start Docker Desktop, or
+│       - Run 'sudo systemctl start docker' (Linux)
+│     
+│     More info: https://docs.docker.com/get-started/
+│
+└  ✘ Failed
+```
+
+### Single Remediation Step
+
+For simple fixes, use a string instead of an array:
+
+```typescript
+export const nodeVersion = defineCheck({
+  label: 'Node.js >= 20',
+  check: async () => {
+    const version = await getNodeMajorVersion();
+    if (version < 20) {
+      throw new Error(`Node.js 20+ required`);
+    }
+  },
+  errorMessage: `Node.js 20+ required (current: ${process.version})`,
+  remediation: 'Install Node.js 20+ from https://nodejs.org/',
+});
+```
+
+### Legacy: Error Message Only
+
+You can still include all information in the error message:
 
 ```typescript
 throw new Error(
@@ -302,17 +368,53 @@ export const bunVersion = createVersionCheck('bun', 1, 'Bun >= 1.0');
 
 ## Visual Output
 
-Checks render with spinners:
+### Successful Checks
 
 ```
-◆  Pre-flight Checks
-│  ◇  Docker installed
-│  ◇  Docker running
-│  ◇  Node.js >= 20
-│  ✖  .env file exists
+┌  Pre-flight Checks
 │
-│  Error: .env file not found.
-│  Copy .env.example to .env and fill in values.
+◇  Docker installed
+│
+◇  Docker running
+│
+◇  Node.js >= 20
+│
+└  ✔ Done
+```
+
+### Failed Check (Basic)
+
+```
+┌  Pre-flight Checks
+│
+◇  Docker installed
+│
+■  Docker running
+│
+└  ✘ Failed
+
+Error: Docker is not running
+```
+
+### Failed Check with Remediation
+
+When a check has `remediation` and/or `documentationUrl` defined, they're displayed after the error:
+
+```
+┌  Pre-flight Checks
+│
+◇  Docker installed
+│
+■  Docker running
+│     Docker daemon is not running
+│     
+│     To fix:
+│       - Start Docker Desktop, or
+│       - Run 'sudo systemctl start docker' (Linux)
+│     
+│     More info: https://docs.docker.com/get-started/
+│
+└  ✘ Failed
 ```
 
 ## Best Practices

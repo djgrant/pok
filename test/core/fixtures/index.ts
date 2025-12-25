@@ -9,3 +9,4 @@ export const commandWithDynamicPreStaging = { events: eventsStaging };
 export * as menuNavigation from '../../cases/18-menu-navigation/events';
 export * as runAllChildren from '../../cases/15-run-all/events';
 export * as taskWithReporter from '../../cases/08-with-reporter/events';
+export * as commandWithFailingPreRemediation from '../../cases/19-with-failing-pre-remediation/events';

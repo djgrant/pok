@@ -16,15 +16,21 @@ function defineCheck(config: CheckConfig): CheckConfig;
 type CheckConfig = {
   label: string;
   check: () => Promise<void> | void;
+  errorMessage?: string;
+  remediation?: string | string[];
+  documentationUrl?: string;
 };
 ```
 
 ## Configuration
 
-| Property | Type                          | Description                                |
-| -------- | ----------------------------- | ------------------------------------------ |
-| `label`  | `string`                      | Human-readable label for logging           |
-| `check`  | `() => void \| Promise<void>` | Validation function that throws on failure |
+| Property           | Type                          | Description                                           |
+| ------------------ | ----------------------------- | ----------------------------------------------------- |
+| `label`            | `string`                      | Human-readable label for logging                      |
+| `check`            | `() => void \| Promise<void>` | Validation function that throws on failure            |
+| `errorMessage`     | `string`                      | Custom error message (replaces default thrown error)  |
+| `remediation`      | `string \| string[]`          | Fix instructions shown when check fails               |
+| `documentationUrl` | `string`                      | Link to documentation for more information            |
 
 ## Examples
 
@@ -45,7 +51,7 @@ export const dockerInstalled = defineCheck({
 });
 ```
 
-### Check with Custom Validation
+### Check with Remediation Steps
 
 ```typescript
 import { defineCheck } from '@openpok/core';
@@ -56,9 +62,35 @@ export const dockerRunning = defineCheck({
   check: async () => {
     const result = await $`docker info`.nothrow().quiet();
     if (result.exitCode !== 0) {
-      throw new Error('Docker is not running. Please start Docker Desktop.');
+      throw new Error('Docker is not running');
     }
   },
+  errorMessage: 'Docker daemon is not running',
+  remediation: [
+    "Start Docker Desktop, or",
+    "Run 'sudo systemctl start docker' (Linux)",
+    "Run 'open -a Docker' (macOS)",
+  ],
+  documentationUrl: 'https://docs.docker.com/get-started/',
+});
+```
+
+### Check with Single Remediation
+
+```typescript
+import { defineCheck } from '@openpok/core';
+
+export const dockerInstalled = defineCheck({
+  label: 'Docker installed',
+  check: async () => {
+    const exists = await commandExists('docker');
+    if (!exists) {
+      throw new Error('Docker not found');
+    }
+  },
+  errorMessage: 'Docker is not installed',
+  remediation: 'Install Docker from https://docs.docker.com/get-docker/',
+  documentationUrl: 'https://docs.docker.com/get-docker/',
 });
 ```
 
@@ -196,14 +228,40 @@ When checks are executed:
 2. Each check's label is displayed with a spinner
 3. On success, a checkmark appears
 4. On failure, execution stops and the error message is shown
+5. If remediation steps are defined, they're displayed after the error
+6. If a documentation URL is provided, it's shown for more information
+
+### Basic Failure
 
 ```
-◆  Pre-flight Checks
-│  ◇  Docker running
-│  ◇  Node.js >= 18
-│  ✖  .env file exists
+┌  Pre-flight Checks
 │
-│  Error: .env file not found. Copy .env.example to .env and fill in values.
+◇  Docker installed
+│
+■  Docker running
+│
+└  ✘ Failed
+
+Error: Docker is not running
+```
+
+### Failure with Remediation
+
+```
+┌  Pre-flight Checks
+│
+◇  Docker installed
+│
+■  Docker running
+│     Docker daemon is not running
+│     
+│     To fix:
+│       - Start Docker Desktop, or
+│       - Run 'sudo systemctl start docker' (Linux)
+│     
+│     More info: https://docs.docker.com/get-started/
+│
+└  ✘ Failed
 ```
 
 ## Deduplication
