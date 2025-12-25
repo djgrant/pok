@@ -17,6 +17,13 @@ export { defineCompositeResolver } from './lib/resolver.composite';
 export { defineCheck, CheckError } from './lib/check';
 
 // =============================================================================
+// Dry Run Pattern
+// =============================================================================
+
+export { dryRunContext, createDryRunReporter } from './lib/dry-run';
+export type { WithDryRun, DryRunReporter } from './lib/dry-run';
+
+// =============================================================================
 // Command types
 // =============================================================================
 
