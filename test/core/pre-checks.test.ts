@@ -80,4 +80,49 @@ describe('Pre-flight Checks', () => {
       expect(failureEvents).toHaveLength(1);
     });
   });
+
+  describe('check remediation', () => {
+    it('includes remediation in failure event', async () => {
+      const { events } = await captureEvents(['with-failing-pre-remediation']);
+      const failureEvent = events.find((e) => e.type === 'activity:failure');
+
+      expect(failureEvent).toBeDefined();
+      if (failureEvent?.type === 'activity:failure') {
+        expect(failureEvent.remediation).toEqual([
+          "Start Docker Desktop, or",
+          "Run 'sudo systemctl start docker' (Linux)",
+        ]);
+      }
+    });
+
+    it('includes documentationUrl in failure event', async () => {
+      const { events } = await captureEvents(['with-failing-pre-remediation']);
+      const failureEvent = events.find((e) => e.type === 'activity:failure');
+
+      expect(failureEvent).toBeDefined();
+      if (failureEvent?.type === 'activity:failure') {
+        expect(failureEvent.documentationUrl).toBe('https://docs.docker.com/get-started/');
+      }
+    });
+
+    it('uses custom errorMessage instead of thrown error message', async () => {
+      const { events } = await captureEvents(['with-failing-pre-remediation']);
+      const failureEvent = events.find((e) => e.type === 'activity:failure');
+
+      expect(failureEvent).toBeDefined();
+      if (failureEvent?.type === 'activity:failure') {
+        // Should use the custom errorMessage, not the thrown error message
+        const errorMessage =
+          failureEvent.error instanceof Error
+            ? failureEvent.error.message
+            : String(failureEvent.error);
+        expect(errorMessage).toBe('Docker daemon is not running');
+      }
+    });
+
+    it('matches expected events for check with remediation', async () => {
+      const { events } = await captureEvents(['with-failing-pre-remediation']);
+      expect(normalizeEvents(events)).toEqual(fixtures.commandWithFailingPreRemediation.events);
+    });
+  });
 });

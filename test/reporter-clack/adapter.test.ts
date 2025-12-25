@@ -529,4 +529,138 @@ describe('ClackReporterAdapter', () => {
       expect(lines.some((l) => l.includes('[OK]'))).toBe(false);
     });
   });
+
+  describe('remediation display', () => {
+    it('displays remediation steps for sequential activity failure', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Pre-flight Checks', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Docker running' },
+        {
+          type: 'activity:failure',
+          id: 'a1',
+          error: 'Docker daemon is not running',
+          remediation: [
+            "Start Docker Desktop, or",
+            "Run 'sudo systemctl start docker' (Linux)",
+          ],
+        },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      const allOutput = lines.join('\n');
+
+      // Should show "To fix:" section
+      expect(allOutput).toContain('To fix:');
+      // Should show remediation steps
+      expect(allOutput).toContain('Start Docker Desktop, or');
+      expect(allOutput).toContain("Run 'sudo systemctl start docker' (Linux)");
+    });
+
+    it('displays documentation URL for sequential activity failure', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Pre-flight Checks', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Docker running' },
+        {
+          type: 'activity:failure',
+          id: 'a1',
+          error: 'Docker daemon is not running',
+          documentationUrl: 'https://docs.docker.com/get-started/',
+        },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      const allOutput = lines.join('\n');
+
+      // Should show documentation URL
+      expect(allOutput).toContain('More info:');
+      expect(allOutput).toContain('https://docs.docker.com/get-started/');
+    });
+
+    it('displays both remediation and documentation URL', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Pre-flight Checks', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Docker running' },
+        {
+          type: 'activity:failure',
+          id: 'a1',
+          error: 'Docker daemon is not running',
+          remediation: ['Start Docker Desktop'],
+          documentationUrl: 'https://docs.docker.com/get-started/',
+        },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      const allOutput = lines.join('\n');
+
+      expect(allOutput).toContain('To fix:');
+      expect(allOutput).toContain('Start Docker Desktop');
+      expect(allOutput).toContain('More info:');
+      expect(allOutput).toContain('https://docs.docker.com/get-started/');
+    });
+
+    it('displays remediation for parallel activity failures after group ends', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Pre-flight Checks', layout: 'parallel' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Docker installed' },
+        { type: 'activity:start', id: 'a2', parentId: 'g1', label: 'Docker running' },
+        { type: 'activity:success', id: 'a1' },
+        {
+          type: 'activity:failure',
+          id: 'a2',
+          error: 'Docker daemon is not running',
+          remediation: ['Start Docker Desktop'],
+          documentationUrl: 'https://docs.docker.com/get-started/',
+        },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      const allOutput = lines.join('\n');
+
+      // Should show remediation after group ends
+      expect(allOutput).toContain('To fix:');
+      expect(allOutput).toContain('Start Docker Desktop');
+      expect(allOutput).toContain('More info:');
+      expect(allOutput).toContain('https://docs.docker.com/get-started/');
+    });
+
+    it('displays remediation in plain mode', async () => {
+      vt = createVirtualTerminal();
+      const bus = createEventBus();
+      const adapter = createReporterAdapter({
+        output: { color: false, unicode: false, verbose: false },
+      });
+      const controller = adapter.start(bus);
+
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Pre-flight Checks', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Docker running' },
+        {
+          type: 'activity:failure',
+          id: 'a1',
+          error: 'Docker daemon is not running',
+          remediation: ['Start Docker Desktop'],
+          documentationUrl: 'https://docs.docker.com/get-started/',
+        },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      for (const event of events) {
+        bus.emit(event);
+      }
+
+      controller.stop();
+      const lines = await vt.screenshot();
+      const allOutput = lines.join('\n');
+
+      // Should show remediation in plain mode too
+      expect(allOutput).toContain('To fix:');
+      expect(allOutput).toContain('Start Docker Desktop');
+      expect(allOutput).toContain('More info:');
+      expect(allOutput).toContain('https://docs.docker.com/get-started/');
+    });
+  });
 });
