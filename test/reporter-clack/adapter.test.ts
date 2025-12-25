@@ -276,6 +276,58 @@ describe('ClackReporterAdapter', () => {
       // Log should still appear even after failure
       expect(lines.some((l) => l.includes('Warning before failure'))).toBe(true);
     });
+
+    it('error logs interrupt spinners immediately', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Deploy', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Running' },
+        // Error log should interrupt spinner and show immediately
+        { type: 'log', activityId: 'a1', level: 'error', message: 'Critical error occurred' },
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      // Error should be displayed
+      expect(lines.some((l) => l.includes('Critical error occurred'))).toBe(true);
+    });
+
+    it('displays logs without activity ID immediately when no spinners active', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Test', layout: 'sequence' },
+        // Log without activity ID and no active spinner
+        { type: 'log', level: 'info', message: 'Global info message' },
+        { type: 'group:end', id: 'g1' },
+      ];
+
+      const lines = await getScreenshot(events);
+      expect(lines.some((l) => l.includes('Global info message'))).toBe(true);
+    });
+
+    it('respects buffer limit per activity', async () => {
+      const events: CLIEvent[] = [
+        { type: 'group:start', id: 'g1', label: 'Test', layout: 'sequence' },
+        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Working' },
+      ];
+
+      // Add 150 logs (exceeds MAX_BUFFERED_LOGS_PER_ACTIVITY = 100)
+      for (let i = 0; i < 150; i++) {
+        events.push({ type: 'log', activityId: 'a1', level: 'info', message: `Log ${i}` });
+      }
+
+      events.push(
+        { type: 'activity:success', id: 'a1' },
+        { type: 'group:end', id: 'g1' }
+      );
+
+      const lines = await getScreenshot(events);
+      // First 100 should be present
+      expect(lines.some((l) => l.includes('Log 0'))).toBe(true);
+      expect(lines.some((l) => l.includes('Log 99'))).toBe(true);
+      // Log 100 and beyond should be dropped (over limit)
+      expect(lines.some((l) => l.includes('Log 100'))).toBe(false);
+      expect(lines.some((l) => l.includes('Log 149'))).toBe(false);
+    });
   });
 
   describe('verbose mode', () => {
