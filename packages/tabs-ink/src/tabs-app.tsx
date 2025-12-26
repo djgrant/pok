@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { TabbedView } from './tabbed-view.js';
-import { type TabProcess, MAX_OUTPUT_LINES } from './types.js';
+import { MAX_OUTPUT_LINES } from '@openpok/tabs-core';
+import type { TabProcess } from './types.js';
 import type { TabSpec, TabsOptions } from '@openpok/core';
 
 const OUTPUT_BATCH_MS = 16;

@@ -141,6 +141,9 @@ importers:
       '@openpok/core':
         specifier: workspace:*
         version: link:../core
+      '@openpok/tabs-core':
+        specifier: workspace:*
+        version: link:../tabs-core
       ink:
         specifier: ^6.6.0
         version: 6.6.0(@types/react@19.2.7)(react@19.2.3)
