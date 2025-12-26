@@ -41,7 +41,7 @@ Create an entry point with TTY adapters:
 ```typescript
 #!/usr/bin/env bun
 import { run } from '@openpok/core';
-import { createTTYAdapter } from '@openpok/tty-prompts';
+import { createPrompter } from '@openpok/prompter-clack';
 import { createTabsAdapter } from '@openpok/tabs-ink';
 import * as path from 'path';
 

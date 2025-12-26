@@ -285,6 +285,60 @@ const deployTask = defineTask({
 });
 ```
 
+## Command Aliases
+
+You can define aliases for commands to provide shorter or alternative names:
+
+```typescript
+export const command = defineCommand({
+  label: 'Deploy to environment',
+  aliases: ['d', 'dep'],
+  run: async (r) => {
+    await r.exec('deploy');
+  },
+});
+```
+
+Users can invoke the command using any of its names:
+
+```bash
+mycli deploy    # Primary name
+mycli d         # Short alias
+mycli dep       # Alternative alias
+```
+
+### Alias Rules
+
+1. **Names take precedence** - If a command name matches, it's used even if it's also an alias of another command
+2. **No conflicts** - Aliases cannot conflict with other command names or aliases at the same level
+3. **Scoped to level** - Aliases only apply within their command's hierarchy level
+
+### Aliases in Help
+
+Aliases are shown in command help output:
+
+```
+$ mycli deploy --help
+Deploy to environment
+
+Usage: mycli deploy [options]
+
+Aliases: d, dep
+
+Options:
+  --env <value>   Target environment
+  --help          Show help
+```
+
+### Aliases in Shell Completion
+
+Aliases are included in tab completion suggestions:
+
+```bash
+mycli <Tab>
+# Shows: deploy, d, dep, build, ...
+```
+
 ## Best Practices
 
 ### 1. Keep Commands Focused
