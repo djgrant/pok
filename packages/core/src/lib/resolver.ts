@@ -1,6 +1,20 @@
 import { z } from 'zod';
 
 /**
+ * Branded type for environment variable keys.
+ * Provides compile-time distinction between validated and unvalidated keys.
+ */
+export type EnvVarKey<T extends string = string> = T & { readonly __brand?: 'EnvVarKey' };
+
+/**
+ * Result type for resolver operations - only allows declared variable names.
+ * This provides stricter return type validation at composition boundaries.
+ */
+export type ResolverResult<TAvailableVars extends string> = {
+  [K in TAvailableVars]?: string;
+};
+
+/**
  * Environment resolver - defines what context is needed and what variables
  * can be resolved (and optionally written).
  *
@@ -14,18 +28,18 @@ export type EnvResolver<
   TAvailableVars extends string = string,
 > = {
   requiredContext: z.ZodObject<TContext>;
-  availableVars: readonly TAvailableVars[];
+  availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
-    keys: string[],
+    keys: EnvVarKey<TAvailableVars>[],
     context: z.infer<z.ZodObject<TContext>>
-  ) => Promise<Record<string, string>> | Record<string, string>;
+  ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
 
   /**
    * Optional write capability - persist values to the underlying store.
    * Not all resolvers support writing (e.g., composite resolvers are read-only).
    */
   write?: (
-    values: Record<string, string>,
+    values: ResolverResult<TAvailableVars>,
     context: z.infer<z.ZodObject<TContext>>
   ) => Promise<void>;
 };
@@ -33,20 +47,23 @@ export type EnvResolver<
 /**
  * Typed resolver that preserves available vars for type inference.
  * Use this return type when you need `defineEnv` to validate vars.
+ *
+ * The context is typed as `unknown` rather than `any` to encourage explicit validation.
+ * Individual resolvers validate context against their `requiredContext` schema.
  */
 export type TypedEnvResolver<TAvailableVars extends string = string> = {
   requiredContext: z.ZodObject<z.ZodRawShape>;
-  availableVars: readonly TAvailableVars[];
+  availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
-    keys: string[],
-    context: any
-  ) => Promise<Record<string, string>> | Record<string, string>;
-  write?: (values: Record<string, string>, context: any) => Promise<void>;
+    keys: EnvVarKey<TAvailableVars>[],
+    context: unknown
+  ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
+  write?: (values: ResolverResult<TAvailableVars>, context: unknown) => Promise<void>;
 };
 
 /**
  * Type-erased resolver for use in generic contexts.
- * The `resolve` function accepts `any` context to avoid contravariance issues.
+ * The `resolve` function accepts `unknown` context to encourage validation.
  */
 export type AnyEnvResolver = TypedEnvResolver<string>;
 
@@ -59,7 +76,33 @@ export type InferResolverContext<T> =
 /**
  * Infer the available vars from a resolver
  */
-export type InferResolverVars<T> = T extends EnvResolver<any, infer V> ? V : never;
+export type InferResolverVars<T> =
+  T extends EnvResolver<any, infer V>
+    ? V
+    : T extends TypedEnvResolver<infer V>
+      ? V
+      : never;
+
+/**
+ * Validate that a set of keys are valid for a resolver's available vars.
+ * Returns typed keys if valid, throws if invalid.
+ */
+export function validateResolverKeys<TAvailableVars extends string>(
+  resolver: TypedEnvResolver<TAvailableVars>,
+  keys: string[]
+): EnvVarKey<TAvailableVars>[] {
+  const availableSet = new Set(resolver.availableVars as readonly string[]);
+  const invalidKeys = keys.filter((k) => !availableSet.has(k));
+
+  if (invalidKeys.length > 0) {
+    throw new Error(
+      `Invalid resolver keys: ${invalidKeys.join(', ')}. ` +
+        `Available: ${[...resolver.availableVars].join(', ')}`
+    );
+  }
+
+  return keys as EnvVarKey<TAvailableVars>[];
+}
 
 /**
  * Define an environment resolver.
@@ -90,13 +133,30 @@ export function defineEnvResolver<
   requiredContext: z.ZodObject<TContext>;
   availableVars: readonly TAvailableVars[];
   resolve: (
-    keys: string[],
+    keys: EnvVarKey<TAvailableVars>[],
     context: z.infer<z.ZodObject<TContext>>
-  ) => Promise<Record<string, string>> | Record<string, string>;
+  ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
   write?: (
-    values: Record<string, string>,
+    values: ResolverResult<TAvailableVars>,
     context: z.infer<z.ZodObject<TContext>>
   ) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
-  return config as TypedEnvResolver<TAvailableVars>;
+  // Wrap the config to ensure it conforms to TypedEnvResolver interface
+  // The context is widened to unknown for generic composition
+  return {
+    requiredContext: config.requiredContext as z.ZodObject<z.ZodRawShape>,
+    availableVars: config.availableVars as readonly EnvVarKey<TAvailableVars>[],
+    resolve: (keys, context) => {
+      // Validate context against the schema before resolving
+      const validatedContext = config.requiredContext.parse(context);
+      return config.resolve(keys, validatedContext);
+    },
+    write: config.write
+      ? (values, context) => {
+          // Validate context against the schema before writing
+          const validatedContext = config.requiredContext.parse(context);
+          return config.write!(values, validatedContext);
+        }
+      : undefined,
+  };
 }
