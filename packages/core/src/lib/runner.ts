@@ -196,7 +196,7 @@ class ProcessRegistry {
   private runners = new Set<WeakRef<RunnerProcessSet>>();
   private signalHandlersRegistered = false;
 
-  private constructor() { }
+  private constructor() {}
 
   static getInstance(): ProcessRegistry {
     if (!ProcessRegistry.instance) {
@@ -487,7 +487,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
           // Note: Original code used ['inherit', 'inherit', 'inherit'] for all parallel execution branches
         });
       } else if (isDeferredTask(item)) {
-        return item.then(() => { });
+        return item.then(() => {});
       } else {
         throw new Error('r.parallel() only accepts commands (r.exec) or tasks (r.run).');
       }
@@ -546,7 +546,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
           if (value === undefined) continue;
           if (!declaredVars.has(key)) {
             throw new Error(
-              `Cannot write undeclared variable "${key}".Declared vars: ${[...declaredVars].join(', ')}`
+              `Cannot write undeclared variable "${key}". Declared vars: ${[...declaredVars].join(', ')}`
             );
           }
           definedValues[key] = value;
