@@ -98,11 +98,14 @@ bun add @openpok/core zod
 | Package                   | Description                                                  |
 | ------------------------- | ------------------------------------------------------------ |
 | `@openpok/core`           | Core framework—command routing, task execution, event system |
+| `@openpok/cmd`            | Global CLI launcher—install once, run anywhere               |
 | `@openpok/create`         | Project scaffolding CLI                                      |
+| `@openpok/op`             | Operation utilities for common CLI patterns                  |
 | `@openpok/prompter-clack` | Interactive prompts adapter (Clack)                          |
 | `@openpok/reporter-clack` | Terminal output adapter (Clack)                              |
-| `@openpok/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
 | `@openpok/tabs-core`      | Shared tabs state management                                 |
+| `@openpok/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
+| `@openpok/tabs-opentui`   | Tabbed terminal UI (OpenTUI/React)                           |
 
 ## Documentation
 

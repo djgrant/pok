@@ -19,6 +19,7 @@ function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandC
 | Property               | Type                                     | Description                                             |
 | ---------------------- | ---------------------------------------- | ------------------------------------------------------- |
 | `label`                | `string`                                 | Human-readable label for menus and help                 |
+| `aliases`              | `string[]`                               | Alternative names to invoke this command                |
 | `context`              | `ContextDef`                             | Context field definitions (flags)                       |
 | `pre`                  | `CheckConfig \| CheckConfig[] \| HookFn` | Pre-execution checks                                    |
 | `timeout`              | `number`                                 | Default timeout for exec calls (ms). Default: 300000    |
@@ -133,6 +134,20 @@ export const command = defineCommand({
   },
 });
 ```
+
+### Command with Aliases
+
+```typescript
+export const command = defineCommand({
+  label: 'Deploy to environment',
+  aliases: ['d', 'dep'],
+  run: async (r) => {
+    await r.exec('deploy');
+  },
+});
+```
+
+Users can run this command as `mycli deploy`, `mycli d`, or `mycli dep`.
 
 ### Parent Command
 

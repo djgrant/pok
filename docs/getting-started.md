@@ -1,5 +1,10 @@
 # Getting Started
 
+## Prerequisites
+
+- **Bun** >= 1.0.0 (https://bun.sh)
+- **Node.js** >= 20 (for compatibility with some dependencies)
+
 ## Installation
 
 ### Create a new project
