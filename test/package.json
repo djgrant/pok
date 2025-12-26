@@ -11,6 +11,8 @@
     "@openpok/prompter-clack": "workspace:*",
     "@openpok/op": "workspace:*",
     "@openpok/tabs-core": "workspace:*",
+    "@openpok/tabs-ink": "workspace:*",
+    "@openpok/tabs-opentui": "workspace:*",
     "@openpok/test-utils": "workspace:*",
     "@clack/prompts": "^0.11.0",
     "zod": "^4.0.0"
