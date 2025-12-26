@@ -131,6 +131,20 @@ export async function runCli(
     if (error instanceof RouterError) {
       process.exit(error.exitCode);
     }
-    throw error;
+
+    // Handle unexpected errors with clean messages
+    const isDebug = process.env.DEBUG !== undefined;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (isDebug) {
+      // In debug mode, show full stack trace
+      console.error('Error:', error);
+    } else {
+      // In normal mode, show clean error message
+      console.error(`Error: ${errorMessage}`);
+      console.error('\nSet DEBUG=1 for full stack trace.');
+    }
+
+    process.exit(1);
   }
 }
