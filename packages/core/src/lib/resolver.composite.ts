@@ -2,17 +2,24 @@ import { z } from 'zod';
 import type { TypedEnvResolver, EnvVarKey, ResolverResult } from './resolver';
 
 /**
+ * Any resolver type - used in composite resolver to allow mixing resolvers with different var types.
+ * This is necessary because TypedEnvResolver is invariant on its type parameter.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyTypedEnvResolver = TypedEnvResolver<any>;
+
+/**
  * Helper to extract available vars from resolvers.
  * Uses branded EnvVarKey type for type safety at composition boundaries.
  */
-type ExtractAvailableVars<T extends readonly TypedEnvResolver<string>[]> =
+type ExtractAvailableVars<T extends readonly AnyTypedEnvResolver[]> =
   T[number]['availableVars'][number] extends EnvVarKey<infer V> ? V : string;
 
 /**
  * Configuration for composite resolver.
  * Provides explicit typing for resolver array.
  */
-export type CompositeResolverConfig<TResolvers extends readonly TypedEnvResolver<string>[]> = {
+export type CompositeResolverConfig<TResolvers extends readonly AnyTypedEnvResolver[]> = {
   resolvers: TResolvers;
 };
 
@@ -37,10 +44,8 @@ export type CompositeResolverConfig<TResolvers extends readonly TypedEnvResolver
  * ```
  */
 export function defineCompositeResolver<
-  const TResolvers extends readonly TypedEnvResolver<string>[],
->(
-  config: CompositeResolverConfig<TResolvers>
-): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
+  const TResolvers extends readonly AnyTypedEnvResolver[],
+>(config: CompositeResolverConfig<TResolvers>): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
   type CompositeVars = ExtractAvailableVars<TResolvers>;
 
   // Collect all available vars from all resolvers (union)

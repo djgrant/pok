@@ -295,7 +295,7 @@ describe('defineCompositeResolver', () => {
       });
 
       const composite = defineCompositeResolver({
-        resolvers: [resolver1, resolver2],
+        resolvers: [resolver1, resolver2] as const,
       });
 
       // Composite uses passthrough - accepts any context and lets
