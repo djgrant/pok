@@ -179,8 +179,16 @@ export async function buildCommandTree(
       // Insert into tree
       insertIntoTree(tree, segments, config);
     } catch (error) {
-      // Log but don't fail - allows partial loading
-      reporter.error(`Failed to load command ${file}: ${error}`);
+      // Log with actionable guidance - allows partial loading
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      reporter.error(
+        `Failed to load command "${file}":\n` +
+        `  ${errorMessage}\n\n` +
+        `To fix this:\n` +
+        `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
+        `  2. Check for syntax errors or missing imports in the file\n` +
+        `  3. Verify all referenced tasks and checks are properly defined`
+      );
     }
   }
 
@@ -191,7 +199,16 @@ export async function buildCommandTree(
 }
 
 /**
- * Insert a command into the tree, creating intermediate nodes as needed
+ * Insert a command into the tree, creating intermediate nodes as needed.
+ *
+ * Walks the segment path (e.g., ['generate', 'types', 'cloudflare']) and creates
+ * tree nodes as necessary. Intermediate nodes get a placeholder config with just
+ * a label. The final segment receives the actual command config.
+ *
+ * @internal
+ * @param tree - The command tree to insert into
+ * @param segments - Path segments from the command filename (e.g., 'foo.bar.ts' -> ['foo', 'bar'])
+ * @param config - The command configuration to attach to the leaf node
  */
 function insertIntoTree(tree: CommandTree, segments: string[], config: CommandConfig): void {
   let currentLevel = tree;
@@ -225,8 +242,13 @@ function insertIntoTree(tree: CommandTree, segments: string[], config: CommandCo
 /**
  * Find a node in a tree level by name or alias.
  *
- * Exact name matches take precedence over alias matches.
+ * Exact name matches take precedence over alias matches. This enables
+ * commands to define shorthand aliases without conflicting with other
+ * command names.
  *
+ * @internal
+ * @param level - The current level of the command tree to search
+ * @param name - The command name or alias to find
  * @returns The matched node, or undefined if not found
  */
 function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | undefined {
@@ -245,12 +267,21 @@ function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | 
 }
 
 /**
- * Find a node in the tree by path segments
+ * Find a node in the tree by path segments.
  *
- * Supports both exact command names and aliases.
- * Exact names always take precedence over aliases.
+ * Traverses the command tree following the provided segments until either
+ * all segments are consumed or no matching child is found. Supports both
+ * exact command names and aliases, with exact names taking precedence.
  *
- * @returns The node and any remaining (unmatched) segments
+ * @internal
+ * @param tree - The root command tree to search
+ * @param segments - The path segments to follow (e.g., ['generate', 'types'])
+ * @returns The deepest matched node and any remaining unmatched segments, or null if no match
+ *
+ * @example
+ * // Given tree with 'generate' -> 'types' -> 'cloudflare'
+ * findNode(tree, ['generate', 'types', '--verbose'])
+ * // Returns { node: typesNode, remainingArgs: ['--verbose'] }
  */
 function findNode(
   tree: CommandTree,
@@ -397,17 +428,20 @@ async function runChecksGroup(checks: CheckConfig[], reporter: Reporter): Promis
 }
 
 /**
- * Execute a command node
+ * Execute a command node.
  *
- * If the node has a run function, execute it.
- * If it's a parent (no run function), show submenu of children.
+ * Handles both leaf commands (with a `run` function) and parent nodes (without).
+ * For leaf commands, delegates to `executeLeaf` which handles context resolution,
+ * pre-checks, and actual execution. For parent nodes, displays an interactive
+ * submenu of available children.
  *
+ * @internal
  * @param node - The command node to execute
  * @param tree - Full command tree (for navigation context)
  * @param args - Command line arguments (flags and remaining positional args)
- * @param ctx - Router context
- * @param fromMenu - Whether invoked from the interactive menu
- * @param menuOpen - Whether the menu intro box is still open
+ * @param ctx - Router context containing reporter, prompter, and configuration
+ * @param fromMenu - Whether invoked from the interactive menu (affects prompting behavior)
+ * @param menuOpen - Whether the menu intro box is still open (needs closing after context)
  */
 async function executeNode(
   node: CommandNode,
