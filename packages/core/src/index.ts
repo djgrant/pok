@@ -102,7 +102,7 @@ export type { CheckConfig, CheckFn } from './lib/check';
 // Runner
 // =============================================================================
 
-export { createRunner, CommandError } from './lib/runner';
+export { createRunner, CommandError, TimeoutError } from './lib/runner';
 export type {
   Runner,
   ExecOptions,
@@ -138,6 +138,21 @@ export type { HelpOptions, RootHelpOptions } from './lib/help';
 // Utils - Shell
 // =============================================================================
 
+/**
+ * Shell utilities for command execution and environment detection.
+ *
+ * Note: `shellRun` and `shellRunQuiet` are aliases for `run` and `runQuiet` from
+ * the shell utilities module. They are renamed on export to avoid naming conflicts
+ * with the router's `run` function. These functions execute shell commands directly,
+ * while the router's `run` function is the CLI entry point.
+ *
+ * Alternative naming considerations:
+ * - `execShell` / `execShellQuiet` - More explicit about shell execution
+ * - `runShell` / `runShellQuiet` - Maintains "run" naming but clarifies context
+ *
+ * The current `shellRun` naming follows the pattern of prefixing with the module
+ * context to disambiguate from other `run` functions in the codebase.
+ */
 export {
   commandExists,
   getVersion,

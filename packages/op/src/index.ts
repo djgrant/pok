@@ -12,6 +12,15 @@ export * as opUtils from './op';
 
 export type { OpItem } from './op';
 
+/**
+ * Type exports for individual utility functions.
+ * These enable consumers to reference specific function signatures
+ * without accessing them through the opUtils namespace.
+ */
+export type IsInstalledFn = typeof import('./op').isInstalled;
+export type IsAuthenticatedFn = typeof import('./op').isAuthenticated;
+export type GetFieldFn = typeof import('./op').getField;
+
 // =============================================================================
 // 1Password CLI checks
 // =============================================================================

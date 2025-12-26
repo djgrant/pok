@@ -30,6 +30,31 @@ export class AbortError extends Error {
   }
 }
 
+/**
+ * Error thrown when a command times out.
+ * Provides actionable information including command name, timeout duration, and suggestions.
+ */
+export class TimeoutError extends Error {
+  /** The command that timed out */
+  readonly command: string;
+  /** The timeout duration in milliseconds */
+  readonly timeoutMs: number;
+
+  constructor(command: string, timeoutMs: number) {
+    const timeoutSecs = Math.round(timeoutMs / 1000);
+    const message =
+      `Command timed out after ${timeoutSecs}s: ${command}\n\n` +
+      `Suggestions:\n` +
+      `  - Increase the timeout in your command config\n` +
+      `  - Check if the command is hanging or waiting for input\n` +
+      `  - Run the command manually to debug`;
+    super(message);
+    this.name = 'TimeoutError';
+    this.command = command;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
 export type Command = {
   readonly _type: 'command';
   readonly cmd: ExecInput;
@@ -83,6 +108,15 @@ export type TabsRunnerOptions = {
   name?: string;
 };
 
+/**
+ * Runner interface for executing commands and tasks within a command's run function.
+ *
+ * @typeParam _TContext - The context type parameter is used for type inference at the
+ * command definition level. While not directly used in Runner methods, it enables
+ * type-safe context passing through the command execution chain. The underscore prefix
+ * indicates this is a phantom type parameter - it exists solely for type-level
+ * information and does not affect runtime behavior.
+ */
 export interface Runner<_TContext extends Record<string, unknown> = Record<string, unknown>> {
   cwd: string;
 
@@ -439,8 +473,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
           .join('\n');
         throw new CommandError(`Command failed: ${cmdLabel}`, output);
       }
-      throw new Error(
-        `Command failed: ${cmdLabel}\n${error instanceof Error ? error.message : String(error)}`
+      throw new CommandError(
+        `Command failed: ${cmdLabel}`,
+        error instanceof Error ? error.message : String(error)
       );
     }
   };
@@ -478,7 +513,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     const allEnv = getAllCachedEnv();
     const envVars = { ...process.env, ...allEnv };
 
-    const promises: Promise<void>[] = items.map((item) => {
+    const promises: Promise<void>[] = items.map((item, index) => {
       if (isCommand(item)) {
         return executeCmd(item.cmd, {
           cwd,
@@ -489,7 +524,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
       } else if (isDeferredTask(item)) {
         return item.then(() => {});
       } else {
-        throw new Error('r.parallel() only accepts commands (r.exec) or tasks (r.run).');
+        throw new CommandError(
+          `r.parallel() item at index ${index} is invalid`,
+          'r.parallel() only accepts commands (r.exec) or tasks (r.run).'
+        );
       }
     });
 
@@ -593,8 +631,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
           // And wrapped generic errors.
           throw error;
         }
-        throw new Error(
-          `Task "${task.label}" failed: ${error instanceof Error ? error.message : String(error)}`
+        throw new CommandError(
+          `Task "${task.label}" failed`,
+          error instanceof Error ? error.message : String(error)
         );
       }
 
