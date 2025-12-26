@@ -8,12 +8,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { spawn, type ChildProcess } from 'node:child_process';
 import stripAnsi from 'strip-ansi';
 import { TabbedView } from './tabbed-view.js';
+import {
+  OutputBuffer,
+  MAX_OUTPUT_LINES,
+  MAX_LINE_LENGTH,
+  BUFFER_WARNING_THRESHOLD,
+} from '@openpok/tabs-core';
 import type { TabSpec, TabProcess } from '@openpok/tabs-core';
 import type { TabsOptions } from '@openpok/core';
 import type { ScrollBoxRenderable } from '@opentui/core';
 
 const OUTPUT_BATCH_MS = 16;
-const MAX_OUTPUT_LINES = 10_000;
 /** How many pixels from bottom to consider "near bottom" for auto-scroll */
 const NEAR_BOTTOM_THRESHOLD = 50;
 /** Delay before scrolling to allow React to render new content */
@@ -25,15 +30,31 @@ type TabsAppProps = {
   onExit: (code: number) => void;
 };
 
-type OutputBuffer = {
+/** Temporary buffer for batching incoming output before flushing to state */
+type BatchBuffer = {
   lines: string[];
 };
 
-function createOutputBuffer(): OutputBuffer {
-  return { lines: [] };
-}
-
 export function TabsApp({ items, options, onExit }: TabsAppProps) {
+  // Ring buffers for storing all output per tab (with O(1) operations)
+  const ringBuffersRef = useRef<Map<string, OutputBuffer>>(new Map());
+
+  // Initialize ring buffers for each tab
+  const getOrCreateRingBuffer = useCallback((tabId: string): OutputBuffer => {
+    let buffer = ringBuffersRef.current.get(tabId);
+    if (!buffer) {
+      buffer = new OutputBuffer({
+        maxLines: MAX_OUTPUT_LINES,
+        maxLineLength: MAX_LINE_LENGTH,
+        warnAtPercentage: BUFFER_WARNING_THRESHOLD,
+        tabId,
+        // Optional: could add onPressure callback here for UI feedback
+      });
+      ringBuffersRef.current.set(tabId, buffer);
+    }
+    return buffer;
+  }, []);
+
   const [tabs, setTabs] = useState<TabProcess[]>(() =>
     items.map((item, i) => ({
       id: `tab-${i}`,
@@ -48,7 +69,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [helpVisible, setHelpVisible] = useState(false);
   const processesRef = useRef<(ChildProcess | null)[]>([]);
-  const outputBuffersRef = useRef<Map<number, OutputBuffer>>(new Map());
+  const batchBuffersRef = useRef<Map<number, BatchBuffer>>(new Map());
   const flushScheduledRef = useRef(false);
   const scrollBoxRef = useRef<ScrollBoxRenderable | null>(null);
 
@@ -100,8 +121,8 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
   const flushOutput = useCallback(() => {
     flushScheduledRef.current = false;
 
-    const buffersSnapshot = outputBuffersRef.current;
-    outputBuffersRef.current = new Map();
+    const buffersSnapshot = batchBuffersRef.current;
+    batchBuffersRef.current = new Map();
 
     if (buffersSnapshot.size === 0) return;
 
@@ -123,11 +144,10 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
         const tab = next[index];
         if (!tab) continue;
 
-        const newOutput = [...tab.output, ...lines];
-        const trimmed =
-          newOutput.length > MAX_OUTPUT_LINES ? newOutput.slice(-MAX_OUTPUT_LINES) : newOutput;
-
-        next[index] = { ...tab, output: trimmed };
+        // Push to ring buffer and get output with dropped indicator
+        const ringBuffer = getOrCreateRingBuffer(tab.id);
+        ringBuffer.push(...lines);
+        next[index] = { ...tab, output: ringBuffer.toArray() };
       }
       return next;
     });
@@ -136,7 +156,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
     if (wasNearBottom) {
       scrollToBottom();
     }
-  }, [checkIfNearBottom, scrollToBottom]);
+  }, [checkIfNearBottom, scrollToBottom, getOrCreateRingBuffer]);
 
   const scheduleFlush = useCallback(() => {
     if (flushScheduledRef.current) return;
@@ -158,10 +178,10 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
 
       if (lines.length === 0) return;
 
-      let buffer = outputBuffersRef.current.get(index);
+      let buffer = batchBuffersRef.current.get(index);
       if (!buffer) {
-        buffer = createOutputBuffer();
-        outputBuffersRef.current.set(index, buffer);
+        buffer = { lines: [] };
+        batchBuffersRef.current.set(index, buffer);
       }
       buffer.lines.push(...lines);
 
@@ -251,7 +271,10 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
         existingProc.kill('SIGTERM');
       }
 
-      outputBuffersRef.current.delete(index);
+      // Clear both batch buffer and ring buffer
+      batchBuffersRef.current.delete(index);
+      const tabId = `tab-${index}`;
+      ringBuffersRef.current.get(tabId)?.clear();
 
       setTabs((prev) => {
         const next = [...prev];
