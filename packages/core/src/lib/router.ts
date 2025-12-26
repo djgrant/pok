@@ -70,59 +70,28 @@ export type RouterConfig = {
   version?: string;
 };
 
-// Module-level state set by run()
-let currentConfig: RouterConfig | null = null;
-let currentEventBus: EventBus | null = null;
-let currentReporter: Reporter | null = null;
-let currentAdapterController: ReporterAdapterController | null = null;
-let currentAppName: string | null = null;
-
 /**
- * Get the app name (for error context)
+ * Runtime context containing all state needed during router execution.
+ * This replaces the previous module-level global state.
  */
-function getAppName(): string {
-  if (!currentAppName) {
-    throw new Error('Router not initialized. Call run() first.');
-  }
-  return currentAppName;
-}
-
-/**
- * Get the prompter from config
- */
-function getPrompter(): Prompter {
-  if (!currentConfig) {
-    throw new Error('Router not initialized. Call run() first.');
-  }
-  return currentConfig.prompter;
-}
-
-/**
- * Get the reporter for emitting events
- */
-function getReporter(): Reporter {
-  if (!currentReporter) {
-    throw new Error('Router not initialized. Call run() first.');
-  }
-  return currentReporter;
-}
-
-/**
- * Get the event bus
- */
-function getEventBus(): EventBus {
-  if (!currentEventBus) {
-    throw new Error('Router not initialized. Call run() first.');
-  }
-  return currentEventBus;
-}
-
-/**
- * Get the tabs adapter from config (if available)
- */
-function getTabs(): TabsAdapter | undefined {
-  return currentConfig?.tabs;
-}
+export type RouterContext = {
+  /** The router configuration */
+  config: RouterConfig;
+  /** Event bus for emitting and subscribing to events */
+  eventBus: EventBus;
+  /** Reporter for emitting events */
+  reporter: Reporter;
+  /** Controller for the reporter adapter */
+  adapterController: ReporterAdapterController;
+  /** Resolved app name */
+  appName: string;
+  /** Project root directory */
+  projectRoot: string;
+  /** Prompter for interactive input */
+  prompter: Prompter;
+  /** Optional tabs adapter */
+  tabs?: TabsAdapter;
+};
 
 /**
  * Validate that there are no alias conflicts within a command tree level.
@@ -170,10 +139,13 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
 /**
  * Load all command files and build a command tree
  */
-export async function buildCommandTree(commandsDir: string): Promise<CommandTree> {
+export async function buildCommandTree(
+  commandsDir: string,
+  ctx: RouterContext
+): Promise<CommandTree> {
   const tree: CommandTree = new Map();
   const glob = new Glob('*.{ts,tsx}');
-  const reporter = getReporter();
+  const { reporter } = ctx;
 
   for await (const file of glob.scan(commandsDir)) {
     // Skip non-command files
@@ -425,16 +397,6 @@ async function runChecksGroup(checks: CheckConfig[], reporter: Reporter): Promis
 }
 
 /**
- * Get the current project root (from config)
- */
-function getProjectRoot(): string {
-  if (!currentConfig) {
-    throw new Error('Router not initialized. Call run() first.');
-  }
-  return currentConfig.projectRoot;
-}
-
-/**
  * Execute a command node
  *
  * If the node has a run function, execute it.
@@ -443,6 +405,7 @@ function getProjectRoot(): string {
  * @param node - The command node to execute
  * @param tree - Full command tree (for navigation context)
  * @param args - Command line arguments (flags and remaining positional args)
+ * @param ctx - Router context
  * @param fromMenu - Whether invoked from the interactive menu
  * @param menuOpen - Whether the menu intro box is still open
  */
@@ -450,15 +413,16 @@ async function executeNode(
   node: CommandNode,
   tree: CommandTree,
   args: string[],
+  ctx: RouterContext,
   fromMenu: boolean = false,
   menuOpen: boolean = false
 ): Promise<void> {
   const { config } = node;
-  const reporter = getReporter();
+  const { reporter } = ctx;
 
   // If node has a run function, execute it
   if (config.run) {
-    await executeLeaf(node, args, { fromMenu, menuOpen });
+    await executeLeaf(node, args, ctx, { fromMenu, menuOpen });
     return;
   }
 
@@ -472,13 +436,13 @@ async function executeNode(
   // If not already in a menu group, wrap in one
   if (!menuOpen) {
     await reporter.group(config.label, { layout: 'sequence' }, async () => {
-      await showParentSubmenu(node, tree, args, true);
+      await showParentSubmenu(node, tree, args, ctx, true);
     });
     return;
   }
 
   // Already in a group - show submenu directly
-  await showParentSubmenu(node, tree, args, menuOpen);
+  await showParentSubmenu(node, tree, args, ctx, menuOpen);
 }
 
 /**
@@ -488,11 +452,11 @@ async function showParentSubmenu(
   node: CommandNode,
   tree: CommandTree,
   args: string[],
+  ctx: RouterContext,
   menuOpen: boolean
 ): Promise<void> {
   const { config } = node;
-  const reporter = getReporter();
-  const prompter = getPrompter();
+  const { reporter, prompter } = ctx;
   const children = Array.from(node.children.values());
 
   // Build menu options
@@ -522,7 +486,7 @@ async function showParentSubmenu(
   if (selected === '__all__') {
     // Close menu group before running all children
     reporter.success('Selected');
-    await executeAllChildren(node, args, true, false);
+    await executeAllChildren(node, args, ctx, true, false);
     return;
   }
 
@@ -532,7 +496,7 @@ async function showParentSubmenu(
   }
 
   // Recurse into selected child (menu stays open through navigation)
-  await executeNode(selectedChild, tree, args, true, menuOpen);
+  await executeNode(selectedChild, tree, args, ctx, true, menuOpen);
 }
 
 /**
@@ -556,21 +520,19 @@ type ExecuteLeafOptions = {
  *
  * @param node - The command node to execute
  * @param args - Command line arguments (flags and remaining positional args)
+ * @param ctx - Router context
  * @param options - Execution options
  */
 async function executeLeaf(
   node: CommandNode,
   args: string[],
+  ctx: RouterContext,
   options: ExecuteLeafOptions
 ): Promise<void> {
   const { fromMenu, menuOpen = false, quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
   const contextDef = config.context || {};
-  const projectRoot = getProjectRoot();
-  const reporter = getReporter();
-  const prompter = getPrompter();
-  const eventBus = getEventBus();
-  const tabs = getTabs();
+  const { projectRoot, reporter, prompter, eventBus, tabs, appName } = ctx;
 
   // Check if already aborted before starting
   if (signal?.aborted) {
@@ -579,7 +541,7 @@ async function executeLeaf(
 
   // Build error context for rich error messages
   const errorContext: ErrorContext = {
-    appName: getAppName(),
+    appName,
     commandPath: node.path.split('.'),
   };
 
@@ -660,13 +622,12 @@ type LeafWithContext = {
 async function executeAllChildren(
   node: CommandNode,
   args: string[],
+  ctx: RouterContext,
   fromMenu: boolean,
   menuOpen: boolean = false
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
-  const reporter = getReporter();
-  const prompter = getPrompter();
-  const projectRoot = getProjectRoot();
+  const { reporter, prompter, projectRoot, appName } = ctx;
 
   if (!mode) {
     throw new RouterError('enableRunAllChildren not configured');
@@ -691,7 +652,7 @@ async function executeAllChildren(
   for (const leaf of leaves) {
     const contextDef = leaf.config.context || {};
     const errorContext: ErrorContext = {
-      appName: getAppName(),
+      appName,
       commandPath: leaf.path.split('.'),
     };
     const parsed = parseContext(args, contextDef, { errorContext });
@@ -741,7 +702,7 @@ async function executeAllChildren(
     await reporter.group(groupLabel, { layout: 'sequence' }, async (grp) => {
       for (const { node: leaf, resolvedContext, extraArgs } of leavesWithContext) {
         await grp.activity(leaf.config.label, async () => {
-          await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
+          await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
             quiet,
             skipPreChecks: true,
           });
@@ -761,7 +722,7 @@ async function executeAllChildren(
 
           try {
             await grp.activity(leaf.config.label, async () => {
-              await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
+              await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
                 quiet,
                 skipPreChecks: true,
                 signal: controller.signal,
@@ -792,6 +753,7 @@ async function executeLeafWithContext(
   node: CommandNode,
   resolvedContext: Record<string, unknown>,
   extraArgs: string[],
+  ctx: RouterContext,
   options: {
     quiet?: boolean;
     signal?: AbortSignal;
@@ -800,11 +762,7 @@ async function executeLeafWithContext(
 ): Promise<void> {
   const { quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
-  const projectRoot = getProjectRoot();
-  const reporter = getReporter();
-  const prompter = getPrompter();
-  const eventBus = getEventBus();
-  const tabs = getTabs();
+  const { projectRoot, reporter, prompter, eventBus, tabs } = ctx;
 
   // Check if already aborted before starting
   if (signal?.aborted) {
@@ -857,11 +815,11 @@ async function executeLeafWithContext(
 async function executeAllChildrenWithContext(
   node: CommandNode,
   resolvedContext: Record<string, unknown>,
-  extraArgs: string[]
+  extraArgs: string[],
+  ctx: RouterContext
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
-  const reporter = getReporter();
-  const projectRoot = getProjectRoot();
+  const { reporter, projectRoot } = ctx;
 
   if (!mode) {
     throw new RouterError('enableRunAllChildren not configured');
@@ -905,7 +863,7 @@ async function executeAllChildrenWithContext(
     await reporter.group(groupLabel, { layout: 'sequence' }, async (grp) => {
       for (const leaf of leaves) {
         await grp.activity(leaf.config.label, async () => {
-          await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
+          await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
             quiet,
             skipPreChecks: true,
           });
@@ -925,7 +883,7 @@ async function executeAllChildrenWithContext(
 
           try {
             await grp.activity(leaf.config.label, async () => {
-              await executeLeafWithContext(leaf, resolvedContext, extraArgs, {
+              await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
                 quiet,
                 skipPreChecks: true,
                 signal: controller.signal,
@@ -978,10 +936,9 @@ function formatBreadcrumb(appName: string, path: string[]): string {
  */
 async function selectFromMenu(
   tree: CommandTree,
-  appName: string
+  ctx: RouterContext
 ): Promise<MenuSelectionResult | null> {
-  const reporter = getReporter();
-  const prompter = getPrompter();
+  const { reporter, prompter, appName } = ctx;
   const topLevel = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
 
   if (topLevel.length === 0) {
@@ -1109,9 +1066,9 @@ async function selectFromMenu(
 /**
  * Show interactive menu and run selected command
  */
-async function runMenu(tree: CommandTree, appName: string): Promise<void> {
+async function runMenu(tree: CommandTree, ctx: RouterContext): Promise<void> {
   // Phase 1: Selection (wrapped in group, closes after selection)
-  const selection = await selectFromMenu(tree, appName);
+  const selection = await selectFromMenu(tree, ctx);
 
   if (!selection) {
     throw new RouterError('No command selected');
@@ -1122,12 +1079,12 @@ async function runMenu(tree: CommandTree, appName: string): Promise<void> {
   // Phase 2: Execution (happens OUTSIDE the menu group)
   // Check if this is a "run all children" scenario
   if (!node.config.run && node.config.enableRunAllChildren) {
-    await executeAllChildrenWithContext(node, context, extraArgs);
+    await executeAllChildrenWithContext(node, context, extraArgs, ctx);
     return;
   }
 
   // Execute the leaf command with pre-resolved context
-  await executeLeafWithContext(node, context, extraArgs);
+  await executeLeafWithContext(node, context, extraArgs, ctx);
 }
 
 /**
@@ -1153,8 +1110,6 @@ async function discoverVersion(projectRoot: string): Promise<string | undefined>
  * @param config - Router configuration
  */
 export async function run(args: string[], config: RouterConfig): Promise<void> {
-  currentConfig = config;
-
   const { commandsDir, projectRoot, appName, reporterAdapter } = config;
 
   // Version check first - before any reporter setup or command tree building
@@ -1173,18 +1128,25 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
   // Create event bus and start reporter adapter
   const eventBus = createEventBus();
-  currentEventBus = eventBus;
-  currentAdapterController = reporterAdapter.start(eventBus);
-  currentReporter = new ScopedReporter(eventBus, 'root', 'root');
+  const adapterController = reporterAdapter.start(eventBus);
+  const reporter = new ScopedReporter(eventBus, 'root', 'root');
+  const resolvedAppName = appName ?? path.basename(projectRoot);
 
-  const reporter = currentReporter;
+  // Build the router context with all runtime state
+  const ctx: RouterContext = {
+    config,
+    eventBus,
+    reporter,
+    adapterController,
+    appName: resolvedAppName,
+    projectRoot,
+    prompter: config.prompter,
+    tabs: config.tabs,
+  };
 
   try {
     // Build command tree
-    const tree = await buildCommandTree(commandsDir);
-
-    const resolvedAppName = appName ?? path.basename(projectRoot);
-    currentAppName = resolvedAppName;
+    const tree = await buildCommandTree(commandsDir, ctx);
 
     // Handle hidden __complete command for dynamic shell completions
     if (args[0] === '__complete') {
@@ -1219,7 +1181,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
         return;
       }
       // No arguments - show interactive menu
-      await runMenu(tree, resolvedAppName);
+      await runMenu(tree, ctx);
       return;
     }
 
@@ -1282,12 +1244,12 @@ Run '${resolvedAppName} --help' for usage.`;
       remainingArgs[0] === 'all' &&
       match.node.config.enableRunAllChildren
     ) {
-      await executeAllChildren(match.node, remainingArgs.slice(1), false);
+      await executeAllChildren(match.node, remainingArgs.slice(1), ctx, false);
       return;
     }
 
     // Execute the command with remaining args
-    await executeNode(match.node, tree, match.remainingArgs);
+    await executeNode(match.node, tree, match.remainingArgs, ctx);
   } catch (error) {
     // Format CLIError with usage hints
     if (error instanceof CLIError) {
@@ -1297,6 +1259,6 @@ Run '${resolvedAppName} --help' for usage.`;
     throw error;
   } finally {
     // Stop the reporter adapter when done
-    currentAdapterController?.stop();
+    adapterController.stop();
   }
 }
