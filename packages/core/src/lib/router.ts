@@ -172,7 +172,7 @@ export async function buildCommandTree(
       if (config.run && config.enableRunAllChildren) {
         reporter.warn(
           `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
-            `The 'enableRunAllChildren' option will be ignored.`
+          `The 'enableRunAllChildren' option will be ignored.`
         );
       }
 
@@ -619,34 +619,16 @@ type LeafWithContext = {
  * Lifts all pre-checks from leaf commands into a single "Pre-flight Checks"
  * group that runs before any commands execute.
  */
-async function executeAllChildren(
-  node: CommandNode,
+/**
+ * Phase 1: Resolve context for each leaf command
+ */
+async function resolveChildrenContexts(
+  leaves: CommandNode[],
   args: string[],
   ctx: RouterContext,
-  fromMenu: boolean,
-  menuOpen: boolean = false
-): Promise<void> {
-  const mode = node.config.enableRunAllChildren;
-  const { reporter, prompter, projectRoot, appName } = ctx;
-
-  if (!mode) {
-    throw new RouterError('enableRunAllChildren not configured');
-  }
-
-  const leaves = getLeafNodes(node);
-
-  if (leaves.length === 0) {
-    throw new RouterError(`No executable children found under "${node.path}"`);
-  }
-
-  // Close menu if open before running multiple commands
-  if (menuOpen) {
-    reporter.success('Selected');
-  }
-
-  const quiet = node.config.quietRunAll !== false;
-
-  // Phase 1: Resolve context for each leaf
+  fromMenu: boolean
+): Promise<LeafWithContext[]> {
+  const { prompter, appName } = ctx;
   const leavesWithContext: LeafWithContext[] = [];
 
   for (const leaf of leaves) {
@@ -673,7 +655,16 @@ async function executeAllChildren(
     });
   }
 
-  // Phase 2: Collect all pre-checks (deduplicated by reference, preserving order)
+  return leavesWithContext;
+}
+
+/**
+ * Phase 2: Collect and deduplicate pre-checks
+ */
+async function collectPreChecks(
+  leavesWithContext: LeafWithContext[],
+  projectRoot: string
+): Promise<CheckConfig[]> {
   const seen = new Set<CheckConfig>();
   const allChecks: CheckConfig[] = [];
 
@@ -692,11 +683,21 @@ async function executeAllChildren(
     }
   }
 
-  // Phase 3: Run all pre-checks in one group
-  await runChecksGroup(allChecks, reporter);
+  return allChecks;
+}
 
-  // Phase 4: Run all leaves as activities within a single group
+/**
+ * Phase 4: Execute children execution group (sequential or parallel)
+ */
+async function executeChildrenGroup(
+  node: CommandNode,
+  leavesWithContext: LeafWithContext[],
+  ctx: RouterContext,
+  quiet: boolean
+): Promise<void> {
+  const mode = node.config.enableRunAllChildren;
   const groupLabel = node.config.label;
+  const { reporter } = ctx;
 
   if (mode === 'sequential') {
     await reporter.group(groupLabel, { layout: 'sequence' }, async (grp) => {
@@ -743,6 +744,52 @@ async function executeAllChildren(
       }
     });
   }
+}
+
+/**
+ * Execute all leaf children of a parent node
+ *
+ * Lifts all pre-checks from leaf commands into a single "Pre-flight Checks"
+ * group that runs before any commands execute.
+ */
+async function executeAllChildren(
+  node: CommandNode,
+  args: string[],
+  ctx: RouterContext,
+  fromMenu: boolean,
+  menuOpen: boolean = false
+): Promise<void> {
+  const mode = node.config.enableRunAllChildren;
+  const { reporter, projectRoot } = ctx;
+
+  if (!mode) {
+    throw new RouterError('enableRunAllChildren not configured');
+  }
+
+  const leaves = getLeafNodes(node);
+
+  if (leaves.length === 0) {
+    throw new RouterError(`No executable children found under "${node.path}"`);
+  }
+
+  // Close menu if open before running multiple commands
+  if (menuOpen) {
+    reporter.success('Selected');
+  }
+
+  const quiet = node.config.quietRunAll !== false;
+
+  // Phase 1: Resolve context for each leaf
+  const leavesWithContext = await resolveChildrenContexts(leaves, args, ctx, fromMenu);
+
+  // Phase 2: Collect all pre-checks
+  const allChecks = await collectPreChecks(leavesWithContext, projectRoot);
+
+  // Phase 3: Run all pre-checks in one group
+  await runChecksGroup(allChecks, reporter);
+
+  // Phase 4: Run all leaves as activities within a single group
+  await executeChildrenGroup(node, leavesWithContext, ctx, quiet);
 }
 
 /**
