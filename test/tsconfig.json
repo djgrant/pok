@@ -12,6 +12,8 @@
     "prompter-clack/**/*",
     "op/**/*",
     "tabs-core/**/*",
+    "tabs-ink/**/*",
+    "tabs-opentui/**/*",
     "cases/**/*",
     "commands/**/*",
     "shared/**/*"
@@ -23,6 +25,8 @@
     { "path": "../packages/prompter-clack" },
     { "path": "../packages/op" },
     { "path": "../packages/tabs-core" },
+    { "path": "../packages/tabs-ink" },
+    { "path": "../packages/tabs-opentui" },
     { "path": "./utils" }
   ]
 }
