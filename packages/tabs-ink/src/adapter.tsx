@@ -8,6 +8,7 @@ import { render, type RenderOptions } from 'ink';
 import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@openpok/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
+import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';
 
 /**
  * Create a tabs adapter using Ink
@@ -46,26 +47,80 @@ export function createTabsAdapter(): TabsAdapter {
       process.stdin.setRawMode(true);
 
       return new Promise<void>((resolve) => {
-        const { unmount, waitUntilExit, clear } = render(
-          <TabsApp
-            items={items}
-            options={options}
-            onExit={() => {
-              clear();
-              unmount();
-              // Switch back to main screen buffer (restores previous terminal content)
-              process.stdout.write('\x1b[?1049l');
-              resolve();
-            }}
-          />,
+        let resolved = false;
+        let unmount: (() => void) | null = null;
+        let clear: (() => void) | null = null;
+
+        // Cleanup function to restore terminal and resolve
+        const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
+
+          // Remove signal handlers
+          process.removeListener('SIGTERM', handleSignal);
+          process.removeListener('SIGQUIT', handleSignal);
+          process.removeListener('uncaughtException', handleUncaughtException);
+
+          try {
+            clear?.();
+            unmount?.();
+          } catch {
+            // Ignore errors during cleanup
+          }
+
+          restoreTerminal();
+          resolve();
+        };
+
+        // Signal handler for graceful shutdown
+        const handleSignal = () => {
+          cleanup();
+          process.exit(0);
+        };
+
+        // Handle uncaught exceptions
+        const handleUncaughtException = (error: Error) => {
+          restoreTerminal();
+          console.error('\n[TabsUI] Uncaught exception:', error);
+          cleanup();
+          process.exit(1);
+        };
+
+        // Register signal handlers
+        process.on('SIGTERM', handleSignal);
+        process.on('SIGQUIT', handleSignal);
+        process.on('uncaughtException', handleUncaughtException);
+
+        // Handle fatal errors from error boundary
+        const handleFatalError = () => {
+          cleanup();
+        };
+
+        const result = render(
+          <TabsErrorBoundary onFatalError={handleFatalError}>
+            <TabsApp
+              items={items}
+              options={options}
+              onExit={() => {
+                cleanup();
+              }}
+            />
+          </TabsErrorBoundary>,
           {
             exitOnCtrlC: false, // We handle quit ourselves
             incrementalRendering: true, // Only update changed lines to reduce flicker
           } as RenderOptions
         );
 
+        unmount = result.unmount;
+        clear = result.clear;
+
         // Also resolve when ink exits naturally
-        waitUntilExit().then(() => resolve());
+        result.waitUntilExit().then(() => {
+          if (!resolved) {
+            cleanup();
+          }
+        });
       });
     },
   };
@@ -101,17 +156,68 @@ export function createEventAdapter(
 
   process.stdout.write('\x1b[?1049h\x1b[H');
 
+  let isCleanedUp = false;
+
+  // Cleanup function to restore terminal
+  const cleanup = () => {
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+
+    // Remove signal handlers
+    process.removeListener('SIGTERM', handleSignal);
+    process.removeListener('SIGQUIT', handleSignal);
+    process.removeListener('uncaughtException', handleUncaughtException);
+
+    try {
+      clear();
+      unmount();
+    } catch {
+      // Ignore errors during cleanup
+    }
+
+    restoreTerminal();
+  };
+
+  // Signal handler for graceful shutdown
+  const handleSignal = () => {
+    cleanup();
+    process.exit(0);
+  };
+
+  // Handle uncaught exceptions
+  const handleUncaughtException = (error: Error) => {
+    restoreTerminal();
+    console.error('\n[TabsUI] Uncaught exception:', error);
+    cleanup();
+    process.exit(1);
+  };
+
+  // Register signal handlers
+  process.on('SIGTERM', handleSignal);
+  process.on('SIGQUIT', handleSignal);
+  process.on('uncaughtException', handleUncaughtException);
+
   const handleExit = (code: number) => {
-    clear();
-    unmount();
-    process.stdout.write('\x1b[?1049l');
+    cleanup();
     options.onExit?.(code);
   };
 
-  const { unmount, clear } = render(<EventDrivenApp bus={bus} onExit={handleExit} />, {
-    exitOnCtrlC: false,
-    incrementalRendering: true,
-  } as RenderOptions);
+  // Handle fatal errors from error boundary
+  const handleFatalError = () => {
+    cleanup();
+  };
 
-  return { unmount };
+  const { unmount, clear } = render(
+    <TabsErrorBoundary onFatalError={handleFatalError}>
+      <EventDrivenApp bus={bus} onExit={handleExit} />
+    </TabsErrorBoundary>,
+    {
+      exitOnCtrlC: false,
+      incrementalRendering: true,
+    } as RenderOptions
+  );
+
+  return {
+    unmount: cleanup,
+  };
 }

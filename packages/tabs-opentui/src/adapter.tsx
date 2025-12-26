@@ -5,11 +5,13 @@
  * Also provides an event-driven adapter that renders based on EventBus events.
  */
 
+import * as React from 'react';
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
 import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@openpok/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
+import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';
 
 /**
  * Create a tabs adapter using OpenTUI
@@ -56,13 +58,65 @@ export function createTabsAdapter(): TabsAdapter {
       renderer.start();
 
       return new Promise<void>((resolve) => {
-        const handleExit = () => {
-          root.unmount();
-          renderer.destroy();
+        let resolved = false;
+
+        // Cleanup function to restore terminal and resolve
+        const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
+
+          // Remove signal handlers
+          process.removeListener('SIGTERM', handleSignal);
+          process.removeListener('SIGQUIT', handleSignal);
+          process.removeListener('uncaughtException', handleUncaughtException);
+
+          try {
+            root.unmount();
+            renderer.destroy();
+          } catch {
+            // Ignore errors during cleanup
+          }
+
+          restoreTerminal();
           resolve();
         };
 
-        root.render(<TabsApp items={items} options={options} onExit={handleExit} />);
+        // Signal handler for graceful shutdown
+        const handleSignal = () => {
+          cleanup();
+          process.exit(0);
+        };
+
+        // Handle uncaught exceptions
+        const handleUncaughtException = (error: Error) => {
+          restoreTerminal();
+          console.error('\n[TabsUI] Uncaught exception:', error);
+          cleanup();
+          process.exit(1);
+        };
+
+        // Register signal handlers
+        process.on('SIGTERM', handleSignal);
+        process.on('SIGQUIT', handleSignal);
+        process.on('uncaughtException', handleUncaughtException);
+
+        // Handle fatal errors from error boundary
+        const handleFatalError = () => {
+          cleanup();
+        };
+
+        const handleExit = () => {
+          cleanup();
+        };
+
+        // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
+        root.render(
+          React.createElement(
+            TabsErrorBoundary,
+            { onFatalError: handleFatalError },
+            React.createElement(TabsApp, { items, options, onExit: handleExit })
+          )
+        );
       });
     },
   };
@@ -94,7 +148,46 @@ export function createEventAdapter(
 
   let root: ReturnType<typeof createRoot> | null = null;
   let renderer: Awaited<ReturnType<typeof createCliRenderer>> | null = null;
-  let unmountRequested = false;
+  let isCleanedUp = false;
+
+  // Cleanup function to restore terminal
+  const cleanup = () => {
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+
+    // Remove signal handlers
+    process.removeListener('SIGTERM', handleSignal);
+    process.removeListener('SIGQUIT', handleSignal);
+    process.removeListener('uncaughtException', handleUncaughtException);
+
+    try {
+      root?.unmount();
+      renderer?.destroy();
+    } catch {
+      // Ignore errors during cleanup
+    }
+
+    restoreTerminal();
+  };
+
+  // Signal handler for graceful shutdown
+  const handleSignal = () => {
+    cleanup();
+    process.exit(0);
+  };
+
+  // Handle uncaught exceptions
+  const handleUncaughtException = (error: Error) => {
+    restoreTerminal();
+    console.error('\n[TabsUI] Uncaught exception:', error);
+    cleanup();
+    process.exit(1);
+  };
+
+  // Register signal handlers
+  process.on('SIGTERM', handleSignal);
+  process.on('SIGQUIT', handleSignal);
+  process.on('uncaughtException', handleUncaughtException);
 
   const init = async () => {
     // Let OpenTUI handle alternate screen and raw mode via its config
@@ -105,8 +198,8 @@ export function createEventAdapter(
       useKittyKeyboard: {}, // Enable Kitty keyboard protocol for better key handling
     });
 
-    // Check if unmount was requested during async init
-    if (unmountRequested) {
+    // Check if cleanup was requested during async init
+    if (isCleanedUp) {
       renderer.destroy();
       return;
     }
@@ -119,23 +212,31 @@ export function createEventAdapter(
     renderer.start();
 
     const handleExit = (code: number) => {
-      root?.unmount();
-      renderer?.destroy();
+      cleanup();
       options.onExit?.(code);
     };
 
-    root.render(<EventDrivenApp bus={bus} onExit={handleExit} />);
+    // Handle fatal errors from error boundary
+    const handleFatalError = () => {
+      cleanup();
+    };
+
+    // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
+    root.render(
+      React.createElement(
+        TabsErrorBoundary,
+        { onFatalError: handleFatalError },
+        React.createElement(EventDrivenApp, { bus, onExit: handleExit })
+      )
+    );
   };
 
   init().catch((error) => {
     console.error('Failed to initialize event adapter:', error);
+    restoreTerminal();
   });
 
   return {
-    unmount: () => {
-      unmountRequested = true;
-      root?.unmount();
-      renderer?.destroy();
-    },
+    unmount: cleanup,
   };
 }
