@@ -70,7 +70,12 @@ export type {
   InferTaskEnvs,
   InferTaskParams,
   InferTaskReturn,
+  // Exec input types (for type annotations)
+  ExecInput,
+  ShellPromise,
 } from './lib/task';
+
+export { isShellPromise, execInputToString } from './lib/task';
 
 // =============================================================================
 // Environment types

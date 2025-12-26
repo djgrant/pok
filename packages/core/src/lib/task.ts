@@ -2,9 +2,63 @@ import { z } from 'zod';
 import type { Env, InferEnvVars, InferEnvContext } from './env';
 import type { TaskReporter } from '../events';
 
-type RunnerLike = {
-  exec(cmd: string, opts?: unknown): unknown;
+/**
+ * Bun ShellPromise type - extracted from bun types for use in ExecInput.
+ * This represents the result of Bun's `$\`command\`` template literal.
+ */
+export type ShellPromise = Promise<unknown> & {
+  cwd(newCwd: string): ShellPromise;
+  env(newEnv: Record<string, string | undefined> | undefined): ShellPromise;
+  quiet(isQuiet?: boolean): ShellPromise;
+  nothrow(): ShellPromise;
+  throws(shouldThrow: boolean): ShellPromise;
+  text(encoding?: BufferEncoding): Promise<string>;
+  json(): Promise<unknown>;
+  lines(): AsyncIterable<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  blob(): Promise<Blob>;
 };
+
+type RunnerLike = {
+  exec(cmd: ExecInput, opts?: unknown): unknown;
+};
+
+/**
+ * Input types for exec commands:
+ * - string: Passed to sh -c (existing behavior)
+ * - string[]: Array of arguments, bypasses shell (safe for dynamic input)
+ * - ShellPromise: Bun shell template, provides automatic escaping
+ */
+export type ExecInput = string | string[] | ShellPromise;
+
+/**
+ * Check if a value is a Bun ShellPromise
+ */
+export function isShellPromise(value: unknown): value is ShellPromise {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    value instanceof Promise &&
+    'cwd' in value &&
+    'env' in value &&
+    'quiet' in value
+  );
+}
+
+/**
+ * Convert an ExecInput to a display string for logging/labels
+ */
+export function execInputToString(input: ExecInput): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+  if (Array.isArray(input)) {
+    // Join array elements, quoting those with spaces
+    return input.map((arg) => (arg.includes(' ') ? `"${arg}"` : arg)).join(' ');
+  }
+  // ShellPromise - we can't easily extract the command, use placeholder
+  return '[shell command]';
+}
 
 type EmptyObject = Record<string, never>;
 
@@ -78,15 +132,21 @@ export type ExecTaskConfig<
    * The env must have a resolver that implements the `write` method.
    */
   envWriter?: TEnvWriter;
+  /**
+   * Command to execute. Supports three forms:
+   * - string: Passed to sh -c (for static commands)
+   * - string[]: Array of arguments, bypasses shell (safe for dynamic input)
+   * - $.ShellPromise: Bun shell template (provides automatic escaping)
+   */
   exec:
-    | string
+    | ExecInput
     | ((
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
           TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
           TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
-      ) => string);
+      ) => ExecInput);
 };
 
 export type RunTaskConfig<
@@ -142,14 +202,14 @@ export function defineTask<
   params?: TParams;
   envWriter?: TEnvWriter;
   exec:
-    | string
+    | ExecInput
     | ((
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
           TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
           TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
-      ) => string);
+      ) => ExecInput);
 }): ExecTaskConfig<TEnv, TParams, TEnvWriter>;
 
 // Single overload for run tasks
@@ -181,7 +241,7 @@ export function defineTask(config: {
   env?: AnyEnv | readonly AnyEnv[];
   envWriter?: AnyEnv;
   params?: z.ZodType;
-  exec?: string | ((ctx: TaskContext<any, any, any>) => string);
+  exec?: ExecInput | ((ctx: TaskContext<any, any, any>) => ExecInput);
   run?: (runner: RunnerLike, ctx: TaskContext<any, any, any>) => Promise<any> | any;
 }): AnyTaskConfig {
   const hasExec = 'exec' in config && config.exec !== undefined;
