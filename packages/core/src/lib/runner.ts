@@ -378,6 +378,21 @@ export function createRunner<TContext extends Record<string, unknown>>(
     });
   }
 
+  /**
+   * Merge process.env with additional env vars, filtering out undefined values.
+   * This is needed because process.env has type Record<string, string | undefined>.
+   */
+  const mergeEnv = (additionalEnv: Record<string, string>): Record<string, string> => {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        result[key] = value;
+      }
+    }
+    Object.assign(result, additionalEnv);
+    return result;
+  };
+
   /* Shared command execution helper */
   const executeCmd = async (
     cmd: ExecInput,
@@ -465,10 +480,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
           stderr: Buffer;
           message?: string;
         };
-        const output = [
-          shellError.stdout?.toString().trim(),
-          shellError.stderr?.toString().trim(),
-        ]
+        const output = [shellError.stdout?.toString().trim(), shellError.stderr?.toString().trim()]
           .filter(Boolean)
           .join('\n');
         throw new CommandError(`Command failed: ${cmdLabel}`, output);
@@ -488,11 +500,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
       then(onFulfilled, onRejected) {
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
-          const mergedEnv = { ...process.env, ...allEnv };
 
           await executeCmd(cmd, {
             cwd,
-            env: mergedEnv,
+            env: mergeEnv(allEnv),
             quiet,
             signal,
           });
@@ -511,7 +522,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     }
 
     const allEnv = getAllCachedEnv();
-    const envVars = { ...process.env, ...allEnv };
+    const envVars = mergeEnv(allEnv);
 
     const promises: Promise<void>[] = items.map((item, index) => {
       if (isCommand(item)) {
@@ -560,8 +571,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
         const rawEnv = await resolver.resolve(keys, context);
 
         for (const [key, value] of Object.entries(rawEnv)) {
-          mergedRawEnv[key] = value;
-          envCache.set(key, value);
+          if (value !== undefined) {
+            mergedRawEnv[key] = value;
+            envCache.set(key, value);
+          }
         }
       }
 
@@ -614,12 +627,11 @@ export function createRunner<TContext extends Record<string, unknown>>(
         typeof execTask.exec === 'function' ? execTask.exec(taskContext as any) : execTask.exec;
 
       const allEnv = getAllCachedEnv();
-      const mergedEnv = { ...process.env, ...allEnv };
 
       try {
         await executeCmd(cmd, {
           cwd,
-          env: mergedEnv,
+          env: mergeEnv(allEnv),
           quiet,
           signal,
         });
@@ -662,10 +674,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
     if (!tabsAdapter) {
       throw new Error(
         'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
-        'Install @openpok/tabs-ink and pass the adapter:\n' +
-        '  import { createTabsAdapter } from "@openpok/tabs-ink";\n' +
-        '  // In your router config:\n' +
-        '  tabs: createTabsAdapter()'
+          'Install @openpok/tabs-ink and pass the adapter:\n' +
+          '  import { createTabsAdapter } from "@openpok/tabs-ink";\n' +
+          '  // In your router config:\n' +
+          '  tabs: createTabsAdapter()'
       );
     }
 
@@ -715,7 +727,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
             const resolver = env.resolver;
             const rawEnv = await resolver.resolve(keys, context);
             for (const [key, value] of Object.entries(rawEnv)) {
-              envCache.set(key, value);
+              if (value !== undefined) {
+                envCache.set(key, value);
+              }
             }
           });
         }
@@ -737,7 +751,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
       // ShellPromise cannot be converted to string for tabs
       throw new Error(
         'r.tabs() does not support Bun shell ($`...`) commands. ' +
-        'Use string or array form instead.'
+          'Use string or array form instead.'
       );
     };
 

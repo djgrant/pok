@@ -85,8 +85,9 @@ describe('defineOpResolver', () => {
       });
 
       // Bypass type checking to test runtime error
+      // Zod validates the context first, so we get a validation error
       await expect(resolver.resolve(['POSTGRES_URL'], { env: 'unknown' } as any)).rejects.toThrow(
-        'No vault configured for environment: unknown'
+        'Invalid input'
       );
     });
 
@@ -98,9 +99,9 @@ describe('defineOpResolver', () => {
         },
       });
 
-      await expect(
-        resolver.resolve(['UNKNOWN_KEY'], { env: 'dev' })
-      ).rejects.toThrow('No secret config for keys: UNKNOWN_KEY');
+      await expect(resolver.resolve(['UNKNOWN_KEY'] as any, { env: 'dev' })).rejects.toThrow(
+        'No secret config for keys: UNKNOWN_KEY'
+      );
     });
 
     it('throws for multiple unknown keys', async () => {
@@ -112,7 +113,7 @@ describe('defineOpResolver', () => {
       });
 
       await expect(
-        resolver.resolve(['UNKNOWN_KEY_1', 'UNKNOWN_KEY_2'], { env: 'dev' })
+        resolver.resolve(['UNKNOWN_KEY_1', 'UNKNOWN_KEY_2'] as any, { env: 'dev' })
       ).rejects.toThrow('No secret config for keys: UNKNOWN_KEY_1, UNKNOWN_KEY_2');
     });
   });
@@ -127,9 +128,10 @@ describe('defineOpResolver', () => {
       });
 
       // Bypass type checking to test runtime error
+      // Zod validates the context first, so we get a validation error
       await expect(
         resolver.write!({ POSTGRES_URL: 'test' }, { env: 'unknown' } as any)
-      ).rejects.toThrow('No vault configured for environment: unknown');
+      ).rejects.toThrow('Invalid input');
     });
 
     it('throws for unknown variable', async () => {
@@ -140,9 +142,9 @@ describe('defineOpResolver', () => {
         },
       });
 
-      await expect(
-        resolver.write!({ UNKNOWN_VAR: 'test' }, { env: 'dev' })
-      ).rejects.toThrow('Unknown variable "UNKNOWN_VAR"');
+      await expect(resolver.write!({ UNKNOWN_VAR: 'test' } as any, { env: 'dev' })).rejects.toThrow(
+        'Unknown variable "UNKNOWN_VAR"'
+      );
     });
   });
 });

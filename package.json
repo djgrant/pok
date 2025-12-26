@@ -12,6 +12,7 @@
     "url": "https://github.com/notation-dev/openpok/issues"
   },
   "scripts": {
+    "bootstrap": "tsc --build",
     "build": "pok build",
     "check": "pok check",
     "test": "pok test",

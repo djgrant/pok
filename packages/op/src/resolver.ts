@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { TypedEnvResolver } from '@openpok/core';
+import type { TypedEnvResolver, ResolverResult } from '@openpok/core';
 import { type OpVault, type InferOpVaultKeys, parseOpRef } from './vault';
 import * as op from './op';
 
@@ -47,7 +47,8 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
     }),
     availableVars,
 
-    resolve: async (keys: string[], ctx: { env: string }) => {
+    resolve: async (keys, context) => {
+      const ctx = z.object({ env: z.enum(envValues as [TEnvs, ...TEnvs[]]) }).parse(context);
       const vaultName = config.vaults[ctx.env as TEnvs];
       if (!vaultName) {
         throw new Error(`No vault configured for environment: ${ctx.env}`);
@@ -103,10 +104,11 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
         );
       }
 
-      return result;
+      return result as ResolverResult<VaultKey>;
     },
 
-    write: async (values: Record<string, string>, ctx: { env: string }) => {
+    write: async (values, context) => {
+      const ctx = z.object({ env: z.enum(envValues as [TEnvs, ...TEnvs[]]) }).parse(context);
       const vaultName = config.vaults[ctx.env as TEnvs];
       if (!vaultName) {
         throw new Error(`No vault configured for environment: ${ctx.env}`);
@@ -115,7 +117,9 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
       // Group values by 1Password item for batch writes
       const byItem = new Map<string, Record<string, string>>();
 
-      for (const [key, value] of Object.entries(values)) {
+      for (const [key, value] of Object.entries(values) as [string, string | undefined][]) {
+        if (value === undefined) continue;
+        
         const ref = config.vault.secrets[key];
         if (!ref) {
           throw new Error(

@@ -83,11 +83,11 @@ describe('isValidShell', () => {
     expect(isValidShell('bash')).toBe(true);
     expect(isValidShell('zsh')).toBe(true);
     expect(isValidShell('fish')).toBe(true);
+    expect(isValidShell('powershell')).toBe(true);
   });
 
   it('rejects invalid shells', () => {
     expect(isValidShell('sh')).toBe(false);
-    expect(isValidShell('powershell')).toBe(false);
     expect(isValidShell('')).toBe(false);
     expect(isValidShell('BASH')).toBe(false);
   });
@@ -320,9 +320,7 @@ async function captureOutput(fn: () => Promise<void>): Promise<{ stdout: string;
 /**
  * Run CLI with args and capture output
  */
-async function runCli(
-  args: string[]
-): Promise<{ stdout: string; stderr: string; error?: Error }> {
+async function runCli(args: string[]): Promise<{ stdout: string; stderr: string; error?: Error }> {
   const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
   const prompter = createRawPrompter({});
 

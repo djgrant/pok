@@ -64,8 +64,10 @@ export type TypedEnvResolver<TAvailableVars extends string = string> = {
 /**
  * Type-erased resolver for use in generic contexts.
  * The `resolve` function accepts `unknown` context to encourage validation.
+ * Uses `any` to allow resolvers with specific variable types to be used interchangeably.
  */
-export type AnyEnvResolver = TypedEnvResolver<string>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyEnvResolver = TypedEnvResolver<any>;
 
 /**
  * Infer the context type required by a resolver
@@ -77,11 +79,7 @@ export type InferResolverContext<T> =
  * Infer the available vars from a resolver
  */
 export type InferResolverVars<T> =
-  T extends EnvResolver<any, infer V>
-    ? V
-    : T extends TypedEnvResolver<infer V>
-      ? V
-      : never;
+  T extends EnvResolver<any, infer V> ? V : T extends TypedEnvResolver<infer V> ? V : never;
 
 /**
  * Validate that a set of keys are valid for a resolver's available vars.

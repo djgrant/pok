@@ -66,7 +66,8 @@ export type InferEnvContext<T> = T extends Env<infer C, any> ? C : never;
  * ```
  */
 export function defineEnv<
-  TResolver extends TypedEnvResolver<string>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TResolver extends TypedEnvResolver<any>,
   const TVars extends TResolver['availableVars'][number],
 >(config: {
   resolver: TResolver;
