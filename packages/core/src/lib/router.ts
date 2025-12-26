@@ -375,6 +375,56 @@ async function executeCheck(check: CheckConfig): Promise<void> {
 }
 
 /**
+ * Run pre-checks for a command.
+ *
+ * Resolves checks from the command's `pre` configuration, creates a "Pre-flight Checks"
+ * group, and executes each check as an activity. Handles error wrapping with remediation info.
+ *
+ * @param config - The command configuration containing pre-checks
+ * @param hookContext - The hook context for dynamic check resolution
+ * @param reporter - The reporter for emitting events
+ */
+async function runPreChecks(
+  config: CommandConfig,
+  hookContext: HookContext,
+  reporter: Reporter
+): Promise<void> {
+  if (!config.pre) return;
+
+  const checks = await resolveChecks(config.pre, hookContext);
+  if (checks.length === 0) return;
+
+  await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+    for (const check of checks) {
+      await groupReporter.activity(check.label, async () => {
+        await executeCheck(check);
+      });
+    }
+  });
+}
+
+/**
+ * Run an array of pre-checks as a single group.
+ *
+ * Used for batch execution scenarios where checks have been collected and deduplicated.
+ * Creates a "Pre-flight Checks" group and executes each check as an activity.
+ *
+ * @param checks - Array of check configurations to execute
+ * @param reporter - The reporter for emitting events
+ */
+async function runChecksGroup(checks: CheckConfig[], reporter: Reporter): Promise<void> {
+  if (checks.length === 0) return;
+
+  await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
+    for (const check of checks) {
+      await groupReporter.activity(check.label, async () => {
+        await executeCheck(check);
+      });
+    }
+  });
+}
+
+/**
  * Get the current project root (from config)
  */
 function getProjectRoot(): string {
@@ -564,31 +614,8 @@ async function executeLeaf(
   };
 
   // Run pre checks as a group (unless already run by batch executor)
-  if (config.pre && !skipPreChecks) {
-    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
-      // Resolve checks - either static or from function
-      let checks: CheckConfig[];
-      if (typeof config.pre === 'function') {
-        const result = await config.pre(hookCtx);
-        if (!result) {
-          checks = [];
-        } else if (Array.isArray(result)) {
-          checks = result.filter(Boolean) as CheckConfig[];
-        } else {
-          checks = [result];
-        }
-      } else {
-        const preChecks = Array.isArray(config.pre) ? config.pre : [config.pre];
-        checks = preChecks.filter(Boolean) as CheckConfig[];
-      }
-
-      // Execute checks as activities (with spinners)
-      for (const check of checks) {
-        await groupReporter.activity(check.label, async () => {
-          await executeCheck(check);
-        });
-      }
-    });
+  if (!skipPreChecks) {
+    await runPreChecks(config, hookCtx, reporter);
   }
 
   // Build run context
@@ -705,15 +732,7 @@ async function executeAllChildren(
   }
 
   // Phase 3: Run all pre-checks in one group
-  if (allChecks.length > 0) {
-    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
-      for (const check of allChecks) {
-        await groupReporter.activity(check.label, async () => {
-          await executeCheck(check);
-        });
-      }
-    });
-  }
+  await runChecksGroup(allChecks, reporter);
 
   // Phase 4: Run all leaves as activities within a single group
   const groupLabel = node.config.label;
@@ -800,31 +819,8 @@ async function executeLeafWithContext(
   };
 
   // Run pre checks as a group (unless already run by batch executor)
-  if (config.pre && !skipPreChecks) {
-    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
-      // Resolve checks - either static or from function
-      let checks: CheckConfig[];
-      if (typeof config.pre === 'function') {
-        const result = await config.pre(hookCtx);
-        if (!result) {
-          checks = [];
-        } else if (Array.isArray(result)) {
-          checks = result.filter(Boolean) as CheckConfig[];
-        } else {
-          checks = [result];
-        }
-      } else {
-        const preChecks = Array.isArray(config.pre) ? config.pre : [config.pre];
-        checks = preChecks.filter(Boolean) as CheckConfig[];
-      }
-
-      // Execute checks as activities (with spinners)
-      for (const check of checks) {
-        await groupReporter.activity(check.label, async () => {
-          await executeCheck(check);
-        });
-      }
-    });
+  if (!skipPreChecks) {
+    await runPreChecks(config, hookCtx, reporter);
   }
 
   // Build run context
@@ -900,15 +896,7 @@ async function executeAllChildrenWithContext(
   }
 
   // Phase 2: Run all pre-checks in one group
-  if (allChecks.length > 0) {
-    await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
-      for (const check of allChecks) {
-        await groupReporter.activity(check.label, async () => {
-          await executeCheck(check);
-        });
-      }
-    });
-  }
+  await runChecksGroup(allChecks, reporter);
 
   // Phase 3: Run all leaves as activities within a single group
   const groupLabel = node.config.label;
