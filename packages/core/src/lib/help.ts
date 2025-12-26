@@ -182,6 +182,12 @@ export function generateHelp(options: HelpOptions): string {
   lines.push(command.label);
   lines.push('');
 
+  // Long description (if any)
+  if (command.description) {
+    lines.push(command.description);
+    lines.push('');
+  }
+
   // Aliases (if any)
   if (command.aliases && command.aliases.length > 0) {
     lines.push(`Aliases: ${command.aliases.join(', ')}`);
@@ -247,6 +253,15 @@ export function generateHelp(options: HelpOptions): string {
     lines.push('Pre-flight checks:');
     for (const label of preCheckLabels) {
       lines.push(`${INDENT}- ${label}`);
+    }
+  }
+
+  // Examples section
+  if (command.examples && command.examples.length > 0) {
+    lines.push('');
+    lines.push('Examples:');
+    for (const example of command.examples) {
+      lines.push(`${INDENT}${example}`);
     }
   }
 

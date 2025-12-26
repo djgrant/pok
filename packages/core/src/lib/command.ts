@@ -127,6 +127,44 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
   label: string;
 
   /**
+   * Extended description for help text.
+   *
+   * Unlike `label` which is short and used in menus, `description` provides
+   * detailed documentation about what the command does.
+   *
+   * @example
+   * ```ts
+   * export const command = defineCommand({
+   *   label: 'Deploy to environment',
+   *   description: 'Deploys the application to the specified environment. ' +
+   *                'Runs migrations, updates configs, and restarts services.',
+   *   // ...
+   * });
+   * ```
+   */
+  description?: string;
+
+  /**
+   * Example invocations shown in help text.
+   *
+   * Provide real-world examples of how to use this command.
+   * These are displayed in the `--help` output to help users understand usage.
+   *
+   * @example
+   * ```ts
+   * export const command = defineCommand({
+   *   label: 'Deploy to environment',
+   *   examples: [
+   *     'mycli deploy --env prod',
+   *     'mycli deploy --env staging --dry-run',
+   *   ],
+   *   // ...
+   * });
+   * ```
+   */
+  examples?: string[];
+
+  /**
    * Alternative names for this command.
    *
    * Aliases allow users to invoke a command with shorter or alternative names.
