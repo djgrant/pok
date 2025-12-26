@@ -38,3 +38,31 @@ export {
 export type { TabSpec, ProcessManagerCallbacks, ProcessManagerOptions } from './process-manager.js';
 
 export { ProcessManager, OUTPUT_BATCH_MS } from './process-manager.js';
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+export type { Shortcut, ShortcutGroup } from './constants/index.js';
+export { HELP_CONTENT, KEY_SEQUENCES, ctrlKeyToSequence, HELP_HINT_DURATION_MS } from './constants/index.js';
+
+// =============================================================================
+// Hooks
+// =============================================================================
+
+export type {
+  UseTabsStateOptions,
+  TabsState,
+  TabsActions,
+  KeyboardCallbacks,
+  KeyboardState,
+  NormalizedKeyEvent,
+  KeyboardAction,
+} from './hooks/index.js';
+
+export {
+  useTabsState,
+  processKeyEvent,
+  useKeyboardCallbackRefs,
+  executeKeyboardAction,
+} from './hooks/index.js';

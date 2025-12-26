@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
-import type { TabProcess } from './types.js';
+import type { TabProcess } from '@openpok/tabs-core';
+import {
+  useTabsState,
+  useKeyboardCallbackRefs,
+  processKeyEvent,
+  executeKeyboardAction,
+  type NormalizedKeyEvent,
+  type KeyboardCallbacks,
+} from '@openpok/tabs-core';
 import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {
@@ -175,6 +182,48 @@ function StatusBar({
   );
 }
 
+/**
+ * Normalize Ink's useInput key event to the shared NormalizedKeyEvent format.
+ */
+function normalizeInkKeyEvent(input: string, key: {
+  upArrow: boolean;
+  downArrow: boolean;
+  leftArrow: boolean;
+  rightArrow: boolean;
+  return: boolean;
+  escape: boolean;
+  ctrl: boolean;
+  shift: boolean;
+  meta: boolean;
+  tab: boolean;
+  backspace: boolean;
+  delete: boolean;
+  pageUp: boolean;
+  pageDown: boolean;
+}): NormalizedKeyEvent {
+  // Map Ink key properties to normalized key names
+  let name: string | undefined;
+  if (key.escape) name = 'escape';
+  else if (key.return) name = 'return';
+  else if (key.tab) name = 'tab';
+  else if (key.backspace) name = 'backspace';
+  else if (key.delete) name = 'delete';
+  else if (key.upArrow) name = 'up';
+  else if (key.downArrow) name = 'down';
+  else if (key.leftArrow) name = 'left';
+  else if (key.rightArrow) name = 'right';
+  else if (key.pageUp) name = 'pageup';
+  else if (key.pageDown) name = 'pagedown';
+
+  return {
+    char: input || undefined,
+    name,
+    ctrl: key.ctrl,
+    shift: key.shift,
+    meta: key.meta,
+  };
+}
+
 export function TabbedView({
   tabs,
   activeIndex,
@@ -194,253 +243,60 @@ export function TabbedView({
 }: TabbedViewProps) {
   const { stdout } = useStdout();
 
-  // Show help hint for first 5 seconds
-  const [showHelpHint, setShowHelpHint] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHelpHint(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const [scrollOffsets, setScrollOffsets] = useState<Map<string, number>>(() => new Map());
-  const [autoScroll, setAutoScroll] = useState<Map<string, boolean>>(
-    () => new Map(tabs.map((t) => [t.id, true]))
-  );
-
   // Calculate view height based on terminal size
   // Reserve space for: padding (2) + tab bar (1) + border (2) + status bar (1) = 6
   const terminalHeight = stdout?.rows ?? 24;
   const viewHeight = Math.max(5, terminalHeight - 6);
 
-  const activeTab = tabs[activeIndex];
-  const activeScrollOffset = scrollOffsets.get(activeTab?.id ?? '') ?? 0;
+  // Use shared tabs state hook
+  const {
+    showHelpHint,
+    activeScrollOffset,
+    canScrollUp,
+    canScrollDown,
+    scrollBy,
+    switchTab,
+    nextTab,
+    prevTab,
+  } = useTabsState({
+    tabs,
+    activeIndex,
+    onActiveIndexChange,
+    viewHeight,
+  });
 
-  // Calculate scroll state
-  const totalLines = activeTab?.output.length ?? 0;
-  const maxScroll = Math.max(0, totalLines - viewHeight);
-  const canScrollUp = activeScrollOffset > 0;
-  const canScrollDown = activeScrollOffset < maxScroll;
-
-  // Auto-scroll when new output arrives (if auto-scroll enabled for this tab)
-  useEffect(() => {
-    if (!activeTab) return;
-    const shouldAutoScroll = autoScroll.get(activeTab.id) ?? true;
-    if (shouldAutoScroll) {
-      const maxScroll = Math.max(0, activeTab.output.length - viewHeight);
-      setScrollOffsets((prev) => {
-        const next = new Map(prev);
-        next.set(activeTab.id, maxScroll);
-        return next;
-      });
-    }
-  }, [activeTab, viewHeight, autoScroll]);
-
-  const scrollBy = useCallback(
-    (delta: number) => {
-      if (!activeTab) return;
-      const maxScroll = Math.max(0, activeTab.output.length - viewHeight);
-      setScrollOffsets((prev) => {
-        const next = new Map(prev);
-        const current = prev.get(activeTab.id) ?? 0;
-        const newOffset = Math.max(0, Math.min(maxScroll, current + delta));
-        next.set(activeTab.id, newOffset);
-
-        // If scrolled away from bottom, disable auto-scroll
-        // If scrolled to bottom, re-enable auto-scroll
-        const atBottom = newOffset >= maxScroll;
-        setAutoScroll((as) => {
-          const asNext = new Map(as);
-          asNext.set(activeTab.id, atBottom);
-          return asNext;
-        });
-
-        return next;
-      });
-    },
-    [activeTab, viewHeight]
-  );
-
-  const switchTab = useCallback(
-    (newIndex: number) => {
-      if (newIndex >= 0 && newIndex < tabs.length) {
-        onActiveIndexChange(newIndex);
-      }
-    },
-    [tabs.length, onActiveIndexChange]
-  );
-
-  // Use refs for callbacks to ensure fresh values in useInput
-  const onQuitRef = useRef(onQuit);
-  const onQuitRequestRef = useRef(onQuitRequest);
-  const onRestartRef = useRef(onRestart);
-  const onKillRef = useRef(onKill);
-  const onEnterFocusModeRef = useRef(onEnterFocusMode);
-  const onExitFocusModeRef = useRef(onExitFocusMode);
-  const onSendInputRef = useRef(onSendInput);
-  const onToggleHelpRef = useRef(onToggleHelp);
-  const onCloseHelpRef = useRef(onCloseHelp);
-
-  useEffect(() => {
-    onQuitRef.current = onQuit;
-    onQuitRequestRef.current = onQuitRequest;
-    onRestartRef.current = onRestart;
-    onKillRef.current = onKill;
-    onEnterFocusModeRef.current = onEnterFocusMode;
-    onExitFocusModeRef.current = onExitFocusMode;
-    onSendInputRef.current = onSendInput;
-    onToggleHelpRef.current = onToggleHelp;
-    onCloseHelpRef.current = onCloseHelp;
-  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput, onToggleHelp, onCloseHelp]);
+  // Use shared callback refs hook
+  const callbacks: KeyboardCallbacks = {
+    onQuit,
+    onQuitRequest,
+    onRestart,
+    onKill,
+    onEnterFocusMode,
+    onExitFocusMode,
+    onSendInput,
+    onToggleHelp,
+    onCloseHelp,
+  };
+  const callbackRefs = useKeyboardCallbackRefs(callbacks);
 
   // Keyboard handling via useInput - always active
   useInput((input, key) => {
-    // Help overlay takes priority
-    if (input === '?') {
-      onToggleHelpRef.current();
-      return;
-    }
-
-    // Escape closes help if visible
-    if (key.escape && helpVisible) {
-      onCloseHelpRef.current();
-      return;
-    }
-
-    // Don't process other keys when help is visible
-    if (helpVisible) {
-      return;
-    }
-
-    // Focus mode: forward most input to child process
-    if (focusMode) {
-      // Escape exits focus mode
-      if (key.escape) {
-        onExitFocusModeRef.current();
-        return;
-      }
-
-      // Build the raw input string to send to child process
-      // For special keys, we need to send the appropriate escape sequences
-      let rawInput = input;
-
-      if (key.return) {
-        rawInput = '\n';
-      } else if (key.tab) {
-        rawInput = '\t';
-      } else if (key.backspace) {
-        rawInput = '\x7f'; // DEL character
-      } else if (key.delete) {
-        rawInput = '\x1b[3~'; // Delete key escape sequence
-      } else if (key.upArrow) {
-        rawInput = '\x1b[A';
-      } else if (key.downArrow) {
-        rawInput = '\x1b[B';
-      } else if (key.rightArrow) {
-        rawInput = '\x1b[C';
-      } else if (key.leftArrow) {
-        rawInput = '\x1b[D';
-      } else if (key.ctrl && input) {
-        // Ctrl+key combinations
-        const code = input.toUpperCase().charCodeAt(0) - 64;
-        if (code >= 1 && code <= 26) {
-          rawInput = String.fromCharCode(code);
-        }
-      }
-
-      if (rawInput) {
-        onSendInputRef.current(rawInput);
-      }
-      return;
-    }
-
-    // Normal mode: handle UI navigation
-
-    // If quit confirmation pending, handle it specially
-    if (quitConfirmPending) {
-      if (input === 'q') {
-        onQuitRef.current();
-      } else {
-        // Any other key cancels (handled by parent resetting state)
-        onQuitRequestRef.current(); // This will toggle it off
-      }
-      return;
-    }
-
-    // Quit request
-    if (input === 'q') {
-      onQuitRequestRef.current();
-      return;
-    }
-
-    // Ctrl+C for instant quit (no confirmation)
-    if (input === 'c' && key.ctrl) {
-      onQuitRef.current();
-      return;
-    }
-
-    // Enter focus/input mode
-    if (input === 'i') {
-      onEnterFocusModeRef.current();
-      return;
-    }
-
-    // Restart current tab
-    if (input === 'r') {
-      onRestartRef.current(activeIndex);
-      return;
-    }
-
-    // Kill current tab's process
-    if (input === 'k') {
-      onKillRef.current(activeIndex);
-      return;
-    }
-
-    // Number keys 1-9 for direct tab access
-    const num = parseInt(input, 10);
-    if (num >= 1 && num <= tabs.length) {
-      switchTab(num - 1);
-      return;
-    }
-
-    // Tab navigation
-    if (key.tab && key.shift) {
-      switchTab((activeIndex - 1 + tabs.length) % tabs.length);
-      return;
-    }
-    if (key.tab) {
-      switchTab((activeIndex + 1) % tabs.length);
-      return;
-    }
-
-    // Arrow key tab navigation
-    if (key.leftArrow && key.meta) {
-      switchTab((activeIndex - 1 + tabs.length) % tabs.length);
-      return;
-    }
-    if (key.rightArrow && key.meta) {
-      switchTab((activeIndex + 1) % tabs.length);
-      return;
-    }
-
-    // Scrolling
-    if (key.upArrow) {
-      scrollBy(-1);
-      return;
-    }
-    if (key.downArrow) {
-      scrollBy(1);
-      return;
-    }
-    if (key.pageUp) {
-      scrollBy(-viewHeight);
-      return;
-    }
-    if (key.pageDown) {
-      scrollBy(viewHeight);
-      return;
-    }
+    const normalizedEvent = normalizeInkKeyEvent(input, key);
+    const action = processKeyEvent(
+      normalizedEvent,
+      {
+        helpVisible,
+        focusMode,
+        quitConfirmPending,
+        activeIndex,
+        tabCount: tabs.length,
+      },
+      viewHeight
+    );
+    executeKeyboardAction(action, callbackRefs, scrollBy, switchTab, nextTab, prevTab);
   });
 
+  const activeTab = tabs[activeIndex];
   if (!activeTab) {
     return <Text>No tabs available</Text>;
   }

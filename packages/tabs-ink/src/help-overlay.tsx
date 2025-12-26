@@ -1,39 +1,5 @@
 import { Box, Text } from 'ink';
-
-type ShortcutGroup = {
-  title: string;
-  shortcuts: Array<{ key: string; description: string }>;
-};
-
-const HELP_CONTENT: ShortcutGroup[] = [
-  {
-    title: 'Navigation',
-    shortcuts: [
-      { key: '\u2191/\u2193', description: 'Scroll output up/down' },
-      { key: 'Page Up/Dn', description: 'Scroll by page' },
-      { key: 'Tab', description: 'Next tab' },
-      { key: 'Shift+Tab', description: 'Previous tab' },
-      { key: '1-9', description: 'Jump to tab by number' },
-      { key: 'Meta+\u2190/\u2192', description: 'Previous/next tab' },
-    ],
-  },
-  {
-    title: 'Process Control',
-    shortcuts: [
-      { key: 'r', description: 'Restart current process' },
-      { key: 'k', description: 'Kill current process' },
-      { key: 'q', description: 'Quit (with confirmation)' },
-      { key: 'Ctrl+C', description: 'Force quit immediately' },
-    ],
-  },
-  {
-    title: 'Input Mode',
-    shortcuts: [
-      { key: 'i', description: 'Enter input mode' },
-      { key: 'Escape', description: 'Exit input mode' },
-    ],
-  },
-];
+import { HELP_CONTENT } from '@openpok/tabs-core';
 
 export type HelpOverlayProps = {
   onClose: () => void;
@@ -78,5 +44,3 @@ export function HelpOverlay(_props: HelpOverlayProps) {
     </Box>
   );
 }
-
-export { HELP_CONTENT };
