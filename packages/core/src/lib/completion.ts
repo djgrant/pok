@@ -15,7 +15,7 @@ import { getSchemaInfo } from './args';
 /**
  * Supported shell types for completion
  */
-export type Shell = 'bash' | 'zsh' | 'fish';
+export type Shell = 'bash' | 'zsh' | 'fish' | 'powershell';
 
 // =============================================================================
 // Completion Script Generation
@@ -36,6 +36,8 @@ export function generateCompletionScript(appName: string, shell: Shell): string 
       return generateZshCompletion(appName);
     case 'fish':
       return generateFishCompletion(appName);
+    case 'powershell':
+      return generatePowerShellCompletion(appName);
   }
 }
 
@@ -86,6 +88,43 @@ function generateFishCompletion(appName: string): string {
   return `# ${appName} fish completion
 complete -c ${appName} -f -a "(${appName} __complete (commandline -opc | string sub -s 2) 2>/dev/null)"`;
 }
+
+/**
+ * Generate PowerShell completion script
+ */
+function generatePowerShellCompletion(appName: string): string {
+  return `# ${appName} PowerShell completion
+Register-ArgumentCompleter -Native -CommandName ${appName} -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $commandElements = $commandAst.CommandElements
+    $args = @()
+
+    # Skip the command name itself, collect remaining arguments
+    for ($i = 1; $i -lt $commandElements.Count; $i++) {
+        $args += $commandElements[$i].ToString()
+    }
+
+    # Get completions from the CLI
+    $completions = & ${appName} __complete @args 2>$null
+
+    if ($completions) {
+        $completions -split '\\n' | ForEach-Object {
+            $completion = $_.Trim()
+            if ($completion -and $completion.StartsWith($wordToComplete)) {
+                [System.Management.Automation.CompletionResult]::new(
+                    $completion,
+                    $completion,
+                    'ParameterValue',
+                    $completion
+                )
+            }
+        }
+    }
+}`;
+}
+
+
 
 // =============================================================================
 // Dynamic Completion Logic
@@ -305,6 +344,13 @@ source <(${appName} completion zsh)`;
     case 'fish':
       return `# Run once to install:
 ${appName} completion fish > ~/.config/fish/completions/${appName}.fish`;
+    case 'powershell':
+      return `# Add to your PowerShell profile ($PROFILE):
+${appName} completion powershell | Out-String | Invoke-Expression
+
+# Or save to a file and dot-source it:
+${appName} completion powershell > ${appName}-completion.ps1
+. ./${appName}-completion.ps1`;
   }
 }
 
@@ -312,5 +358,5 @@ ${appName} completion fish > ~/.config/fish/completions/${appName}.fish`;
  * Check if a shell name is valid
  */
 export function isValidShell(shell: string): shell is Shell {
-  return shell === 'bash' || shell === 'zsh' || shell === 'fish';
+  return shell === 'bash' || shell === 'zsh' || shell === 'fish' || shell === 'powershell';
 }
