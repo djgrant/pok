@@ -169,34 +169,86 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
   ): Promise<T>;
 }
 
-const activeProcesses = new Set<ReturnType<typeof Bun.spawn>>();
+type BunProcess = ReturnType<typeof Bun.spawn>;
+type RunnerProcessSet = Set<BunProcess>;
 
-function killAllProcesses(): void {
-  for (const proc of activeProcesses) {
-    if (!proc.killed) {
-      try {
-        proc.kill();
-      } catch {
-        // Process may already be dead
+/**
+ * Registry for tracking process sets across runner instances.
+ * Uses WeakRef to allow garbage collection of abandoned runners.
+ * Provides centralized signal handling for all registered runners.
+ */
+class ProcessRegistry {
+  private static instance: ProcessRegistry;
+  private runners = new Set<WeakRef<RunnerProcessSet>>();
+  private signalHandlersRegistered = false;
+
+  private constructor() {}
+
+  static getInstance(): ProcessRegistry {
+    if (!ProcessRegistry.instance) {
+      ProcessRegistry.instance = new ProcessRegistry();
+    }
+    return ProcessRegistry.instance;
+  }
+
+  /**
+   * Register a runner's process set with the registry.
+   * Returns an unregister function to be called on runner cleanup.
+   */
+  register(processes: RunnerProcessSet): () => void {
+    const ref = new WeakRef(processes);
+    this.runners.add(ref);
+    this.registerSignalHandlers();
+
+    return () => {
+      this.runners.delete(ref);
+    };
+  }
+
+  /**
+   * Kill all processes across all registered runners.
+   * Used for signal handling cleanup.
+   */
+  killAll(): void {
+    for (const ref of this.runners) {
+      const processes = ref.deref();
+      if (processes) {
+        for (const proc of processes) {
+          if (!proc.killed) {
+            try {
+              proc.kill();
+            } catch {
+              // Process may already be dead
+            }
+          }
+        }
+        processes.clear();
+      }
+    }
+    // Clean up dead refs
+    this.cleanupDeadRefs();
+  }
+
+  private cleanupDeadRefs(): void {
+    for (const ref of this.runners) {
+      if (!ref.deref()) {
+        this.runners.delete(ref);
       }
     }
   }
-  activeProcesses.clear();
-}
 
-let signalHandlersRegistered = false;
+  private registerSignalHandlers(): void {
+    if (this.signalHandlersRegistered) return;
+    this.signalHandlersRegistered = true;
 
-function registerSignalHandlers(): void {
-  if (signalHandlersRegistered) return;
-  signalHandlersRegistered = true;
+    const cleanup = () => {
+      this.killAll();
+      process.exit(0);
+    };
 
-  const cleanup = () => {
-    killAllProcesses();
-    process.exit(0);
-  };
-
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+  }
 }
 
 export type RunnerOptions<TContext extends Record<string, unknown>> = {
@@ -245,7 +297,11 @@ export function createRunner<TContext extends Record<string, unknown>>(
   const reporter: Reporter = new ScopedReporter(eventBus, 'root', 'root');
   const envCache = new Map<string, string>();
   // Track processes spawned by this runner for cancellation
-  const runnerProcesses = new Set<ReturnType<typeof Bun.spawn>>();
+  const runnerProcesses: RunnerProcessSet = new Set<BunProcess>();
+
+  // Register this runner's process set with the global registry
+  const registry = ProcessRegistry.getInstance();
+  const unregisterFromRegistry = registry.register(runnerProcesses);
 
   const getAllCachedEnv = (): Record<string, string> => {
     return Object.fromEntries(envCache.entries());
@@ -274,8 +330,6 @@ export function createRunner<TContext extends Record<string, unknown>>(
     });
   }
 
-  registerSignalHandlers();
-
   const exec = (cmd: string, opts?: ExecOptions): Command => {
     const finalCmd = cmd.trim();
 
@@ -303,12 +357,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
               });
 
               runnerProcesses.add(proc);
-              activeProcesses.add(proc);
 
               const exitCode = await proc.exited;
 
               runnerProcesses.delete(proc);
-              activeProcesses.delete(proc);
 
               // Check if we were aborted
               if (signal?.aborted) {
@@ -375,10 +427,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
           env: envVars,
         });
 
-        activeProcesses.add(proc);
+        runnerProcesses.add(proc);
 
         return proc.exited.then(async (exitCode) => {
-          activeProcesses.delete(proc);
+          runnerProcesses.delete(proc);
           if (exitCode !== 0 && exitCode !== null) {
             throw new CommandError(
               `Command failed with exit code ${exitCode}: ${item.cmd}`,
@@ -397,7 +449,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     try {
       await Promise.race(promises);
     } finally {
-      killAllProcesses();
+      killRunnerProcesses();
     }
   };
 
@@ -498,12 +550,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
           });
 
           runnerProcesses.add(proc);
-          activeProcesses.add(proc);
 
           const exitCode = await proc.exited;
 
           runnerProcesses.delete(proc);
-          activeProcesses.delete(proc);
 
           // Check if we were aborted
           if (signal?.aborted) {
@@ -681,9 +731,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
         env: envVars,
       });
 
-      activeProcesses.add(proc);
+      runnerProcesses.add(proc);
       const exitCode = await proc.exited;
-      activeProcesses.delete(proc);
+      runnerProcesses.delete(proc);
 
       if (exitCode !== 0 && exitCode !== null) {
         throw new CommandError(
