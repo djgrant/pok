@@ -12,7 +12,7 @@
 export { defineCommand } from './lib/command';
 export { defineTask } from './lib/task';
 export { defineEnv, getEnvKeys } from './lib/env';
-export { defineEnvResolver } from './lib/resolver';
+export { defineEnvResolver, validateResolverKeys } from './lib/resolver';
 export { defineCompositeResolver } from './lib/resolver.composite';
 export { defineCheck, CheckError } from './lib/check';
 
@@ -86,6 +86,8 @@ export type {
   EnvResolver,
   AnyEnvResolver,
   TypedEnvResolver,
+  EnvVarKey,
+  ResolverResult,
   InferResolverContext,
   InferResolverVars,
 } from './lib/resolver';

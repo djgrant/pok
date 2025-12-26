@@ -1,13 +1,29 @@
 import { z } from 'zod';
-import type { TypedEnvResolver } from './resolver';
+import type { TypedEnvResolver, EnvVarKey, ResolverResult } from './resolver';
 
-// Helper to extract available vars from resolvers
+/**
+ * Helper to extract available vars from resolvers.
+ * Uses branded EnvVarKey type for type safety at composition boundaries.
+ */
 type ExtractAvailableVars<T extends readonly TypedEnvResolver<string>[]> =
-  T[number]['availableVars'][number];
+  T[number]['availableVars'][number] extends EnvVarKey<infer V> ? V : string;
+
+/**
+ * Configuration for composite resolver.
+ * Provides explicit typing for resolver array.
+ */
+export type CompositeResolverConfig<TResolvers extends readonly TypedEnvResolver<string>[]> = {
+  resolvers: TResolvers;
+};
 
 /**
  * Define a composite resolver that combines multiple resolvers.
  * Resolvers are tried in order; first one that can provide a key wins.
+ *
+ * Type safety is preserved at composition boundaries:
+ * - Available vars are unioned from all resolvers
+ * - Context validation is performed by individual resolvers
+ * - Return types are constrained to declared variables only
  *
  * @example
  * ```ts
@@ -22,12 +38,16 @@ type ExtractAvailableVars<T extends readonly TypedEnvResolver<string>[]> =
  */
 export function defineCompositeResolver<
   const TResolvers extends readonly TypedEnvResolver<string>[],
->(config: { resolvers: TResolvers }): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
+>(
+  config: CompositeResolverConfig<TResolvers>
+): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
+  type CompositeVars = ExtractAvailableVars<TResolvers>;
+
   // Collect all available vars from all resolvers (union)
   const allVars = new Set<string>();
   for (const resolver of config.resolvers) {
     for (const v of resolver.availableVars) {
-      allVars.add(v);
+      allVars.add(v as string);
     }
   }
 
@@ -38,17 +58,17 @@ export function defineCompositeResolver<
 
   return {
     requiredContext: mergedContext as z.ZodObject<z.ZodRawShape>,
-    availableVars: [...allVars] as ExtractAvailableVars<TResolvers>[],
-    resolve: async (keys, context) => {
-      const result: Record<string, string> = {};
-      const remainingKeys = new Set(keys);
+    availableVars: [...allVars] as EnvVarKey<CompositeVars>[],
+    resolve: async (keys, context): Promise<ResolverResult<CompositeVars>> => {
+      const result: ResolverResult<CompositeVars> = {};
+      const remainingKeys = new Set(keys as string[]);
       const errors: Array<{ resolver: string; keys: string[]; error: string }> = [];
 
       for (const resolver of config.resolvers) {
         if (remainingKeys.size === 0) break;
 
         // Check which keys this resolver can provide
-        const resolverVars = new Set(resolver.availableVars);
+        const resolverVars = new Set(resolver.availableVars as readonly string[]);
         const keysForThisResolver = [...remainingKeys].filter((k) => resolverVars.has(k));
 
         if (keysForThisResolver.length === 0) continue;
@@ -59,11 +79,14 @@ export function defineCompositeResolver<
 
         // Try to resolve
         try {
-          const resolved = await resolver.resolve(keysForThisResolver, context as any);
+          const resolved = await resolver.resolve(
+            keysForThisResolver as EnvVarKey<string>[],
+            context
+          );
 
           for (const [key, value] of Object.entries(resolved)) {
             if (value !== undefined && value !== null) {
-              result[key] = value;
+              (result as Record<string, string>)[key] = value;
               remainingKeys.delete(key);
             }
           }
