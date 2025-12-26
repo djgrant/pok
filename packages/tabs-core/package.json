@@ -2,6 +2,18 @@
   "name": "@openpok/tabs-core",
   "version": "0.0.1",
   "description": "Core tab management utilities for pok CLI applications",
+  "keywords": [
+    "cli",
+    "command-line",
+    "typescript",
+    "bun",
+    "terminal",
+    "pok",
+    "openpok",
+    "tabs",
+    "tab-management",
+    "process-manager"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -13,9 +25,16 @@
   "bugs": {
     "url": "https://github.com/notation-dev/openpok/issues"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "files": ["dist", "README.md", "LICENSE"],
   "publishConfig": {
     "access": "public"
   },
