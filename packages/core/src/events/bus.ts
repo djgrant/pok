@@ -18,6 +18,24 @@ export type EventListener = (event: CLIEvent) => void;
 export type Unsubscribe = () => void;
 
 /**
+ * Error handler function type for event bus errors
+ */
+export type EventBusErrorHandler = (error: unknown, event: CLIEvent) => void;
+
+/**
+ * Options for creating an EventBus
+ */
+export type EventBusOptions = {
+  /**
+   * Custom error handler for listener errors.
+   * If not provided, errors are logged to console.
+   * Set to 'throw' to re-throw errors (useful for testing).
+   * Set to 'silent' to suppress all error output.
+   */
+  onError?: EventBusErrorHandler | 'throw' | 'silent';
+};
+
+/**
  * The Event Bus interface - the bridge between emitters and consumers
  */
 export interface EventBus {
@@ -35,9 +53,27 @@ export interface EventBus {
 
 /**
  * Create a new EventBus instance
+ *
+ * @param options - Optional configuration for error handling
  */
-export function createEventBus(): EventBus {
+export function createEventBus(options?: EventBusOptions): EventBus {
   const listeners = new Set<EventListener>();
+  const { onError } = options ?? {};
+
+  const handleError = (error: unknown, event: CLIEvent): void => {
+    if (onError === 'throw') {
+      throw error;
+    }
+    if (onError === 'silent') {
+      return;
+    }
+    if (typeof onError === 'function') {
+      onError(error, event);
+      return;
+    }
+    // Default: log to console
+    console.error('Error in event listener:', error);
+  };
 
   return {
     emit(event: CLIEvent): void {
@@ -45,7 +81,7 @@ export function createEventBus(): EventBus {
         try {
           listener(event);
         } catch (error) {
-          console.error('Error in event listener:', error);
+          handleError(error, event);
         }
       }
     },
