@@ -196,7 +196,7 @@ class ProcessRegistry {
   private runners = new Set<WeakRef<RunnerProcessSet>>();
   private signalHandlersRegistered = false;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): ProcessRegistry {
     if (!ProcessRegistry.instance) {
@@ -344,6 +344,107 @@ export function createRunner<TContext extends Record<string, unknown>>(
     });
   }
 
+  /* Shared command execution helper */
+  const executeCmd = async (
+    cmd: ExecInput,
+    options: {
+      cwd: string;
+      env: Record<string, string>;
+      quiet: boolean;
+      signal?: AbortSignal;
+    }
+  ): Promise<void> => {
+    const { cwd: runCwd, env, quiet: runQuiet, signal: runSignal } = options;
+    const cmdLabel = execInputToString(cmd);
+
+    // Check if already aborted
+    if (runSignal?.aborted) {
+      throw new AbortError();
+    }
+
+    try {
+      if (isShellPromise(cmd)) {
+        // Bun shell form: apply env and cwd, then await
+        await cmd.env(env).cwd(runCwd);
+      } else if (Array.isArray(cmd)) {
+        // Array form: bypass shell entirely using Bun.spawn
+        const proc = Bun.spawn(cmd, {
+          cwd: runCwd,
+          stdio: runQuiet ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'inherit', 'inherit'],
+          env,
+        });
+
+        runnerProcesses.add(proc);
+        const exitCode = await proc.exited;
+        runnerProcesses.delete(proc);
+
+        if (runSignal?.aborted) {
+          throw new AbortError();
+        }
+
+        if (exitCode !== 0 && exitCode !== null) {
+          if (runQuiet) {
+            const stdout = await new Response(proc.stdout).text();
+            const stderr = await new Response(proc.stderr).text();
+            const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+            throw new CommandError(`Command failed: ${cmdLabel}`, output);
+          }
+          throw new CommandError(`Command failed: ${cmdLabel}`, '');
+        }
+      } else {
+        // String form: pass to sh -c
+        const finalCmd = cmd.trim();
+        if (runQuiet) {
+          const proc = Bun.spawn(['sh', '-c', finalCmd], {
+            cwd: runCwd,
+            stdio: ['inherit', 'pipe', 'pipe'],
+            env,
+          });
+
+          runnerProcesses.add(proc);
+          const exitCode = await proc.exited;
+          runnerProcesses.delete(proc);
+
+          if (runSignal?.aborted) {
+            throw new AbortError();
+          }
+
+          if (exitCode !== 0 && exitCode !== null) {
+            const stdout = await new Response(proc.stdout).text();
+            const stderr = await new Response(proc.stderr).text();
+            const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+            throw new CommandError(`Command failed: ${finalCmd}`, output);
+          }
+        } else {
+          await $`${{ raw: finalCmd }}`.env(env).cwd(runCwd);
+        }
+      }
+    } catch (error) {
+      // Re-throw AbortError and CommandError as-is
+      if (error instanceof AbortError || error instanceof CommandError) {
+        throw error;
+      }
+      if (error && typeof error === 'object' && 'stdout' in error) {
+        // Bun shell error includes stdout/stderr
+        const shellError = error as {
+          stdout: Buffer;
+          stderr: Buffer;
+          message?: string;
+        };
+        const output = [
+          shellError.stdout?.toString().trim(),
+          shellError.stderr?.toString().trim(),
+        ]
+          .filter(Boolean)
+          .join('\n');
+        throw new CommandError(`Command failed: ${cmdLabel}`, output);
+      }
+      throw new Error(
+        `Command failed: ${cmdLabel}\n${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  };
+
   const exec = (cmd: ExecInput, opts?: ExecOptions): Command => {
     return {
       _type: 'command',
@@ -351,96 +452,15 @@ export function createRunner<TContext extends Record<string, unknown>>(
       opts,
       then(onFulfilled, onRejected) {
         const execute = async (): Promise<void> => {
-          // Check if already aborted before starting
-          if (signal?.aborted) {
-            throw new AbortError();
-          }
-
           const allEnv = getAllCachedEnv();
           const mergedEnv = { ...process.env, ...allEnv };
-          const cmdLabel = execInputToString(cmd);
 
-          try {
-            if (isShellPromise(cmd)) {
-              // Bun shell form: apply env and cwd, then await
-              await cmd.env(mergedEnv).cwd(cwd);
-            } else if (Array.isArray(cmd)) {
-              // Array form: bypass shell entirely using Bun.spawn
-              const proc = Bun.spawn(cmd, {
-                cwd,
-                stdio: quiet ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'inherit', 'inherit'],
-                env: mergedEnv,
-              });
-
-              runnerProcesses.add(proc);
-              const exitCode = await proc.exited;
-              runnerProcesses.delete(proc);
-
-              if (signal?.aborted) {
-                throw new AbortError();
-              }
-
-              if (exitCode !== 0 && exitCode !== null) {
-                if (quiet) {
-                  const stdout = await new Response(proc.stdout).text();
-                  const stderr = await new Response(proc.stderr).text();
-                  const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-                  throw new CommandError(`Command failed: ${cmdLabel}`, output);
-                }
-                throw new CommandError(`Command failed: ${cmdLabel}`, '');
-              }
-            } else {
-              // String form: pass to sh -c
-              const finalCmd = cmd.trim();
-              if (quiet) {
-                const proc = Bun.spawn(['sh', '-c', finalCmd], {
-                  cwd,
-                  stdio: ['inherit', 'pipe', 'pipe'],
-                  env: mergedEnv,
-                });
-
-                runnerProcesses.add(proc);
-                const exitCode = await proc.exited;
-                runnerProcesses.delete(proc);
-
-                if (signal?.aborted) {
-                  throw new AbortError();
-                }
-
-                if (exitCode !== 0 && exitCode !== null) {
-                  const stdout = await new Response(proc.stdout).text();
-                  const stderr = await new Response(proc.stderr).text();
-                  const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-                  throw new CommandError(`Command failed: ${finalCmd}`, output);
-                }
-              } else {
-                await $`${{ raw: finalCmd }}`.env(mergedEnv).cwd(cwd);
-              }
-            }
-          } catch (error) {
-            // Re-throw AbortError and CommandError as-is
-            if (error instanceof AbortError || error instanceof CommandError) {
-              throw error;
-            }
-            if (error && typeof error === 'object' && 'stdout' in error) {
-              // Bun shell error includes stdout/stderr
-              const shellError = error as {
-                stdout: Buffer;
-                stderr: Buffer;
-                message?: string;
-              };
-              const output = [
-                shellError.stdout?.toString().trim(),
-                shellError.stderr?.toString().trim(),
-              ]
-                .filter(Boolean)
-                .join('\n');
-              throw new CommandError(`Command failed: ${cmdLabel}`, output);
-            }
-            throw new Error(
-              `Command failed: ${cmdLabel}\n${error instanceof Error ? error.message : String(error)}`
-            );
-          }
+          await executeCmd(cmd, {
+            cwd,
+            env: mergedEnv,
+            quiet,
+            signal,
+          });
         };
 
         return execute().then(onFulfilled, onRejected);
@@ -460,50 +480,14 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
     const promises: Promise<void>[] = items.map((item) => {
       if (isCommand(item)) {
-        const { cmd } = item;
-        const cmdLabel = execInputToString(cmd);
-
-        if (isShellPromise(cmd)) {
-          // Bun shell form
-          return cmd.env(envVars).cwd(cwd).then(() => {});
-        } else if (Array.isArray(cmd)) {
-          // Array form: bypass shell
-          const proc = Bun.spawn(cmd, {
-            cwd,
-            stdio: ['inherit', 'inherit', 'inherit'],
-            env: envVars,
-          });
-          runnerProcesses.add(proc);
-          return proc.exited.then(async (exitCode) => {
-            runnerProcesses.delete(proc);
-            if (exitCode !== 0 && exitCode !== null) {
-              throw new CommandError(
-                `Command failed with exit code ${exitCode}: ${cmdLabel}`,
-                ''
-              );
-            }
-          });
-        } else {
-          // String form: pass to sh -c
-          const proc = Bun.spawn(['sh', '-c', cmd], {
-            cwd,
-            stdio: ['inherit', 'inherit', 'inherit'],
-            env: envVars,
-          });
-          runnerProcesses.add(proc);
-          return proc.exited.then(async (exitCode) => {
-            runnerProcesses.delete(proc);
-            if (exitCode !== 0 && exitCode !== null) {
-              throw new CommandError(
-                `Command failed with exit code ${exitCode}: ${cmd}`,
-                ''
-              );
-            }
-          });
-        }
+        return executeCmd(item.cmd, {
+          cwd,
+          env: envVars,
+          quiet: false, // Parallel output is usually interleaved/handled by reporter, assuming non-quiet for now or standard inheritance
+          // Note: Original code used ['inherit', 'inherit', 'inherit'] for all parallel execution branches
+        });
       } else if (isDeferredTask(item)) {
-        // Execute the deferred task (runs via executeTask which tracks processes)
-        return item.then(() => {});
+        return item.then(() => { });
       } else {
         throw new Error('r.parallel() only accepts commands (r.exec) or tasks (r.run).');
       }
@@ -543,48 +527,39 @@ export function createRunner<TContext extends Record<string, unknown>>(
         }
       }
 
-      // Copy resolved vars to taskEnvs (no Zod validation needed - resolver returns strings)
+      // Copy resolved vars to taskEnvs
       Object.assign(taskEnvs, mergedRawEnv);
     }
 
-    // Validate params if task declares a params schema
+    // Validate params
     const taskParams = task.params ? task.params.parse(params ?? {}) : {};
 
-    // Build writeEnvs function if task declares envWriter
+    // Build writeEnvs function
     let writeEnvs: ((values: Partial<Record<string, string>>) => Promise<void>) | undefined;
     if (task.envWriter) {
       const envWriter = task.envWriter as AnyEnv;
       const declaredVars = new Set(envWriter.vars);
 
       writeEnvs = async (values: Partial<Record<string, string>>): Promise<void> => {
-        // Filter out undefined values and validate keys
         const definedValues: Record<string, string> = {};
         for (const [key, value] of Object.entries(values)) {
           if (value === undefined) continue;
           if (!declaredVars.has(key)) {
             throw new Error(
-              `Cannot write undeclared variable "${key}". ` +
-                `Declared vars: ${[...declaredVars].join(', ')}`
+              `Cannot write undeclared variable "${key}".Declared vars: ${[...declaredVars].join(', ')}`
             );
           }
           definedValues[key] = value;
         }
 
-        // Check if resolver implements write method
         if (!envWriter.resolver.write) {
-          throw new Error(
-            `Resolver for envWriter does not implement write method. ` +
-              `Ensure the resolver supports writing.`
-          );
+          throw new Error('Resolver for envWriter does not implement write method.');
         }
 
-        // Write using the runner's current context
         await envWriter.resolver.write(definedValues, context);
       };
     }
 
-    // Task uses the runner's reporter directly (no extra activity wrapper)
-    // The caller is responsible for activity management if needed
     const taskContext: TaskContext<unknown, unknown, typeof writeEnvs, typeof context> = {
       context,
       cwd,
@@ -602,84 +577,21 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
       const allEnv = getAllCachedEnv();
       const mergedEnv = { ...process.env, ...allEnv };
-      const cmdLabel = execInputToString(cmd);
 
       try {
-        if (isShellPromise(cmd)) {
-          // Bun shell form: apply env and cwd, then await
-          await cmd.env(mergedEnv).cwd(cwd);
-        } else if (Array.isArray(cmd)) {
-          // Array form: bypass shell entirely using Bun.spawn
-          const proc = Bun.spawn(cmd, {
-            cwd,
-            stdio: quiet ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'inherit', 'inherit'],
-            env: mergedEnv,
-          });
-
-          runnerProcesses.add(proc);
-          const exitCode = await proc.exited;
-          runnerProcesses.delete(proc);
-
-          if (signal?.aborted) {
-            throw new AbortError();
-          }
-
-          if (exitCode !== 0 && exitCode !== null) {
-            if (quiet) {
-              const stdout = await new Response(proc.stdout).text();
-              const stderr = await new Response(proc.stderr).text();
-              const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-              throw new CommandError(`Command failed: ${cmdLabel}`, output);
-            }
-            throw new CommandError(`Command failed: ${cmdLabel}`, '');
-          }
-        } else {
-          // String form: pass to sh -c
-          const finalCmd = cmd.trim();
-          if (quiet) {
-            const proc = Bun.spawn(['sh', '-c', finalCmd], {
-              cwd,
-              stdio: ['inherit', 'pipe', 'pipe'],
-              env: mergedEnv,
-            });
-
-            runnerProcesses.add(proc);
-            const exitCode = await proc.exited;
-            runnerProcesses.delete(proc);
-
-            if (signal?.aborted) {
-              throw new AbortError();
-            }
-
-            if (exitCode !== 0 && exitCode !== null) {
-              const stdout = await new Response(proc.stdout).text();
-              const stderr = await new Response(proc.stderr).text();
-              const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-              throw new CommandError(`Command failed: ${finalCmd}`, output);
-            }
-          } else {
-            await $`${{ raw: finalCmd }}`.env(mergedEnv).cwd(cwd);
-          }
-        }
+        await executeCmd(cmd, {
+          cwd,
+          env: mergedEnv,
+          quiet,
+          signal,
+        });
       } catch (error) {
-        // Re-throw AbortError and CommandError as-is
-        if (error instanceof AbortError || error instanceof CommandError) {
+        if (error instanceof CommandError || error instanceof AbortError) {
+          // Task specific error modification if needed, or just rethrow
+          // The original code wrapped "Task '...' failed", unless it was Abort/CommandError?
+          // Actually, original code re-threw Abort/CommandError AS-IS.
+          // And wrapped generic errors.
           throw error;
-        }
-        if (error && typeof error === 'object' && 'stdout' in error) {
-          // Bun shell error includes stdout/stderr
-          const shellError = error as {
-            stdout: Buffer;
-            stderr: Buffer;
-            message?: string;
-          };
-          const output = [
-            shellError.stdout?.toString().trim(),
-            shellError.stderr?.toString().trim(),
-          ]
-            .filter(Boolean)
-            .join('\n');
-          throw new CommandError(`Command failed: ${cmdLabel}`, output);
         }
         throw new Error(
           `Task "${task.label}" failed: ${error instanceof Error ? error.message : String(error)}`
@@ -711,10 +623,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
     if (!tabsAdapter) {
       throw new Error(
         'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
-          'Install @openpok/tabs-ink and pass the adapter:\n' +
-          '  import { createTabsAdapter } from "@openpok/tabs-ink";\n' +
-          '  // In your router config:\n' +
-          '  tabs: createTabsAdapter()'
+        'Install @openpok/tabs-ink and pass the adapter:\n' +
+        '  import { createTabsAdapter } from "@openpok/tabs-ink";\n' +
+        '  // In your router config:\n' +
+        '  tabs: createTabsAdapter()'
       );
     }
 
@@ -786,7 +698,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
       // ShellPromise cannot be converted to string for tabs
       throw new Error(
         'r.tabs() does not support Bun shell ($`...`) commands. ' +
-          'Use string or array form instead.'
+        'Use string or array form instead.'
       );
     };
 
