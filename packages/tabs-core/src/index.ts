@@ -18,7 +18,21 @@ export type {
   EventDrivenState,
 } from './types.js';
 
-export { MAX_OUTPUT_LINES, STATUS_INDICATORS, getStatusIndicator } from './types.js';
+export {
+  MAX_OUTPUT_LINES,
+  MAX_LINE_LENGTH,
+  BUFFER_WARNING_THRESHOLD,
+  STATUS_INDICATORS,
+  getStatusIndicator,
+} from './types.js';
+
+// =============================================================================
+// Ring Buffer
+// =============================================================================
+
+export type { RingBufferOptions, OutputBufferOptions } from './ring-buffer.js';
+
+export { RingBuffer, OutputBuffer } from './ring-buffer.js';
 
 // =============================================================================
 // State Reducer

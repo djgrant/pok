@@ -22,6 +22,8 @@ export type TabProcess = {
 };
 
 export const MAX_OUTPUT_LINES = 10_000;
+export const MAX_LINE_LENGTH = 5_000;
+export const BUFFER_WARNING_THRESHOLD = 80; // Percentage
 
 // =============================================================================
 // Status Indicator Styling
