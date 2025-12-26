@@ -4,10 +4,17 @@
  * UI components for the tabbed terminal interface using OpenTUI primitives.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useKeyboard, useTerminalDimensions } from '@opentui/react';
 import type { KeyEvent, ScrollBoxRenderable } from '@opentui/core';
 import type { TabProcess } from '@openpok/tabs-core';
+import {
+  useTabsState,
+  useKeyboardCallbackRefs,
+  processKeyEvent,
+  executeKeyboardAction,
+  type NormalizedKeyEvent,
+  type KeyboardCallbacks,
+} from '@openpok/tabs-core';
 import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {
@@ -154,6 +161,36 @@ function StatusBar({
   );
 }
 
+/**
+ * Normalize OpenTUI's KeyEvent to the shared NormalizedKeyEvent format.
+ */
+function normalizeOpenTUIKeyEvent(event: KeyEvent): NormalizedKeyEvent {
+  const { name, ctrl, shift, meta, sequence } = event;
+
+  // Map OpenTUI key names to normalized names
+  let normalizedName: string | undefined;
+  if (name === 'escape') normalizedName = 'escape';
+  else if (name === 'return') normalizedName = 'return';
+  else if (name === 'tab') normalizedName = 'tab';
+  else if (name === 'backspace') normalizedName = 'backspace';
+  else if (name === 'delete') normalizedName = 'delete';
+  else if (name === 'up') normalizedName = 'up';
+  else if (name === 'down') normalizedName = 'down';
+  else if (name === 'left') normalizedName = 'left';
+  else if (name === 'right') normalizedName = 'right';
+  else if (name === 'pageup') normalizedName = 'pageup';
+  else if (name === 'pagedown') normalizedName = 'pagedown';
+  else normalizedName = name;
+
+  return {
+    char: sequence || undefined,
+    name: normalizedName,
+    ctrl,
+    shift,
+    meta,
+  };
+}
+
 export function TabbedView({
   tabs,
   activeIndex,
@@ -174,167 +211,62 @@ export function TabbedView({
 }: TabbedViewProps) {
   const { height: rows } = useTerminalDimensions();
 
-  // Show help hint for first 5 seconds
-  const [showHelpHint, setShowHelpHint] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHelpHint(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
   const terminalHeight = rows ?? 24;
   const viewHeight = Math.max(5, terminalHeight - 6);
 
-  const activeTab = tabs[activeIndex];
-
-  const switchTab = useCallback(
-    (newIndex: number) => {
-      if (newIndex >= 0 && newIndex < tabs.length) {
-        onActiveIndexChange(newIndex);
-      }
-    },
-    [tabs.length, onActiveIndexChange]
-  );
-
-  const onQuitRef = useRef(onQuit);
-  const onQuitRequestRef = useRef(onQuitRequest);
-  const onRestartRef = useRef(onRestart);
-  const onKillRef = useRef(onKill);
-  const onEnterFocusModeRef = useRef(onEnterFocusMode);
-  const onExitFocusModeRef = useRef(onExitFocusMode);
-  const onSendInputRef = useRef(onSendInput);
-  const onToggleHelpRef = useRef(onToggleHelp);
-  const onCloseHelpRef = useRef(onCloseHelp);
-
-  useEffect(() => {
-    onQuitRef.current = onQuit;
-    onQuitRequestRef.current = onQuitRequest;
-    onRestartRef.current = onRestart;
-    onKillRef.current = onKill;
-    onEnterFocusModeRef.current = onEnterFocusMode;
-    onExitFocusModeRef.current = onExitFocusMode;
-    onSendInputRef.current = onSendInput;
-    onToggleHelpRef.current = onToggleHelp;
-    onCloseHelpRef.current = onCloseHelp;
-  }, [onQuit, onQuitRequest, onRestart, onKill, onEnterFocusMode, onExitFocusMode, onSendInput, onToggleHelp, onCloseHelp]);
-
-  useKeyboard((event: KeyEvent) => {
-    const { name, ctrl, shift, meta, sequence } = event;
-
-    // Help overlay takes priority
-    if (sequence === '?') {
-      onToggleHelpRef.current();
-      return;
-    }
-
-    // Escape closes help if visible
-    if (name === 'escape' && helpVisible) {
-      onCloseHelpRef.current();
-      return;
-    }
-
-    // Don't process other keys when help is visible
-    if (helpVisible) {
-      return;
-    }
-
-    if (focusMode) {
-      if (name === 'escape') {
-        onExitFocusModeRef.current();
-        return;
-      }
-
-      let rawInput = sequence;
-
-      if (name === 'return') {
-        rawInput = '\n';
-      } else if (name === 'tab') {
-        rawInput = '\t';
-      } else if (name === 'backspace') {
-        rawInput = '\x7f';
-      } else if (name === 'delete') {
-        rawInput = '\x1b[3~';
-      } else if (name === 'up') {
-        rawInput = '\x1b[A';
-      } else if (name === 'down') {
-        rawInput = '\x1b[B';
-      } else if (name === 'right') {
-        rawInput = '\x1b[C';
-      } else if (name === 'left') {
-        rawInput = '\x1b[D';
-      } else if (ctrl && name.length === 1) {
-        const code = name.toUpperCase().charCodeAt(0) - 64;
-        if (code >= 1 && code <= 26) {
-          rawInput = String.fromCharCode(code);
-        }
-      }
-
-      if (rawInput) {
-        onSendInputRef.current(rawInput);
-      }
-      return;
-    }
-
-    if (quitConfirmPending) {
-      if (name === 'q') {
-        onQuitRef.current();
-      } else {
-        onQuitRequestRef.current();
-      }
-      return;
-    }
-
-    if (name === 'q') {
-      onQuitRequestRef.current();
-      return;
-    }
-
-    if (name === 'c' && ctrl) {
-      onQuitRef.current();
-      return;
-    }
-
-    if (name === 'i') {
-      onEnterFocusModeRef.current();
-      return;
-    }
-
-    if (name === 'r') {
-      onRestartRef.current(activeIndex);
-      return;
-    }
-
-    if (name === 'k') {
-      onKillRef.current(activeIndex);
-      return;
-    }
-
-    const num = parseInt(name, 10);
-    if (num >= 1 && num <= tabs.length) {
-      switchTab(num - 1);
-      return;
-    }
-
-    if (name === 'tab' && shift) {
-      switchTab((activeIndex - 1 + tabs.length) % tabs.length);
-      return;
-    }
-    if (name === 'tab') {
-      switchTab((activeIndex + 1) % tabs.length);
-      return;
-    }
-
-    if (name === 'left' && meta) {
-      switchTab((activeIndex - 1 + tabs.length) % tabs.length);
-      return;
-    }
-    if (name === 'right' && meta) {
-      switchTab((activeIndex + 1) % tabs.length);
-      return;
-    }
-
-    // Note: up/down/pageup/pagedown are now handled by the native scrollbox
+  // Use shared tabs state hook
+  // Note: OpenTUI's scrollbox handles scrolling natively, so we don't use scrollBy here
+  const {
+    showHelpHint,
+    switchTab,
+    nextTab,
+    prevTab,
+    scrollBy,
+  } = useTabsState({
+    tabs,
+    activeIndex,
+    onActiveIndexChange,
+    viewHeight,
   });
 
+  // Use shared callback refs hook
+  const callbacks: KeyboardCallbacks = {
+    onQuit,
+    onQuitRequest,
+    onRestart,
+    onKill,
+    onEnterFocusMode,
+    onExitFocusMode,
+    onSendInput,
+    onToggleHelp,
+    onCloseHelp,
+  };
+  const callbackRefs = useKeyboardCallbackRefs(callbacks);
+
+  useKeyboard((event: KeyEvent) => {
+    const normalizedEvent = normalizeOpenTUIKeyEvent(event);
+    const action = processKeyEvent(
+      normalizedEvent,
+      {
+        helpVisible,
+        focusMode,
+        quitConfirmPending,
+        activeIndex,
+        tabCount: tabs.length,
+      },
+      viewHeight
+    );
+
+    // For OpenTUI, we skip scroll actions since native scrollbox handles them
+    if (action.type === 'scroll') {
+      // OpenTUI's scrollbox handles up/down/pageup/pagedown natively
+      return;
+    }
+
+    executeKeyboardAction(action, callbackRefs, scrollBy, switchTab, nextTab, prevTab);
+  });
+
+  const activeTab = tabs[activeIndex];
   if (!activeTab) {
     return <text>No tabs available</text>;
   }
