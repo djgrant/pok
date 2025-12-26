@@ -3,3 +3,4 @@ packages:
   - test/utils
   - test
   - .test-projects/*
+  - website
