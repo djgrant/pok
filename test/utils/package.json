@@ -11,6 +11,7 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "@openpok/core": "workspace:*"
+    "@openpok/core": "workspace:*",
+    "zod": "^4.0.0"
   }
 }

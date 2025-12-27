@@ -1,5 +1,7 @@
 import { defineCommand } from '@openpok/core';
-import { runWithAllLogLevels } from '../../shared/tasks';
+import { tasks } from '@openpok/test-utils';
+
+const { runWithAllLogLevels } = tasks;
 
 export const command = defineCommand({
   label: 'Command with all log levels',

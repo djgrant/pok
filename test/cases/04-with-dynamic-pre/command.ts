@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { defineCommand } from '@openpok/core';
-import { alwaysPass, secondCheck, conditionalCheck } from '../../shared/mocks/checks';
+import { mocks } from '@openpok/test-utils';
+
+const { alwaysPass, secondCheck, conditionalCheck } = mocks;
 
 export const command = defineCommand({
   label: 'Command with dynamic pre-checks',

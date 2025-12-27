@@ -23,7 +23,10 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@openpok/core": "workspace:*",
+    "@openpok/reporter-clack": "workspace:*",
+    "@openpok/prompter-clack": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

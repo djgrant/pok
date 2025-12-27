@@ -1,5 +1,7 @@
 import { defineCommand } from '@openpok/core';
-import { alwaysPass, alwaysFail } from '../../shared/mocks/checks';
+import { mocks } from '@openpok/test-utils';
+
+const { alwaysPass, alwaysFail } = mocks;
 
 export const command = defineCommand({
   label: 'Command with failing pre-check',

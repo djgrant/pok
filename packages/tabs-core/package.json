@@ -25,11 +25,12 @@
   "bugs": {
     "url": "https://github.com/notation-dev/openpok/issues"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
@@ -54,7 +55,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.2.0",
-    "react": "^19.2.0"
+    "react": "^19.2.0",
+    "@openpok/core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"
