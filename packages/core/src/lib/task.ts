@@ -67,12 +67,33 @@ type EmptyObject = Record<string, never>;
 // =============================================================================
 
 /**
- * Backoff strategy for retries.
- * - 'fixed': Same delay between each retry
- * - 'linear': Delay increases linearly (delay * attempt)
- * - 'exponential': Delay doubles each attempt (delay * 2^attempt)
+ * Backoff strategy constants with descriptions.
  */
-export type BackoffStrategy = 'fixed' | 'linear' | 'exponential';
+export const BackoffStrategies = {
+  /**
+   * Same delay between each retry.
+   * @example delay=1000 → waits 1s, 1s, 1s...
+   */
+  fixed: 'fixed',
+  /**
+   * Delay increases linearly: `delay * (attempt + 1)`.
+   * @example delay=1000 → waits 1s, 2s, 3s...
+   */
+  linear: 'linear',
+  /**
+   * Delay doubles each attempt: `delay * 2^attempt`.
+   * @example delay=1000 → waits 1s, 2s, 4s, 8s...
+   */
+  exponential: 'exponential',
+} as const;
+
+/**
+ * Backoff strategy for retries.
+ * - `'fixed'`: Same delay between each retry
+ * - `'linear'`: Delay increases linearly (`delay * attempt`)
+ * - `'exponential'`: Delay doubles each attempt (`delay * 2^attempt`)
+ */
+export type BackoffStrategy = (typeof BackoffStrategies)[keyof typeof BackoffStrategies];
 
 /**
  * Configuration for retry behavior on task failure.
@@ -90,6 +111,11 @@ export type RetryConfig = {
   delay?: number;
   /**
    * Backoff strategy for calculating delay between retries.
+   *
+   * - `'fixed'`: Same delay between each retry
+   * - `'linear'`: Delay increases linearly (`delay * attempt`)
+   * - `'exponential'`: Delay doubles each attempt (`delay * 2^attempt`)
+   *
    * @default 'fixed'
    */
   backoff?: BackoffStrategy;

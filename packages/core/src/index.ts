@@ -78,7 +78,7 @@ export type {
   BackoffStrategy,
 } from './lib/task';
 
-export { isShellPromise, execInputToString } from './lib/task';
+export { isShellPromise, execInputToString, BackoffStrategies } from './lib/task';
 
 // =============================================================================
 // Environment types
@@ -105,7 +105,7 @@ export type { CheckConfig, CheckFn } from './lib/check';
 // Runner
 // =============================================================================
 
-export { createRunner, CommandError, TimeoutError, AbortError } from './lib/runner';
+export { createRunner, CommandError, TimeoutError, AbortError, ParallelModes } from './lib/runner';
 export type {
   Runner,
   ExecOptions,
