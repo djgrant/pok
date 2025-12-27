@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { defineCommand } from '@openpok/core';
-import { execSimple, execWithParams } from '../../shared/tasks';
+import { tasks } from '@openpok/test-utils';
+
+const { execSimple, execWithParams } = tasks;
 
 export const command = defineCommand({
   label: 'Command that runs tasks',

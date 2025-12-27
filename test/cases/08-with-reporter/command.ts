@@ -1,5 +1,7 @@
 import { defineCommand } from '@openpok/core';
-import { runWithReporter } from '../../shared/tasks';
+import { tasks } from '@openpok/test-utils';
+
+const { runWithReporter } = tasks;
 
 export const command = defineCommand({
   label: 'Command with reporter output',

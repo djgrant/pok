@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { defineCommand } from '@openpok/core';
-import { execWithEnv } from '../../shared/tasks';
+import { tasks } from '@openpok/test-utils';
+
+const { execWithEnv } = tasks;
 
 export const command = defineCommand({
   label: 'Command with env task',
