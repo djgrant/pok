@@ -13,12 +13,10 @@ function detectBrowser(): {
 } {
   const ua = navigator.userAgent.toLowerCase();
 
-  const isSafari =
-    ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium');
+  const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('chromium');
   const isChrome = ua.includes('chrome') || ua.includes('chromium');
   const isFirefox = ua.includes('firefox');
-  const isMobile =
-    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
 
   return { isSafari, isChrome, isFirefox, isMobile };
 }

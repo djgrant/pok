@@ -25,8 +25,8 @@ const prompter = createRawPrompter();
 
 // Pre-configured responses
 const prompter = createRawPrompter({
-  selectResponses: ['option1', 'option2'],  // consumed in order
-  confirmResponses: true,                    // always true
+  selectResponses: ['option1', 'option2'], // consumed in order
+  confirmResponses: true, // always true
   textResponses: (opts) => opts.initialValue ?? 'test',
 });
 
@@ -37,14 +37,14 @@ expect(calls[0]).toMatchObject({ type: 'select', response: 'option1' });
 
 #### Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `selectResponses` | `T \| T[] \| ((opts) => T)` | Responses for select prompts |
-| `multiselectResponses` | `T[] \| T[][] \| ((opts) => T[])` | Responses for multiselect prompts |
-| `confirmResponses` | `boolean \| boolean[] \| ((opts) => boolean)` | Responses for confirm prompts |
-| `textResponses` | `string \| string[] \| ((opts) => string)` | Responses for text prompts |
-| `strict` | `boolean` | Throw if no response is configured |
-| `onPrompt` | `(call) => void` | Callback fired for each prompt |
+| Option                 | Type                                          | Description                        |
+| ---------------------- | --------------------------------------------- | ---------------------------------- |
+| `selectResponses`      | `T \| T[] \| ((opts) => T)`                   | Responses for select prompts       |
+| `multiselectResponses` | `T[] \| T[][] \| ((opts) => T[])`             | Responses for multiselect prompts  |
+| `confirmResponses`     | `boolean \| boolean[] \| ((opts) => boolean)` | Responses for confirm prompts      |
+| `textResponses`        | `string \| string[] \| ((opts) => string)`    | Responses for text prompts         |
+| `strict`               | `boolean`                                     | Throw if no response is configured |
+| `onPrompt`             | `(call) => void`                              | Callback fired for each prompt     |
 
 #### Response Patterns
 
@@ -82,9 +82,7 @@ await run(['my-command'], {
 });
 
 // Assert on captured events
-expect(events).toContainEqual(
-  expect.objectContaining({ type: 'activity:success' })
-);
+expect(events).toContainEqual(expect.objectContaining({ type: 'activity:success' }));
 ```
 
 #### Controller Methods
@@ -192,9 +190,7 @@ export const mockResolver = defineEnvResolver({
   availableVars: ['API_KEY', 'DATABASE_URL'] as const,
   resolve: (keys, ctx) => {
     // Return predictable mock values
-    return Object.fromEntries(
-      keys.map((k) => [k, `mock-${k.toLowerCase()}-${ctx.env}`])
-    );
+    return Object.fromEntries(keys.map((k) => [k, `mock-${k.toLowerCase()}-${ctx.env}`]));
   },
 });
 ```
@@ -237,9 +233,7 @@ export const simpleResolver = defineEnvResolver({
   requiredContext: z.object({}),
   availableVars: ['SIMPLE_VAR'] as const,
   resolve: (keys) => {
-    return Object.fromEntries(
-      keys.map((k) => [k, `simple-${k.toLowerCase()}`])
-    );
+    return Object.fromEntries(keys.map((k) => [k, `simple-${k.toLowerCase()}`]));
   },
 });
 ```
@@ -272,10 +266,7 @@ Create a reusable helper for your test suite:
 // test/utils/capture.ts
 import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '@openpok/core';
 
-export async function captureEvents(
-  args: string[],
-  options: { selectResponses?: unknown[] } = {}
-) {
+export async function captureEvents(args: string[], options: { selectResponses?: unknown[] } = {}) {
   const events: CLIEvent[] = [];
   const reporterAdapter = createRawReporterAdapter({
     onEvent: (event) => events.push(event),

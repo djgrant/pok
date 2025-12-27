@@ -43,9 +43,9 @@ export type CompositeResolverConfig<TResolvers extends readonly AnyTypedEnvResol
  * });
  * ```
  */
-export function defineCompositeResolver<
-  const TResolvers extends readonly AnyTypedEnvResolver[],
->(config: CompositeResolverConfig<TResolvers>): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
+export function defineCompositeResolver<const TResolvers extends readonly AnyTypedEnvResolver[]>(
+  config: CompositeResolverConfig<TResolvers>
+): TypedEnvResolver<ExtractAvailableVars<TResolvers>> {
   type CompositeVars = ExtractAvailableVars<TResolvers>;
 
   // Collect all available vars from all resolvers (union)

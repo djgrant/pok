@@ -124,8 +124,6 @@ Register-ArgumentCompleter -Native -CommandName ${appName} -ScriptBlock {
 }`;
 }
 
-
-
 // =============================================================================
 // Dynamic Completion Logic
 // =============================================================================
@@ -194,10 +192,7 @@ function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | 
 /**
  * Find the current command node based on arguments
  */
-function findCurrentNode(
-  args: string[],
-  tree: CommandTree
-): { node: CommandNode | null } {
+function findCurrentNode(args: string[], tree: CommandTree): { node: CommandNode | null } {
   // Filter out flags and empty strings to get just command path
   const commandArgs = args.filter((arg) => arg !== '' && !arg.startsWith('-'));
 

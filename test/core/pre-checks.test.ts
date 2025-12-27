@@ -89,7 +89,7 @@ describe('Pre-flight Checks', () => {
       expect(failureEvent).toBeDefined();
       if (failureEvent?.type === 'activity:failure') {
         expect(failureEvent.remediation).toEqual([
-          "Start Docker Desktop, or",
+          'Start Docker Desktop, or',
           "Run 'sudo systemctl start docker' (Linux)",
         ]);
       }

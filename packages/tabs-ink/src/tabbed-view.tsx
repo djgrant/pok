@@ -185,22 +185,25 @@ function StatusBar({
 /**
  * Normalize Ink's useInput key event to the shared NormalizedKeyEvent format.
  */
-function normalizeInkKeyEvent(input: string, key: {
-  upArrow: boolean;
-  downArrow: boolean;
-  leftArrow: boolean;
-  rightArrow: boolean;
-  return: boolean;
-  escape: boolean;
-  ctrl: boolean;
-  shift: boolean;
-  meta: boolean;
-  tab: boolean;
-  backspace: boolean;
-  delete: boolean;
-  pageUp: boolean;
-  pageDown: boolean;
-}): NormalizedKeyEvent {
+function normalizeInkKeyEvent(
+  input: string,
+  key: {
+    upArrow: boolean;
+    downArrow: boolean;
+    leftArrow: boolean;
+    rightArrow: boolean;
+    return: boolean;
+    escape: boolean;
+    ctrl: boolean;
+    shift: boolean;
+    meta: boolean;
+    tab: boolean;
+    backspace: boolean;
+    delete: boolean;
+    pageUp: boolean;
+    pageDown: boolean;
+  }
+): NormalizedKeyEvent {
   // Map Ink key properties to normalized key names
   let name: string | undefined;
   if (key.escape) name = 'escape';

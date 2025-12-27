@@ -59,7 +59,7 @@ export const dockerRunning = defineCheck({
   },
   errorMessage: 'Docker daemon is not running',
   remediation: [
-    "Start Docker Desktop, or",
+    'Start Docker Desktop, or',
     "Run 'sudo systemctl start docker' (Linux)",
     "Run 'open -a Docker' (macOS)",
   ],
@@ -224,10 +224,7 @@ export const dockerRunning = defineCheck({
     }
   },
   errorMessage: 'Docker daemon is not running',
-  remediation: [
-    "Start Docker Desktop, or",
-    "Run 'sudo systemctl start docker' (Linux)",
-  ],
+  remediation: ['Start Docker Desktop, or', "Run 'sudo systemctl start docker' (Linux)"],
   documentationUrl: 'https://docs.docker.com/get-started/',
 });
 ```
@@ -239,11 +236,11 @@ This renders as:
 │
 ■  Docker running
 │     Docker daemon is not running
-│     
+│
 │     To fix:
 │       - Start Docker Desktop, or
 │       - Run 'sudo systemctl start docker' (Linux)
-│     
+│
 │     More info: https://docs.docker.com/get-started/
 │
 └  ✘ Failed
@@ -407,11 +404,11 @@ When a check has `remediation` and/or `documentationUrl` defined, they're displa
 │
 ■  Docker running
 │     Docker daemon is not running
-│     
+│
 │     To fix:
 │       - Start Docker Desktop, or
 │       - Run 'sudo systemctl start docker' (Linux)
-│     
+│
 │     More info: https://docs.docker.com/get-started/
 │
 └  ✘ Failed

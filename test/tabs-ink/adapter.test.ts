@@ -201,9 +201,8 @@ describe('State management re-exports', () => {
   });
 
   it('getTabsGroupActivities returns activities in tabs group', async () => {
-    const { createInitialState, reducer, getTabsGroupActivities } = await import(
-      '@openpok/tabs-ink'
-    );
+    const { createInitialState, reducer, getTabsGroupActivities } =
+      await import('@openpok/tabs-ink');
 
     let state = createInitialState();
     const groupId = 'tabs-group' as any;

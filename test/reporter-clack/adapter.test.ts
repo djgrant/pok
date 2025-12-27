@@ -315,10 +315,7 @@ describe('ClackReporterAdapter', () => {
         events.push({ type: 'log', activityId: 'a1', level: 'info', message: `Log ${i}` });
       }
 
-      events.push(
-        { type: 'activity:success', id: 'a1' },
-        { type: 'group:end', id: 'g1' }
-      );
+      events.push({ type: 'activity:success', id: 'a1' }, { type: 'group:end', id: 'g1' });
 
       const lines = await getScreenshot(events);
       // First 100 should be present
@@ -539,10 +536,7 @@ describe('ClackReporterAdapter', () => {
           type: 'activity:failure',
           id: 'a1',
           error: 'Docker daemon is not running',
-          remediation: [
-            "Start Docker Desktop, or",
-            "Run 'sudo systemctl start docker' (Linux)",
-          ],
+          remediation: ['Start Docker Desktop, or', "Run 'sudo systemctl start docker' (Linux)"],
         },
         { type: 'group:end', id: 'g1' },
       ];

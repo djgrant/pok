@@ -6,15 +6,15 @@ pok is designed for modern terminal emulators with Unicode and color support.
 
 These terminals are fully supported:
 
-| Terminal | Platform | Notes |
-|----------|----------|-------|
-| iTerm2 | macOS | Recommended |
-| Warp | macOS | Recommended |
-| Terminal.app | macOS | Built-in |
-| Windows Terminal | Windows | Recommended |
-| Alacritty | Cross-platform | |
-| Kitty | Cross-platform | |
-| Hyper | Cross-platform | |
+| Terminal         | Platform       | Notes       |
+| ---------------- | -------------- | ----------- |
+| iTerm2           | macOS          | Recommended |
+| Warp             | macOS          | Recommended |
+| Terminal.app     | macOS          | Built-in    |
+| Windows Terminal | Windows        | Recommended |
+| Alacritty        | Cross-platform |             |
+| Kitty            | Cross-platform |             |
+| Hyper            | Cross-platform |             |
 
 ## Feature Requirements
 
@@ -22,15 +22,15 @@ These terminals are fully supported:
 
 pok uses Unicode symbols for visual feedback:
 
-| Symbol | Meaning | Fallback |
-|--------|---------|----------|
-| ◇ | Success | [OK] |
-| ■ | Error | [ERR] |
-| ▲ | Warning | [WARN] |
-| ● | Info | [INFO] |
-| ┌└│ | Group borders | [] |
-| ✔ | Done | Done |
-| ✘ | Failed | Failed |
+| Symbol | Meaning       | Fallback |
+| ------ | ------------- | -------- |
+| ◇      | Success       | [OK]     |
+| ■      | Error         | [ERR]    |
+| ▲      | Warning       | [WARN]   |
+| ●      | Info          | [INFO]   |
+| ┌└│    | Group borders | []       |
+| ✔      | Done          | Done     |
+| ✘      | Failed        | Failed   |
 
 If your terminal doesn't display these correctly, use `--plain` mode.
 
@@ -39,7 +39,7 @@ If your terminal doesn't display these correctly, use `--plain` mode.
 pok uses ANSI colors for status indication:
 
 - Green: Success
-- Red: Error/Failure  
+- Red: Error/Failure
 - Yellow: Warning
 - Blue: Info
 - Cyan: Step
@@ -49,10 +49,12 @@ Disable with `--no-color` or set `NO_COLOR=1`.
 ### Minimum Terminal Size
 
 For the best experience:
+
 - Width: 80 columns minimum (120 recommended)
 - Height: 24 rows minimum
 
 The tabs TUI requires:
+
 - Width: 100 columns recommended
 - Height: 30 rows recommended
 
@@ -70,6 +72,7 @@ Disables all Unicode symbols and colors:
 ```
 
 Enable with:
+
 ```bash
 mycli build --plain
 ```
@@ -112,10 +115,10 @@ If you see boxes (□) instead of symbols:
 
 ## Environment Variables
 
-| Variable | Effect |
-|----------|--------|
-| `NO_COLOR` | Disables color output |
-| `FORCE_COLOR` | Forces color even in non-TTY |
-| `CI` | Enables plain mode |
-| `TERM` | Terminal type detection |
-| `TERM_PROGRAM` | Terminal program detection |
+| Variable       | Effect                       |
+| -------------- | ---------------------------- |
+| `NO_COLOR`     | Disables color output        |
+| `FORCE_COLOR`  | Forces color even in non-TTY |
+| `CI`           | Enables plain mode           |
+| `TERM`         | Terminal type detection      |
+| `TERM_PROGRAM` | Terminal program detection   |

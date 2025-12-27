@@ -11,12 +11,7 @@ import type { TabProcess as BaseTabProcess } from '@openpok/tabs-core';
 // Re-exports from @openpok/tabs-core
 // =============================================================================
 
-export type {
-  TabStatus,
-  ActivityNode,
-  GroupNode,
-  EventDrivenState,
-} from '@openpok/tabs-core';
+export type { TabStatus, ActivityNode, GroupNode, EventDrivenState } from '@openpok/tabs-core';
 
 export { MAX_OUTPUT_LINES } from '@openpok/tabs-core';
 

@@ -220,9 +220,7 @@ describe('ProcessManager - output batching', () => {
 
 describe('ProcessManager - kill', () => {
   it('kills a specific process', async () => {
-    const { manager, captured } = createTestManager([
-      { label: 'Long running', exec: 'sleep 10' },
-    ]);
+    const { manager, captured } = createTestManager([{ label: 'Long running', exec: 'sleep 10' }]);
 
     manager.start();
     await waitForBatch();

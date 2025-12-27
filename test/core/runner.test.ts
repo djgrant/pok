@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import {
-  createRunner,
-  createEventBus,
-  createRawPrompter,
-  CommandError,
-} from '@openpok/core';
+import { createRunner, createEventBus, createRawPrompter, CommandError } from '@openpok/core';
 import type { Runner } from '@openpok/core';
 
 // =============================================================================

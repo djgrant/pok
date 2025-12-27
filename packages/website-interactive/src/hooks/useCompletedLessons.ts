@@ -6,9 +6,7 @@ const STORAGE_KEY = 'pok-completed-lessons';
  * Hook for managing lesson completion state with localStorage persistence
  */
 export function useCompletedLessons() {
-  const [completedLessons, setCompletedLessons] = useState<Set<string>>(
-    () => new Set()
-  );
+  const [completedLessons, setCompletedLessons] = useState<Set<string>>(() => new Set());
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -28,10 +26,7 @@ export function useCompletedLessons() {
   // Save to localStorage whenever completedLessons changes
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(Array.from(completedLessons))
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(completedLessons)));
     } catch (error) {
       console.error('Failed to save completed lessons:', error);
     }

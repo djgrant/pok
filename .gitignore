@@ -9,6 +9,9 @@ dist/
 *.tsbuildinfo
 .pok-bundle/
 
+# VitePress cache
+**/.vitepress/cache/
+
 # OS files
 .DS_Store
 

@@ -24,13 +24,13 @@ type CheckConfig = {
 
 ## Configuration
 
-| Property           | Type                          | Description                                           |
-| ------------------ | ----------------------------- | ----------------------------------------------------- |
-| `label`            | `string`                      | Human-readable label for logging                      |
-| `check`            | `() => void \| Promise<void>` | Validation function that throws on failure            |
-| `errorMessage`     | `string`                      | Custom error message (replaces default thrown error)  |
-| `remediation`      | `string \| string[]`          | Fix instructions shown when check fails               |
-| `documentationUrl` | `string`                      | Link to documentation for more information            |
+| Property           | Type                          | Description                                          |
+| ------------------ | ----------------------------- | ---------------------------------------------------- |
+| `label`            | `string`                      | Human-readable label for logging                     |
+| `check`            | `() => void \| Promise<void>` | Validation function that throws on failure           |
+| `errorMessage`     | `string`                      | Custom error message (replaces default thrown error) |
+| `remediation`      | `string \| string[]`          | Fix instructions shown when check fails              |
+| `documentationUrl` | `string`                      | Link to documentation for more information           |
 
 ## Examples
 
@@ -67,7 +67,7 @@ export const dockerRunning = defineCheck({
   },
   errorMessage: 'Docker daemon is not running',
   remediation: [
-    "Start Docker Desktop, or",
+    'Start Docker Desktop, or',
     "Run 'sudo systemctl start docker' (Linux)",
     "Run 'open -a Docker' (macOS)",
   ],
@@ -254,11 +254,11 @@ Error: Docker is not running
 │
 ■  Docker running
 │     Docker daemon is not running
-│     
+│
 │     To fix:
 │       - Start Docker Desktop, or
 │       - Run 'sudo systemctl start docker' (Linux)
-│     
+│
 │     More info: https://docs.docker.com/get-started/
 │
 └  ✘ Failed

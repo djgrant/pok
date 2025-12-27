@@ -7,13 +7,7 @@ export type HelpOverlayProps = {
 
 export function HelpOverlay(_props: HelpOverlayProps) {
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="single"
-      borderColor="blue"
-      paddingX={2}
-      paddingY={1}
-    >
+    <Box flexDirection="column" borderStyle="single" borderColor="blue" paddingX={2} paddingY={1}>
       <Box justifyContent="center" marginBottom={1}>
         <Text bold>Keyboard Help</Text>
       </Box>

@@ -336,7 +336,12 @@ describe('EventBus integration', () => {
     // Simulate a typical CLI run
     bus.emit({ type: 'root:start', appName: 'my-cli', version: '1.0.0' });
     bus.emit({ type: 'group:start', id: 'checks' as any, label: 'Pre-flight', layout: 'sequence' });
-    bus.emit({ type: 'activity:start', id: 'check-1' as any, label: 'Check A', parentId: 'checks' as any });
+    bus.emit({
+      type: 'activity:start',
+      id: 'check-1' as any,
+      label: 'Check A',
+      parentId: 'checks' as any,
+    });
     bus.emit({ type: 'activity:success', id: 'check-1' as any });
     bus.emit({ type: 'group:end', id: 'checks' as any });
     bus.emit({ type: 'root:end', exitCode: 0 });
