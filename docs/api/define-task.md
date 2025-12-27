@@ -18,7 +18,8 @@ function defineTask<TEnv, TParams, TEnvWriter>(config: {
   env?: TEnv;
   params?: TParams;
   envWriter?: TEnvWriter;
-  exec: string | ((ctx: TaskContext) => string);
+  retry?: RetryConfig;
+  exec: ExecInput | ((ctx: TaskContext) => ExecInput);
 }): ExecTaskConfig;
 
 // Run task - custom logic
@@ -28,6 +29,7 @@ function defineTask<TEnv, TParams, TEnvWriter, TReturn>(config: {
   env?: TEnv;
   params?: TParams;
   envWriter?: TEnvWriter;
+  retry?: RetryConfig;
   run: (runner: Runner, ctx: TaskContext) => Promise<TReturn> | TReturn;
 }): RunTaskConfig;
 ```
@@ -41,8 +43,27 @@ function defineTask<TEnv, TParams, TEnvWriter, TReturn>(config: {
 | `env`        | `Env \| Env[]`       | Environment(s) to resolve before execution            |
 | `params`     | `z.ZodType`          | Zod schema for task parameters                        |
 | `envWriter`  | `Env`                | Environment for writing (enables `ctx.writeEnvs`)     |
+| `retry`      | `RetryConfig`        | Retry configuration for failed executions             |
 | `exec`       | `string \| Function` | Shell command to execute                              |
 | `run`        | `Function`           | Custom execution logic                                |
+
+### RetryConfig
+
+```typescript
+type RetryConfig = {
+  maxAttempts: number;  // Retry attempts (not including initial)
+  delay?: number;       // Base delay in ms (default: 1000)
+  backoff?: BackoffStrategy;  // Default: 'fixed'
+  maxDelay?: number;    // Cap for backoff growth
+};
+
+type BackoffStrategy = 'fixed' | 'linear' | 'exponential';
+```
+
+Backoff strategies:
+- `fixed`: Same delay between each retry
+- `linear`: Delay increases linearly (`delay * attempt`)
+- `exponential`: Delay doubles each attempt (`delay * 2^attempt`)
 
 ## TaskContext
 
@@ -138,6 +159,43 @@ export const setup = defineTask({
     ctx.reporter.success('Ready!');
   },
 });
+```
+
+### Task with Retry
+
+```typescript
+import { defineTask } from '@openpok/core';
+
+// Retry with exponential backoff
+export const flakyApiCall = defineTask({
+  label: 'Call flaky API',
+  retry: {
+    maxAttempts: 3,
+    delay: 1000,
+    backoff: 'exponential',
+    maxDelay: 10000,
+  },
+  exec: 'curl https://flaky-api.example.com/endpoint',
+});
+
+// Run task with retry
+export const deployWithRetry = defineTask({
+  label: 'Deploy to CDN',
+  retry: { maxAttempts: 2, delay: 5000 },
+  run: async (r, ctx) => {
+    ctx.reporter.info('Deploying...');
+    await r.exec('aws s3 sync ./dist s3://my-bucket');
+    ctx.reporter.success('Deployed!');
+  },
+});
+```
+
+When used in parallel, retries exhaust before parallel mode rules apply:
+
+```typescript
+// In fail-fast mode, flakyApiCall will retry up to 3 times
+// before being considered a failure
+await r.parallel([r.run(flakyApiCall), r.run(stableTask)], { mode: 'fail-fast' });
 ```
 
 ### Task with Return Value

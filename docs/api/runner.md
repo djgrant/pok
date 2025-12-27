@@ -20,10 +20,11 @@ defineCommand({
 interface Runner<TContext> {
   cwd: string;
   reporter: CommandReporter;
+  prompter: Prompter;
 
-  exec(cmd: string, opts?: ExecOptions): Command;
+  exec(cmd: ExecInput, opts?: ExecOptions): Command;
   run<TReturn>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
-  parallel(items: RunnerItem[]): Promise<void>;
+  parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
   tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
   group<T>(
     label: string,
@@ -73,10 +74,20 @@ run: async (r) => {
 Execute a shell command.
 
 ```typescript
-exec(cmd: string, opts?: ExecOptions): Command
+exec(cmd: ExecInput, opts?: ExecOptions): Command
+
+type ExecInput = string | string[] | ShellPromise;
 
 type ExecOptions = {
   timeout?: number;  // Override default timeout
+  retry?: RetryConfig;  // Retry configuration
+};
+
+type RetryConfig = {
+  maxAttempts: number;  // Retry attempts (not including initial)
+  delay?: number;       // Base delay in ms (default: 1000)
+  backoff?: 'fixed' | 'linear' | 'exponential';  // Default: 'fixed'
+  maxDelay?: number;    // Cap for backoff growth
 };
 ```
 
@@ -90,9 +101,13 @@ run: async (r) => {
   // With timeout
   await r.exec('npm test', { timeout: 60000 });
 
-  // Chained
-  await r.exec('npm run build');
-  await r.exec('npm run deploy');
+  // With retry on failure
+  await r.exec('curl https://flaky-api.com', {
+    retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' }
+  });
+
+  // Array form (no shell interpolation, safe for dynamic input)
+  await r.exec(['git', 'checkout', branchName]);
 };
 ```
 
@@ -123,23 +138,59 @@ run: async (r) => {
 
 ### parallel
 
-Run multiple commands/tasks in parallel with race semantics.
+Run multiple commands/tasks in parallel with configurable execution modes.
 
 ```typescript
-parallel(items: RunnerItem[]): Promise<void>
+parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>
+
+type ParallelMode = 'race' | 'fail-fast' | 'all-settled';
+
+type ParallelOptions = {
+  mode?: ParallelMode;  // Default: 'race'
+};
 ```
 
-Exits when **any** item completes, killing all others:
+#### Execution Modes
+
+| Mode          | Behavior                                                  |
+| ------------- | --------------------------------------------------------- |
+| `race`        | First to settle wins, cancel rest (default)               |
+| `fail-fast`   | First failure cancels rest, otherwise wait for all        |
+| `all-settled` | Run all to completion, throw `AggregateError` if any fail |
 
 ```typescript
 run: async (r) => {
-  // Run until one exits
+  // Race mode (default) - exits when first completes
   await r.parallel([r.exec('npm run dev'), r.exec('npm run watch')]);
 
-  // Mix commands and tasks
-  await r.parallel([r.run(devServerTask), r.exec('stripe listen')]);
+  // Fail-fast mode - all must succeed, abort on first failure
+  await r.parallel(
+    [r.run(buildTask), r.run(testTask), r.run(lintTask)],
+    { mode: 'fail-fast' }
+  );
+
+  // All-settled mode - run all, collect failures
+  await r.parallel(
+    [r.run(deploy1), r.run(deploy2), r.run(deploy3)],
+    { mode: 'all-settled' }
+  );
 };
 ```
+
+#### Retry Interaction
+
+Tasks with retry configuration will exhaust all retries before the parallel mode rules apply:
+
+```typescript
+const flakyTask = defineTask({
+  label: 'Flaky API call',
+  retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' },
+  exec: 'curl https://api.example.com/flaky',
+});
+
+// In fail-fast mode: flakyTask retries up to 3 times before
+// being considered a failure that triggers cancellation
+await r.parallel([r.run(flakyTask), r.run(stableTask)], { mode: 'fail-fast' });
 
 ### tabs
 
