@@ -73,6 +73,9 @@ export type {
   // Exec input types (for type annotations)
   ExecInput,
   ShellPromise,
+  // Retry configuration
+  RetryConfig,
+  BackoffStrategy,
 } from './lib/task';
 
 export { isShellPromise, execInputToString } from './lib/task';
@@ -102,7 +105,7 @@ export type { CheckConfig, CheckFn } from './lib/check';
 // Runner
 // =============================================================================
 
-export { createRunner, CommandError, TimeoutError } from './lib/runner';
+export { createRunner, CommandError, TimeoutError, AbortError } from './lib/runner';
 export type {
   Runner,
   ExecOptions,
@@ -111,6 +114,9 @@ export type {
   DeferredTask,
   TabsRunnerOptions,
   RunnerOptions,
+  // Parallel execution options
+  ParallelMode,
+  ParallelOptions,
 } from './lib/runner';
 
 // =============================================================================
