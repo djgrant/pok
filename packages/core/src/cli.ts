@@ -83,7 +83,6 @@ export async function runCli(
   let createPrompter: () => any;
 
   try {
-    // @ts-expect-error - optional peer dependency, dynamically loaded at runtime
     const reporterModule = await import('@openpok/reporter-clack');
     createReporterAdapter = reporterModule.createReporterAdapter;
   } catch {
@@ -95,7 +94,6 @@ export async function runCli(
   }
 
   try {
-    // @ts-expect-error - optional peer dependency, dynamically loaded at runtime
     const prompterModule = await import('@openpok/prompter-clack');
     createPrompter = prompterModule.createPrompter;
   } catch {
