@@ -62,6 +62,43 @@ export function execInputToString(input: ExecInput): string {
 
 type EmptyObject = Record<string, never>;
 
+// =============================================================================
+// Retry Configuration
+// =============================================================================
+
+/**
+ * Backoff strategy for retries.
+ * - 'fixed': Same delay between each retry
+ * - 'linear': Delay increases linearly (delay * attempt)
+ * - 'exponential': Delay doubles each attempt (delay * 2^attempt)
+ */
+export type BackoffStrategy = 'fixed' | 'linear' | 'exponential';
+
+/**
+ * Configuration for retry behavior on task failure.
+ */
+export type RetryConfig = {
+  /**
+   * Maximum number of retry attempts (not including the initial attempt).
+   * e.g., maxAttempts: 3 means up to 4 total executions.
+   */
+  maxAttempts: number;
+  /**
+   * Base delay between retries in milliseconds.
+   * @default 1000
+   */
+  delay?: number;
+  /**
+   * Backoff strategy for calculating delay between retries.
+   * @default 'fixed'
+   */
+  backoff?: BackoffStrategy;
+  /**
+   * Maximum delay in milliseconds (caps exponential/linear growth).
+   */
+  maxDelay?: number;
+};
+
 /**
  * Function to write environment variables to the configured writer.
  * Only available when the task declares `envWriter`.
@@ -133,6 +170,11 @@ export type ExecTaskConfig<
    */
   envWriter?: TEnvWriter;
   /**
+   * Retry configuration for this task.
+   * When specified, failed executions will be retried according to this config.
+   */
+  retry?: RetryConfig;
+  /**
    * Command to execute. Supports three forms:
    * - string: Passed to sh -c (for static commands)
    * - string[]: Array of arguments, bypasses shell (safe for dynamic input)
@@ -167,6 +209,11 @@ export type RunTaskConfig<
    * The env must have a resolver that implements the `write` method.
    */
   envWriter?: TEnvWriter;
+  /**
+   * Retry configuration for this task.
+   * When specified, failed executions will be retried according to this config.
+   */
+  retry?: RetryConfig;
   run: (
     runner: RunnerLike,
     ctx: TaskContext<
@@ -201,6 +248,7 @@ export function defineTask<
   env?: TEnv;
   params?: TParams;
   envWriter?: TEnvWriter;
+  retry?: RetryConfig;
   exec:
     | ExecInput
     | ((
@@ -224,6 +272,7 @@ export function defineTask<
   env?: TEnv;
   params?: TParams;
   envWriter?: TEnvWriter;
+  retry?: RetryConfig;
   run: (
     runner: RunnerLike,
     ctx: TaskContext<
@@ -241,6 +290,7 @@ export function defineTask(config: {
   env?: AnyEnv | readonly AnyEnv[];
   envWriter?: AnyEnv;
   params?: z.ZodType;
+  retry?: RetryConfig;
   exec?: ExecInput | ((ctx: TaskContext<any, any, any>) => ExecInput);
   run?: (runner: RunnerLike, ctx: TaskContext<any, any, any>) => Promise<any> | any;
 }): AnyTaskConfig {

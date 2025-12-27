@@ -4,6 +4,7 @@ import {
   type RunTaskConfig,
   type TaskContext,
   type ExecInput,
+  type RetryConfig,
   isShellPromise,
   execInputToString,
 } from './task';
@@ -18,6 +19,11 @@ type AnyEnv = Env<any, any>;
 
 export type ExecOptions = {
   timeout?: number;
+  /**
+   * Retry configuration for this command.
+   * When specified, failed executions will be retried according to this config.
+   */
+  retry?: RetryConfig;
 };
 
 /**
@@ -100,6 +106,29 @@ function isDeferredTask(item: unknown): item is DeferredTask<unknown> {
 /** Items that can be passed to r.parallel() or r.tabs() */
 export type RunnerItem = Command | DeferredTask<unknown>;
 
+// =============================================================================
+// Parallel Execution Options
+// =============================================================================
+
+/**
+ * Parallel execution mode.
+ * - 'race': First to settle wins, cancel rest (current default)
+ * - 'fail-fast': First failure cancels rest, otherwise wait for all
+ * - 'all-settled': Run all to completion, collect errors
+ */
+export type ParallelMode = 'race' | 'fail-fast' | 'all-settled';
+
+/**
+ * Options for parallel execution.
+ */
+export type ParallelOptions = {
+  /**
+   * Execution mode for the parallel group.
+   * @default 'race'
+   */
+  mode?: ParallelMode;
+};
+
 /**
  * Options for the tabs runner.
  */
@@ -148,15 +177,25 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
 
   /**
    * Run multiple commands or tasks in parallel.
-   * Exits when any item completes (race behavior), killing all others.
    *
-   * Accepts commands (r.exec) or deferred tasks (r.run).
+   * Modes:
+   * - 'race' (default): First to settle wins, cancel rest
+   * - 'fail-fast': First failure cancels rest, otherwise wait for all
+   * - 'all-settled': Run all to completion, throw AggregateError if any fail
+   *
+   * Tasks with retry configs will retry before the parallel mode rules apply.
    *
    * @example
+   * // Race mode (default) - first to complete wins
    * await r.parallel([r.exec('vite'), r.exec('stripe listen')]);
-   * await r.parallel([r.run(task1), r.run(task2)]);
+   *
+   * // Fail-fast mode - all must succeed
+   * await r.parallel([r.run(task1), r.run(task2)], { mode: 'fail-fast' });
+   *
+   * // All-settled mode - run all regardless of failures
+   * await r.parallel([r.run(task1), r.run(task2)], { mode: 'all-settled' });
    */
-  parallel(items: RunnerItem[]): Promise<void>;
+  parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
 
   /**
    * Run multiple commands or tasks in a tabbed terminal interface.
@@ -298,6 +337,98 @@ class ProcessRegistry {
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
   }
+}
+
+// =============================================================================
+// Retry Helpers
+// =============================================================================
+
+/**
+ * Calculate delay for a retry attempt based on the backoff strategy.
+ */
+function calculateRetryDelay(config: RetryConfig, attempt: number): number {
+  const base = config.delay ?? 1000;
+  let delay: number;
+
+  switch (config.backoff ?? 'fixed') {
+    case 'fixed':
+      delay = base;
+      break;
+    case 'linear':
+      delay = base * (attempt + 1);
+      break;
+    case 'exponential':
+      delay = base * Math.pow(2, attempt);
+      break;
+  }
+
+  return config.maxDelay !== undefined ? Math.min(delay, config.maxDelay) : delay;
+}
+
+/**
+ * Sleep for a specified duration, respecting abort signal.
+ */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new AbortError());
+      return;
+    }
+
+    const timeout = setTimeout(resolve, ms);
+
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timeout);
+        reject(new AbortError());
+      },
+      { once: true }
+    );
+  });
+}
+
+/**
+ * Execute a function with retry logic.
+ * Reports retry attempts via the optional onRetry callback.
+ */
+async function executeWithRetry<T>(
+  fn: () => Promise<T>,
+  retry: RetryConfig | undefined,
+  signal: AbortSignal | undefined,
+  onRetry?: (attempt: number, maxAttempts: number, error: unknown) => void
+): Promise<T> {
+  if (!retry) {
+    return fn();
+  }
+
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retry.maxAttempts; attempt++) {
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    try {
+      return await fn();
+    } catch (error) {
+      // Don't retry on abort
+      if (error instanceof AbortError) {
+        throw error;
+      }
+
+      lastError = error;
+
+      // If we have more attempts, wait and retry
+      if (attempt < retry.maxAttempts) {
+        onRetry?.(attempt + 1, retry.maxAttempts, error);
+        const delay = calculateRetryDelay(retry, attempt);
+        await sleep(delay, signal);
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export type RunnerOptions<TContext extends Record<string, unknown>> = {
@@ -526,12 +657,20 @@ export function createRunner<TContext extends Record<string, unknown>>(
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
 
-          await executeCmd(cmd, {
-            cwd,
-            env: mergeEnv(allEnv),
-            quiet,
+          await executeWithRetry(
+            () =>
+              executeCmd(cmd, {
+                cwd,
+                env: mergeEnv(allEnv),
+                quiet,
+                signal,
+              }),
+            opts?.retry,
             signal,
-          });
+            (attempt, max) => {
+              reporter.warn(`Retrying command (${attempt}/${max})...`);
+            }
+          );
         };
 
         return execute().then(onFulfilled, onRejected);
@@ -539,39 +678,150 @@ export function createRunner<TContext extends Record<string, unknown>>(
     };
   };
 
-  const parallel = async (items: RunnerItem[]): Promise<void> => {
+  /**
+   * Execute a single parallel item with retry support.
+   */
+  const executeParallelItem = async (
+    item: RunnerItem,
+    index: number,
+    envVars: Record<string, string>,
+    itemSignal?: AbortSignal
+  ): Promise<void> => {
+    if (isCommand(item)) {
+      const retryConfig = item.opts?.retry;
+      await executeWithRetry(
+        () =>
+          executeCmd(item.cmd, {
+            cwd,
+            env: envVars,
+            quiet: false,
+            signal: itemSignal,
+          }),
+        retryConfig,
+        itemSignal,
+        (attempt, max) => {
+          reporter.warn(`Retrying command (${attempt}/${max})...`);
+        }
+      );
+    } else if (isDeferredTask(item)) {
+      const retryConfig = item.task.retry;
+      await executeWithRetry(
+        () => item.then(() => {}),
+        retryConfig,
+        itemSignal,
+        (attempt, max) => {
+          reporter.warn(`Retrying task "${item.task.label}" (${attempt}/${max})...`);
+        }
+      );
+    } else {
+      throw new CommandError(
+        `r.parallel() item at index ${index} is invalid`,
+        'r.parallel() only accepts commands (r.exec) or tasks (r.run).'
+      );
+    }
+  };
+
+  const parallel = async (items: RunnerItem[], options?: ParallelOptions): Promise<void> => {
     if (items.length === 0) return;
     if (items.length === 1) {
-      await items[0];
+      await executeParallelItem(items[0]!, 0, mergeEnv(getAllCachedEnv()), signal);
       return;
     }
 
+    const mode = options?.mode ?? 'race';
     const allEnv = getAllCachedEnv();
     const envVars = mergeEnv(allEnv);
 
-    const promises: Promise<void>[] = items.map((item, index) => {
-      if (isCommand(item)) {
-        return executeCmd(item.cmd, {
-          cwd,
-          env: envVars,
-          quiet: false, // Parallel output is usually interleaved/handled by reporter, assuming non-quiet for now or standard inheritance
-          // Note: Original code used ['inherit', 'inherit', 'inherit'] for all parallel execution branches
-        });
-      } else if (isDeferredTask(item)) {
-        return item.then(() => {});
-      } else {
-        throw new CommandError(
-          `r.parallel() item at index ${index} is invalid`,
-          'r.parallel() only accepts commands (r.exec) or tasks (r.run).'
+    switch (mode) {
+      case 'race': {
+        // Race mode: first to settle wins, cancel rest
+        const promises = items.map((item, index) =>
+          executeParallelItem(item, index, envVars, signal)
         );
-      }
-    });
 
-    try {
-      await Promise.race(promises);
-    } finally {
-      killRunnerProcesses();
+        try {
+          await Promise.race(promises);
+        } finally {
+          killRunnerProcesses();
+        }
+        break;
+      }
+
+      case 'fail-fast': {
+        // Fail-fast mode: first failure cancels rest, otherwise wait for all
+        const controller = new AbortController();
+        const itemSignal = signal
+          ? AbortSignal.any([signal, controller.signal])
+          : controller.signal;
+
+        let firstError: unknown = null;
+
+        const promises = items.map(async (item, index) => {
+          if (controller.signal.aborted) return;
+
+          try {
+            await executeParallelItem(item, index, envVars, itemSignal);
+          } catch (error) {
+            if (error instanceof AbortError || controller.signal.aborted) return;
+            if (!firstError) {
+              firstError = error;
+              controller.abort();
+            }
+          }
+        });
+
+        await Promise.allSettled(promises);
+        killRunnerProcesses();
+
+        if (firstError) {
+          throw firstError;
+        }
+        break;
+      }
+
+      case 'all-settled': {
+        // All-settled mode: run all to completion, collect errors
+        const errors: { index: number; error: unknown }[] = [];
+
+        const promises = items.map(async (item, index) => {
+          try {
+            await executeParallelItem(item, index, envVars, signal);
+          } catch (error) {
+            if (!(error instanceof AbortError)) {
+              errors.push({ index, error });
+            }
+          }
+        });
+
+        await Promise.allSettled(promises);
+        killRunnerProcesses();
+
+        if (errors.length > 0) {
+          const errorMessages = errors.map(({ index, error }) => {
+            const label = getItemLabel(items[index]!);
+            const msg = error instanceof Error ? error.message : String(error);
+            return `[${index}] ${label}: ${msg}`;
+          });
+          throw new AggregateError(
+            errors.map((e) => e.error),
+            `${errors.length} of ${items.length} parallel items failed:\n${errorMessages.join('\n')}`
+          );
+        }
+        break;
+      }
     }
+  };
+
+  /**
+   * Get a display label for a runner item.
+   */
+  const getItemLabel = (item: RunnerItem): string => {
+    if (isCommand(item)) {
+      return execInputToString(item.cmd);
+    } else if (isDeferredTask(item)) {
+      return item.task.label;
+    }
+    return 'unknown';
   };
 
   const executeTask = async <TReturn>(
@@ -654,18 +904,22 @@ export function createRunner<TContext extends Record<string, unknown>>(
       const allEnv = getAllCachedEnv();
 
       try {
-        await executeCmd(cmd, {
-          cwd,
-          env: mergeEnv(allEnv),
-          quiet,
+        await executeWithRetry(
+          () =>
+            executeCmd(cmd, {
+              cwd,
+              env: mergeEnv(allEnv),
+              quiet,
+              signal,
+            }),
+          task.retry,
           signal,
-        });
+          (attempt, max) => {
+            reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
+          }
+        );
       } catch (error) {
         if (error instanceof CommandError || error instanceof AbortError) {
-          // Task specific error modification if needed, or just rethrow
-          // The original code wrapped "Task '...' failed", unless it was Abort/CommandError?
-          // Actually, original code re-threw Abort/CommandError AS-IS.
-          // And wrapped generic errors.
           throw error;
         }
         throw new CommandError(
@@ -677,7 +931,14 @@ export function createRunner<TContext extends Record<string, unknown>>(
       return undefined as TReturn;
     } else {
       const runTask = task as RunTaskConfig;
-      return runTask.run(runner, taskContext as any) as TReturn;
+      return executeWithRetry(
+        () => runTask.run(runner, taskContext as any) as Promise<TReturn>,
+        task.retry,
+        signal,
+        (attempt, max) => {
+          reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
+        }
+      );
     }
   };
 
