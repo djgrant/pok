@@ -1,27 +1,17 @@
+import type { LessonCategory } from '../lib/lessons';
+
 interface SidebarProps {
+  categories: LessonCategory[];
   selectedLesson: string | null;
   onSelectLesson: (lessonId: string) => void;
+  isComplete: (lessonId: string) => boolean;
 }
-
-interface Lesson {
-  id: string;
-  number: number;
-  title: string;
-}
-
-// Static placeholder lessons for now
-const lessons: Lesson[] = [
-  { id: 'intro', number: 1, title: 'Introduction to pok' },
-  { id: 'commands', number: 2, title: 'Creating Commands' },
-  { id: 'tasks', number: 3, title: 'Working with Tasks' },
-  { id: 'events', number: 4, title: 'Event System' },
-  { id: 'environments', number: 5, title: 'Environments' },
-  { id: 'checks', number: 6, title: 'Checks & Validation' },
-];
 
 export function Sidebar({
+  categories,
   selectedLesson,
   onSelectLesson,
+  isComplete,
 }: SidebarProps) {
   return (
     <aside className="sidebar">
@@ -30,19 +20,48 @@ export function Sidebar({
         <p>Interactive CLI Tutorial</p>
       </header>
       <nav className="sidebar-content">
-        <ul className="lesson-list">
-          {lessons.map((lesson) => (
-            <li
-              key={lesson.id}
-              className={`lesson-item ${selectedLesson === lesson.id ? 'active' : ''}`}
-              onClick={() => onSelectLesson(lesson.id)}
-            >
-              <span className="lesson-number">{lesson.number}.</span>
-              {lesson.title}
-            </li>
-          ))}
-        </ul>
+        {categories.map((category) => (
+          <div key={category.id} className="lesson-category">
+            <h2 className="category-title">{category.title}</h2>
+            <ul className="lesson-list">
+              {category.lessons.map((lesson, index) => (
+                <li
+                  key={lesson.id}
+                  className={`lesson-item ${selectedLesson === lesson.id ? 'active' : ''}`}
+                  onClick={() => onSelectLesson(lesson.id)}
+                >
+                  <span className="lesson-status">
+                    {isComplete(lesson.id) ? (
+                      <CheckIcon />
+                    ) : (
+                      <span className="lesson-number">{index + 1}</span>
+                    )}
+                  </span>
+                  <span className="lesson-title">{lesson.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
     </aside>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      className="check-icon"
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="11 4 5.5 10 3 7.5" />
+    </svg>
   );
 }
