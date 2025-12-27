@@ -119,7 +119,7 @@ def run_server():
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
-            device_scale_factor=2,
+            device_scale_factor=1,
         )
         page = context.new_page()
         
