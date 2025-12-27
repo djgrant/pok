@@ -18,8 +18,7 @@ Tasks are reusable pieces of work that can be shared between commands. They help
 
 Let's create a task that formats a timestamp:
 
-```bash
-cat > commands/format-time.task.ts << 'EOF'
+```typescript file="commands/format-time.task.ts"
 import { defineTask } from '@openpok/core';
 
 export default defineTask({
@@ -42,15 +41,13 @@ export default defineTask({
     return now.toISOString();
   },
 });
-EOF
 ```
 
 ## Step 2: Use the task in a command
 
 Now create a command that uses this task:
 
-```bash
-cat > commands/show-time.ts << 'EOF'
+```typescript file="commands/show-time.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -71,7 +68,6 @@ export default defineCommand({
     console.log(`Current time: ${time}`);
   },
 });
-EOF
 ```
 
 ## Step 3: Run the command

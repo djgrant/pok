@@ -18,8 +18,7 @@ Pok lets you compose commands into parent-child hierarchies and run multiple com
 
 Let's create a `db` command with `migrate` and `seed` subcommands:
 
-```bash
-cat > commands/db.ts << 'EOF'
+```typescript file="commands/db.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -32,13 +31,11 @@ export default defineCommand({
     console.log('Run: pok db migrate  or  pok db seed');
   },
 });
-EOF
 ```
 
 ## Step 2: Create child commands
 
-```bash
-cat > commands/db.migrate.ts << 'EOF'
+```typescript file="commands/db.migrate.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -53,11 +50,9 @@ export default defineCommand({
     console.log('All migrations complete!');
   },
 });
-EOF
 ```
 
-```bash
-cat > commands/db.seed.ts << 'EOF'
+```typescript file="commands/db.seed.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -72,7 +67,6 @@ export default defineCommand({
     console.log('Seeding complete!');
   },
 });
-EOF
 ```
 
 ## Step 3: Run the commands
@@ -97,8 +91,7 @@ pok db seed
 
 Create a setup command that runs migrate before seed:
 
-```bash
-cat > commands/db.setup.ts << 'EOF'
+```typescript file="commands/db.setup.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -106,16 +99,13 @@ export default defineCommand({
     name: 'db.setup',
     description: 'Full database setup (migrate + seed)',
   },
-  pre: [
-    { command: 'db.migrate' },
-  ],
+  pre: [{ command: 'db.migrate' }],
   run: async ({ commands }) => {
     console.log('Running post-migration seed...');
     await commands['db.seed']();
     console.log('Database setup complete!');
   },
 });
-EOF
 ```
 
 ```bash
@@ -141,7 +131,7 @@ From within a command, you can run other commands:
 ```typescript
 run: async ({ commands }) => {
   await commands['other-command']({ someArg: 'value' });
-}
+};
 ```
 
 ## Key Points

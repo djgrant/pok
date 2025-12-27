@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebContainer } from '@webcontainer/api';
@@ -8,10 +8,31 @@ interface TerminalProps {
   webContainer: WebContainer | null;
 }
 
-export function Terminal({ webContainer }: TerminalProps) {
+export interface TerminalHandle {
+  writeCommand: (command: string) => void;
+}
+
+export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
+  { webContainer },
+  ref
+) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const shellWriterRef = useRef<WritableStreamDefaultWriter<string> | null>(null);
+
+  // Expose writeCommand method via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      writeCommand: (command: string) => {
+        if (shellWriterRef.current) {
+          shellWriterRef.current.write(command + '\n');
+        }
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!terminalRef.current || xtermRef.current) return;
@@ -82,8 +103,7 @@ export function Terminal({ webContainer }: TerminalProps) {
   useEffect(() => {
     if (!webContainer || !xtermRef.current) return;
 
-    let shellProcess: Awaited<ReturnType<typeof webContainer.spawn>> | null =
-      null;
+    let shellProcess: Awaited<ReturnType<typeof webContainer.spawn>> | null = null;
     let shellWriter: WritableStreamDefaultWriter<string> | null = null;
 
     const setupShell = async () => {
@@ -108,6 +128,7 @@ export function Terminal({ webContainer }: TerminalProps) {
 
       // Get input writer
       shellWriter = shellProcess.input.getWriter();
+      shellWriterRef.current = shellWriter;
 
       // Handle terminal input
       terminal.onData((data) => {
@@ -131,12 +152,11 @@ export function Terminal({ webContainer }: TerminalProps) {
 
     setupShell().catch((err) => {
       console.error('Failed to setup shell:', err);
-      xtermRef.current?.writeln(
-        `\r\n\x1b[31mError: Failed to start shell: ${err.message}\x1b[0m`
-      );
+      xtermRef.current?.writeln(`\r\n\x1b[31mError: Failed to start shell: ${err.message}\x1b[0m`);
     });
 
     return () => {
+      shellWriterRef.current = null;
       shellWriter?.close();
       shellProcess?.kill();
     };
@@ -149,4 +169,4 @@ export function Terminal({ webContainer }: TerminalProps) {
       </div>
     </div>
   );
-}
+});

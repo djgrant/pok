@@ -18,10 +18,7 @@ Welcome to pok! In this lesson, you'll create your very first CLI command.
 
 Commands in pok are TypeScript files in the `commands/` directory. Let's create a simple "hello" command.
 
-Type this in the terminal:
-
-```bash
-cat > commands/hello.ts << 'EOF'
+```typescript file="commands/hello.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -33,7 +30,6 @@ export default defineCommand({
     console.log('Hello, pok!');
   },
 });
-EOF
 ```
 
 ## Step 2: Run your command

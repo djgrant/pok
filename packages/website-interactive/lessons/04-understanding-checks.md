@@ -18,8 +18,7 @@ Checks validate that certain conditions are met before a command runs. They help
 
 Let's create a check that verifies a file exists:
 
-```bash
-cat > commands/file-exists.check.ts << 'EOF'
+```typescript file="commands/file-exists.check.ts"
 import { defineCheck } from '@openpok/core';
 import { existsSync } from 'fs';
 
@@ -39,19 +38,15 @@ export default defineCheck({
     const exists = existsSync(args.path);
     return {
       ok: exists,
-      message: exists 
-        ? `File exists: ${args.path}` 
-        : `File not found: ${args.path}`,
+      message: exists ? `File exists: ${args.path}` : `File not found: ${args.path}`,
     };
   },
 });
-EOF
 ```
 
 ## Step 2: Create a command that uses the check
 
-```bash
-cat > commands/read-config.ts << 'EOF'
+```typescript file="commands/read-config.ts"
 import { defineCommand } from '@openpok/core';
 import { readFileSync } from 'fs';
 
@@ -60,15 +55,12 @@ export default defineCommand({
     name: 'read-config',
     description: 'Read a config file',
   },
-  pre: [
-    { check: 'file-exists', args: { path: 'config.json' } },
-  ],
+  pre: [{ check: 'file-exists', args: { path: 'config.json' } }],
   run: () => {
     const content = readFileSync('config.json', 'utf-8');
     console.log('Config:', content);
   },
 });
-EOF
 ```
 
 ## Step 3: Try the command without a config file
@@ -83,6 +75,9 @@ The check will fail because `config.json` doesn't exist.
 
 ```bash
 echo '{"name": "my-app"}' > config.json
+```
+
+```bash
 pok read-config
 ```
 
@@ -92,10 +87,10 @@ Now it works!
 
 A check must return an object with:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `ok` | `boolean` | Whether the check passed |
-| `message` | `string` | Status message to display |
+| Property  | Type      | Description               |
+| --------- | --------- | ------------------------- |
+| `ok`      | `boolean` | Whether the check passed  |
+| `message` | `string`  | Status message to display |
 
 ## Built-in Check Patterns
 
