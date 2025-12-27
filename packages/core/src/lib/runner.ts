@@ -111,12 +111,36 @@ export type RunnerItem = Command | DeferredTask<unknown>;
 // =============================================================================
 
 /**
- * Parallel execution mode.
- * - 'race': First to settle wins, cancel rest (current default)
- * - 'fail-fast': First failure cancels rest, otherwise wait for all
- * - 'all-settled': Run all to completion, collect errors
+ * Parallel execution mode constants with descriptions.
  */
-export type ParallelMode = 'race' | 'fail-fast' | 'all-settled';
+export const ParallelModes = {
+  /**
+   * First to settle (success or failure) wins, cancel rest.
+   * Use for long-running processes where you only need one.
+   * @example `await r.parallel([r.exec('vite'), r.exec('stripe listen')])`
+   */
+  race: 'race',
+  /**
+   * First failure cancels rest, otherwise wait for all to succeed.
+   * Use when all tasks must succeed but you want fast failure.
+   * @example `await r.parallel([r.run(build), r.run(test)], { mode: 'fail-fast' })`
+   */
+  failFast: 'fail-fast',
+  /**
+   * Run all to completion regardless of failures.
+   * Throws AggregateError if any fail.
+   * @example `await r.parallel([r.run(deploy1), r.run(deploy2)], { mode: 'all-settled' })`
+   */
+  allSettled: 'all-settled',
+} as const;
+
+/**
+ * Parallel execution mode.
+ * - `'race'`: First to settle wins, cancel rest (default)
+ * - `'fail-fast'`: First failure cancels rest, otherwise wait for all
+ * - `'all-settled'`: Run all to completion, throw AggregateError if any fail
+ */
+export type ParallelMode = (typeof ParallelModes)[keyof typeof ParallelModes];
 
 /**
  * Options for parallel execution.
@@ -124,6 +148,11 @@ export type ParallelMode = 'race' | 'fail-fast' | 'all-settled';
 export type ParallelOptions = {
   /**
    * Execution mode for the parallel group.
+   *
+   * - `'race'`: First to settle wins, cancel rest (default)
+   * - `'fail-fast'`: First failure cancels rest, otherwise wait for all
+   * - `'all-settled'`: Run all to completion, throw AggregateError if any fail
+   *
    * @default 'race'
    */
   mode?: ParallelMode;
