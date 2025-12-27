@@ -1,15 +1,53 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Terminal } from './components/Terminal';
 import { Sidebar } from './components/Sidebar';
+import { LessonContent } from './components/LessonContent';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { useWebContainer } from './hooks/useWebContainer';
 import { useBrowserSupport } from './hooks/useBrowserSupport';
+import { useCompletedLessons } from './hooks/useCompletedLessons';
+import {
+  loadLessons,
+  findLessonById,
+  getAdjacentLessons,
+  getAllLessonsFlat,
+} from './lib/lessons';
+
+// Import all lesson markdown files at build time
+const lessonModules = import.meta.glob('../lessons/*.md', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+}) as Record<string, string>;
 
 export function App() {
   const { isSupported, message } = useBrowserSupport();
   const { webContainer, status, error } = useWebContainer();
-  const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
+  const { isComplete, toggleComplete } = useCompletedLessons();
+
+  // Load and parse lessons
+  const categories = useMemo(() => loadLessons(lessonModules), []);
+  const allLessons = useMemo(() => getAllLessonsFlat(categories), [categories]);
+
+  // Default to first lesson
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(
+    () => allLessons[0]?.id ?? null
+  );
+
+  const selectedLesson = useMemo(
+    () =>
+      selectedLessonId ? findLessonById(categories, selectedLessonId) : null,
+    [categories, selectedLessonId]
+  );
+
+  const adjacentLessons = useMemo(
+    () =>
+      selectedLessonId
+        ? getAdjacentLessons(categories, selectedLessonId)
+        : { prev: null, next: null },
+    [categories, selectedLessonId]
+  );
 
   if (!isSupported) {
     return <UnsupportedBrowser message={message} />;
@@ -32,11 +70,40 @@ export function App() {
   return (
     <div className="app">
       <Sidebar
-        selectedLesson={selectedLesson}
-        onSelectLesson={setSelectedLesson}
+        categories={categories}
+        selectedLesson={selectedLessonId}
+        onSelectLesson={setSelectedLessonId}
+        isComplete={isComplete}
       />
       <main className="main-content">
-        <Terminal webContainer={webContainer} />
+        <div className="content-area">
+          {selectedLesson ? (
+            <LessonContent
+              lesson={selectedLesson}
+              isComplete={isComplete(selectedLesson.id)}
+              onMarkComplete={() => toggleComplete(selectedLesson.id)}
+              onPrevious={
+                adjacentLessons.prev
+                  ? () => setSelectedLessonId(adjacentLessons.prev!.id)
+                  : null
+              }
+              onNext={
+                adjacentLessons.next
+                  ? () => setSelectedLessonId(adjacentLessons.next!.id)
+                  : null
+              }
+              prevTitle={adjacentLessons.prev?.title ?? null}
+              nextTitle={adjacentLessons.next?.title ?? null}
+            />
+          ) : (
+            <div className="no-lesson-selected">
+              <p>Select a lesson from the sidebar to get started.</p>
+            </div>
+          )}
+        </div>
+        <div className="terminal-area">
+          <Terminal webContainer={webContainer} />
+        </div>
       </main>
     </div>
   );
