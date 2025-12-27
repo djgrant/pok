@@ -46,11 +46,7 @@ import { getSymbols, type SymbolSet } from './symbols';
  * Helper to conditionally apply color.
  * In no-color mode, returns text unchanged.
  */
-function colorize(
-  text: string,
-  colorFn: (s: string) => string,
-  useColor: boolean
-): string {
+function colorize(text: string, colorFn: (s: string) => string, useColor: boolean): string {
   return useColor ? colorFn(text) : text;
 }
 
@@ -375,7 +371,11 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 if (activity.groupId !== event.id) continue;
                 if (activity.status === 'success') {
                   if (!state.outputConfig.unicode) {
-                    const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
+                    const prefix = colorize(
+                      state.symbols.success,
+                      pc.green,
+                      state.outputConfig.color
+                    );
                     writeLine(`  ${prefix} ${activity.label}`);
                   } else {
                     p.log.success(activity.label);
@@ -422,7 +422,9 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             } else {
               // Unicode mode - use clack's outro
               if (hasFailures) {
-                p.outro(colorize(`${state.symbols.failed} Failed`, pc.red, state.outputConfig.color));
+                p.outro(
+                  colorize(`${state.symbols.failed} Failed`, pc.red, state.outputConfig.color)
+                );
               } else {
                 p.outro(colorize(`${state.symbols.done} Done`, pc.green, state.outputConfig.color));
               }
@@ -580,7 +582,11 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               const suspended = state.suspendedActivities.get(event.id);
               if (suspended && !state.suspended) {
                 if (!state.outputConfig.unicode) {
-                  const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
+                  const prefix = colorize(
+                    state.symbols.success,
+                    pc.green,
+                    state.outputConfig.color
+                  );
                   writeLine(`  ${prefix} ${suspended.label}`);
                 } else {
                   p.log.success(suspended.label);
@@ -681,7 +687,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             const hasActiveSpinners = state.spinners.size > 0 || state.parallelSpinner !== null;
 
             // Error logs interrupt spinners immediately (only in unicode mode)
-            if (event.level === 'error' && hasActiveSpinners && event.activityId && state.outputConfig.unicode) {
+            if (
+              event.level === 'error' &&
+              hasActiveSpinners &&
+              event.activityId &&
+              state.outputConfig.unicode
+            ) {
               const spinner = state.spinners.get(event.activityId);
               if (spinner && spinner.spinner) {
                 // Temporarily stop spinner, show error, resume

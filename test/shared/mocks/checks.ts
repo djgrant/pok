@@ -26,10 +26,7 @@ export const alwaysFailWithRemediation = defineCheck({
     throw new Error('Docker is not running');
   },
   errorMessage: 'Docker daemon is not running',
-  remediation: [
-    "Start Docker Desktop, or",
-    "Run 'sudo systemctl start docker' (Linux)",
-  ],
+  remediation: ['Start Docker Desktop, or', "Run 'sudo systemctl start docker' (Linux)"],
   documentationUrl: 'https://docs.docker.com/get-started/',
 });
 

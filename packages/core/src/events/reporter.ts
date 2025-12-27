@@ -261,10 +261,8 @@ export class ScopedReporter implements Reporter {
       return result;
     } catch (error) {
       // Extract remediation info from CheckError if available
-      const remediation =
-        error instanceof CheckError ? error.remediation : undefined;
-      const documentationUrl =
-        error instanceof CheckError ? error.documentationUrl : undefined;
+      const remediation = error instanceof CheckError ? error.remediation : undefined;
+      const documentationUrl = error instanceof CheckError ? error.documentationUrl : undefined;
 
       this.bus.emit({
         type: 'activity:failure',

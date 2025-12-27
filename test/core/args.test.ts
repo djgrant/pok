@@ -151,7 +151,9 @@ describe('parseContext', () => {
 
   describe('error handling', () => {
     it('throws for unknown flags', () => {
-      expect(() => parseContext(['--unknown'], simpleContextDef)).toThrow('Unknown flag: --unknown');
+      expect(() => parseContext(['--unknown'], simpleContextDef)).toThrow(
+        'Unknown flag: --unknown'
+      );
     });
 
     it('throws when string flag has no value', () => {
@@ -181,7 +183,9 @@ describe('parseContext', () => {
     });
 
     it('suggests flag for missing character', () => {
-      expect(() => parseContext(['--verbos'], simpleContextDef)).toThrow(/Did you mean --verbose\?/);
+      expect(() => parseContext(['--verbos'], simpleContextDef)).toThrow(
+        /Did you mean --verbose\?/
+      );
     });
 
     it('suggests flag for extra character', () => {

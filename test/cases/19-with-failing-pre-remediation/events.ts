@@ -27,10 +27,7 @@ export const events: CLIEvent[] = [
     type: 'activity:failure',
     id: 'activity-1',
     error: 'Docker daemon is not running',
-    remediation: [
-      "Start Docker Desktop, or",
-      "Run 'sudo systemctl start docker' (Linux)",
-    ],
+    remediation: ['Start Docker Desktop, or', "Run 'sudo systemctl start docker' (Linux)"],
     documentationUrl: 'https://docs.docker.com/get-started/',
   },
   {

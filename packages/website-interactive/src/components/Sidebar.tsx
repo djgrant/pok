@@ -7,12 +7,7 @@ interface SidebarProps {
   isComplete: (lessonId: string) => boolean;
 }
 
-export function Sidebar({
-  categories,
-  selectedLesson,
-  onSelectLesson,
-  isComplete,
-}: SidebarProps) {
+export function Sidebar({ categories, selectedLesson, onSelectLesson, isComplete }: SidebarProps) {
   return (
     <aside className="sidebar">
       <header className="sidebar-header">

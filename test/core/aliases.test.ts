@@ -223,9 +223,13 @@ describe('Command Aliases', () => {
         aliases: ['s'],
         run: async () => {},
       });
-      const parent = createCommandNode('db', {
-        label: 'Database operations',
-      }, [childA, childB]);
+      const parent = createCommandNode(
+        'db',
+        {
+          label: 'Database operations',
+        },
+        [childA, childB]
+      );
 
       const tree = createCommandTree([parent]);
       const completions = generateCompletions(['db', ''], tree);

@@ -216,13 +216,7 @@ export function TabbedView({
 
   // Use shared tabs state hook
   // Note: OpenTUI's scrollbox handles scrolling natively, so we don't use scrollBy here
-  const {
-    showHelpHint,
-    switchTab,
-    nextTab,
-    prevTab,
-    scrollBy,
-  } = useTabsState({
+  const { showHelpHint, switchTab, nextTab, prevTab, scrollBy } = useTabsState({
     tabs,
     activeIndex,
     onActiveIndexChange,

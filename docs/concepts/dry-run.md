@@ -87,11 +87,7 @@ dry.wouldRun('docker push myapp:latest');
 Report a summary of all planned actions:
 
 ```typescript
-dry.summary([
-  'Build application',
-  'Push to registry',
-  'Update load balancer',
-]);
+dry.summary(['Build application', 'Push to registry', 'Update load balancer']);
 // Output:
 // [DRY RUN] Would execute:
 //   - Build application
@@ -347,17 +343,13 @@ import { captureEvents } from '../utils';
 
 describe('Deploy command', () => {
   it('does not execute commands in dry-run mode', async () => {
-    const { events, error } = await captureEvents([
-      'deploy',
-      '--env', 'staging',
-      '--dry-run',
-    ]);
+    const { events, error } = await captureEvents(['deploy', '--env', 'staging', '--dry-run']);
 
     expect(error).toBeUndefined();
 
     // Verify dry-run output was logged
     const logs = events.filter((e) => e.type === 'log');
-    const messages = logs.map((e) => e.type === 'log' ? e.message : '');
+    const messages = logs.map((e) => (e.type === 'log' ? e.message : ''));
 
     expect(messages.some((m) => m.includes('[DRY RUN]'))).toBe(true);
     expect(messages.some((m) => m.includes('No changes were made'))).toBe(true);

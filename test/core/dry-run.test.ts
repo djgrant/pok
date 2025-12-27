@@ -59,13 +59,19 @@ describe('Dry Run', () => {
   });
 
   describe('createDryRunReporter', () => {
-    function createMockReporter(): { reporter: CommandReporter; logs: { level: string; message: string }[] } {
+    function createMockReporter(): {
+      reporter: CommandReporter;
+      logs: { level: string; message: string }[];
+    } {
       const logs: { level: string; message: string }[] = [];
       const reporter: CommandReporter = {
         info: (message: string) => logs.push({ level: 'info', message }),
         warn: (message: string) => logs.push({ level: 'warn', message }),
         error: (message: string | Error) =>
-          logs.push({ level: 'error', message: message instanceof Error ? message.message : message }),
+          logs.push({
+            level: 'error',
+            message: message instanceof Error ? message.message : message,
+          }),
         success: (message: string) => logs.push({ level: 'success', message }),
         step: (message: string) => logs.push({ level: 'step', message }),
       };
@@ -112,11 +118,7 @@ describe('Dry Run', () => {
         const { reporter, logs } = createMockReporter();
         const dry = createDryRunReporter(reporter);
 
-        dry.summary([
-          'Build application',
-          'Push to registry',
-          'Update load balancer',
-        ]);
+        dry.summary(['Build application', 'Push to registry', 'Update load balancer']);
 
         expect(logs).toHaveLength(6);
 

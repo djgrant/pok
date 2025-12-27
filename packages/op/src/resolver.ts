@@ -119,7 +119,7 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
 
       for (const [key, value] of Object.entries(values) as [string, string | undefined][]) {
         if (value === undefined) continue;
-        
+
         const ref = config.vault.secrets[key];
         if (!ref) {
           throw new Error(

@@ -115,7 +115,9 @@ export class CLIError extends Error {
       if (info.type === 'enum' && info.choices) {
         // Show choices for enum flags
         const choicesStr = info.choices.join('|');
-        parts.push(info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`);
+        parts.push(
+          info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`
+        );
       } else if (info.type === 'boolean') {
         // Boolean flags are always optional in usage display
         parts.push(`[--${kebabName}]`);
@@ -152,7 +154,9 @@ export function generateUsageLine(
 
     if (info.type === 'enum' && info.choices) {
       const choicesStr = info.choices.join('|');
-      flags.push(info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`);
+      flags.push(
+        info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`
+      );
     } else if (info.type === 'boolean') {
       flags.push(`[--${kebabName}]`);
     } else {

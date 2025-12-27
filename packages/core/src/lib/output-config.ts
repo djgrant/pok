@@ -63,8 +63,7 @@ export function detectOutputConfig(args: string[]): OutputConfig {
   // NO_COLOR env var disables color
   // TERM=dumb disables color
   // Non-TTY disables color unless FORCE_COLOR is set
-  const color =
-    !noColor && !plain && !envNoColor && !termDumb && (isTTY || envForceColor);
+  const color = !noColor && !plain && !envNoColor && !termDumb && (isTTY || envForceColor);
 
   // Determine unicode support
   // --plain always disables unicode

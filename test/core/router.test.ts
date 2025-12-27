@@ -143,9 +143,7 @@ async function captureConsoleOutput(fn: () => Promise<void>): Promise<string> {
 /**
  * Run CLI and capture output
  */
-async function runCli(
-  args: string[]
-): Promise<{ output: string; error?: Error }> {
+async function runCli(args: string[]): Promise<{ output: string; error?: Error }> {
   const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
   const prompter = createRawPrompter({});
 

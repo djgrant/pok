@@ -58,7 +58,12 @@ export { ProcessManager, OUTPUT_BATCH_MS } from './process-manager.js';
 // =============================================================================
 
 export type { Shortcut, ShortcutGroup } from './constants/index.js';
-export { HELP_CONTENT, KEY_SEQUENCES, ctrlKeyToSequence, HELP_HINT_DURATION_MS } from './constants/index.js';
+export {
+  HELP_CONTENT,
+  KEY_SEQUENCES,
+  ctrlKeyToSequence,
+  HELP_HINT_DURATION_MS,
+} from './constants/index.js';
 
 // =============================================================================
 // Hooks

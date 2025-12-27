@@ -27,10 +27,7 @@ const CATEGORY_TITLES: Record<LessonFrontmatter['category'], string> = {
   'core-concepts': 'Core Concepts',
 };
 
-const CATEGORY_ORDER: LessonFrontmatter['category'][] = [
-  'getting-started',
-  'core-concepts',
-];
+const CATEGORY_ORDER: LessonFrontmatter['category'][] = ['getting-started', 'core-concepts'];
 
 /**
  * Parse frontmatter from markdown content
@@ -77,9 +74,7 @@ marked.setOptions({
 /**
  * Load all lessons from the lessons directory using Vite's glob import
  */
-export function loadLessons(
-  lessonModules: Record<string, string>
-): LessonCategory[] {
+export function loadLessons(lessonModules: Record<string, string>): LessonCategory[] {
   const lessons: Lesson[] = [];
 
   for (const [path, content] of Object.entries(lessonModules)) {
@@ -142,10 +137,7 @@ export function getAllLessonsFlat(categories: LessonCategory[]): Lesson[] {
 /**
  * Find lesson by ID
  */
-export function findLessonById(
-  categories: LessonCategory[],
-  id: string
-): Lesson | undefined {
+export function findLessonById(categories: LessonCategory[], id: string): Lesson | undefined {
   for (const category of categories) {
     const lesson = category.lessons.find((l) => l.id === id);
     if (lesson) return lesson;
@@ -169,7 +161,6 @@ export function getAdjacentLessons(
 
   return {
     prev: currentIndex > 0 ? allLessons[currentIndex - 1] : null,
-    next:
-      currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null,
+    next: currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null,
   };
 }
