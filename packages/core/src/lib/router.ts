@@ -8,8 +8,8 @@
  * 1. Explicit config: Pass commandsDir and projectRoot
  * 2. Autodiscovery: Finds commands/ sibling directory from calling file
  */
-import { Glob } from 'bun';
 import * as path from 'path';
+import { getRuntime } from '../runtime';
 import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
 import type { CheckConfig } from './check';
 import { CheckError } from './check';
@@ -144,10 +144,10 @@ export async function buildCommandTree(
   ctx: RouterContext
 ): Promise<CommandTree> {
   const tree: CommandTree = new Map();
-  const glob = new Glob('*.{ts,tsx}');
+  const runtime = await getRuntime();
   const { reporter } = ctx;
 
-  for await (const file of glob.scan(commandsDir)) {
+  for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
     // Skip non-command files
     if (file.startsWith('_')) continue;
 
@@ -172,7 +172,7 @@ export async function buildCommandTree(
       if (config.run && config.enableRunAllChildren) {
         reporter.warn(
           `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
-          `The 'enableRunAllChildren' option will be ignored.`
+            `The 'enableRunAllChildren' option will be ignored.`
         );
       }
 
@@ -183,11 +183,11 @@ export async function buildCommandTree(
       const errorMessage = error instanceof Error ? error.message : String(error);
       reporter.error(
         `Failed to load command "${file}":\n` +
-        `  ${errorMessage}\n\n` +
-        `To fix this:\n` +
-        `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
-        `  2. Check for syntax errors or missing imports in the file\n` +
-        `  3. Verify all referenced tasks and checks are properly defined`
+          `  ${errorMessage}\n\n` +
+          `To fix this:\n` +
+          `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
+          `  2. Check for syntax errors or missing imports in the file\n` +
+          `  3. Verify all referenced tasks and checks are properly defined`
       );
     }
   }
@@ -1175,8 +1175,8 @@ async function discoverVersion(projectRoot: string): Promise<string | undefined>
   const packageJsonPath = path.join(projectRoot, 'package.json');
 
   try {
-    const file = Bun.file(packageJsonPath);
-    const content = await file.text();
+    const runtime = await getRuntime();
+    const content = await runtime.readFile(packageJsonPath);
     const pkg = JSON.parse(content);
     return pkg.version;
   } catch {
