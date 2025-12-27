@@ -15,4 +15,7 @@ dist/
 # OS files
 .DS_Store
 
+# Screenshots for development tooling
+.screenshots/
+
 work-packages
