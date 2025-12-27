@@ -18,8 +18,7 @@ Environments let you define different configurations for development, staging, p
 
 Let's define development and production environments:
 
-```bash
-cat > commands/env.dev.ts << 'EOF'
+```typescript file="commands/env.dev.ts"
 import { defineEnv } from '@openpok/core';
 
 export default defineEnv({
@@ -33,11 +32,9 @@ export default defineEnv({
     logLevel: 'verbose',
   },
 });
-EOF
 ```
 
-```bash
-cat > commands/env.prod.ts << 'EOF'
+```typescript file="commands/env.prod.ts"
 import { defineEnv } from '@openpok/core';
 
 export default defineEnv({
@@ -51,13 +48,11 @@ export default defineEnv({
     logLevel: 'error',
   },
 });
-EOF
 ```
 
 ## Step 2: Create a command that uses environment values
 
-```bash
-cat > commands/show-config.ts << 'EOF'
+```typescript file="commands/show-config.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -72,7 +67,6 @@ export default defineCommand({
     console.log(`  Log Level: ${env.logLevel}`);
   },
 });
-EOF
 ```
 
 ## Step 3: Run with different environments

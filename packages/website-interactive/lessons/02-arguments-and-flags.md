@@ -18,8 +18,7 @@ Commands become more useful when they accept input. Let's add arguments and flag
 
 Let's create a command that greets a person by name:
 
-```bash
-cat > commands/greet.ts << 'EOF'
+```typescript file="commands/greet.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -38,7 +37,6 @@ export default defineCommand({
     console.log(`Hello, ${args.name}!`);
   },
 });
-EOF
 ```
 
 ## Step 2: Run with an argument
@@ -53,8 +51,7 @@ You should see: `Hello, Alice!`
 
 Now let's add an optional `--loud` flag that makes the greeting uppercase:
 
-```bash
-cat > commands/greet.ts << 'EOF'
+```typescript file="commands/greet.ts"
 import { defineCommand } from '@openpok/core';
 
 export default defineCommand({
@@ -82,7 +79,6 @@ export default defineCommand({
     console.log(message);
   },
 });
-EOF
 ```
 
 ## Step 4: Try the flag
@@ -97,11 +93,11 @@ You should see: `HELLO, BOB!`
 
 pok supports these argument types:
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `string` | Text value | `--name Alice` |
-| `boolean` | True/false flag | `--loud` |
-| `number` | Numeric value | `--count 5` |
+| Type      | Description     | Example        |
+| --------- | --------------- | -------------- |
+| `string`  | Text value      | `--name Alice` |
+| `boolean` | True/false flag | `--loud`       |
+| `number`  | Numeric value   | `--count 5`    |
 
 ## Key Points
 

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Terminal } from './components/Terminal';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { Terminal, TerminalHandle } from './components/Terminal';
 import { Sidebar } from './components/Sidebar';
 import { LessonContent } from './components/LessonContent';
 import { LoadingScreen } from './components/LoadingScreen';
@@ -7,12 +7,7 @@ import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { useWebContainer } from './hooks/useWebContainer';
 import { useBrowserSupport } from './hooks/useBrowserSupport';
 import { useCompletedLessons } from './hooks/useCompletedLessons';
-import {
-  loadLessons,
-  findLessonById,
-  getAdjacentLessons,
-  getAllLessonsFlat,
-} from './lib/lessons';
+import { loadLessons, findLessonById, getAdjacentLessons, getAllLessonsFlat } from './lib/lessons';
 
 // Import all lesson markdown files at build time
 const lessonModules = import.meta.glob('../lessons/*.md', {
@@ -25,6 +20,12 @@ export function App() {
   const { isSupported, message } = useBrowserSupport();
   const { webContainer, status, error } = useWebContainer();
   const { isComplete, toggleComplete } = useCompletedLessons();
+  const terminalRef = useRef<TerminalHandle>(null);
+
+  // Callback to run commands in terminal
+  const runCommand = useCallback((command: string) => {
+    terminalRef.current?.writeCommand(command);
+  }, []);
 
   // Load and parse lessons
   const categories = useMemo(() => loadLessons(lessonModules), []);
@@ -36,8 +37,7 @@ export function App() {
   );
 
   const selectedLesson = useMemo(
-    () =>
-      selectedLessonId ? findLessonById(categories, selectedLessonId) : null,
+    () => (selectedLessonId ? findLessonById(categories, selectedLessonId) : null),
     [categories, selectedLessonId]
   );
 
@@ -83,17 +83,15 @@ export function App() {
               isComplete={isComplete(selectedLesson.id)}
               onMarkComplete={() => toggleComplete(selectedLesson.id)}
               onPrevious={
-                adjacentLessons.prev
-                  ? () => setSelectedLessonId(adjacentLessons.prev!.id)
-                  : null
+                adjacentLessons.prev ? () => setSelectedLessonId(adjacentLessons.prev!.id) : null
               }
               onNext={
-                adjacentLessons.next
-                  ? () => setSelectedLessonId(adjacentLessons.next!.id)
-                  : null
+                adjacentLessons.next ? () => setSelectedLessonId(adjacentLessons.next!.id) : null
               }
               prevTitle={adjacentLessons.prev?.title ?? null}
               nextTitle={adjacentLessons.next?.title ?? null}
+              onRunCommand={runCommand}
+              webContainer={webContainer}
             />
           ) : (
             <div className="no-lesson-selected">
@@ -102,7 +100,7 @@ export function App() {
           )}
         </div>
         <div className="terminal-area">
-          <Terminal webContainer={webContainer} />
+          <Terminal ref={terminalRef} webContainer={webContainer} />
         </div>
       </main>
     </div>
