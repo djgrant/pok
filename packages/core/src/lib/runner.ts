@@ -8,7 +8,7 @@ import {
   execInputToString,
 } from './task';
 import { type Env, getEnvKeys } from './env';
-import { $ } from 'bun';
+import { getRuntime, type SpawnResult } from '../runtime';
 import type { TabsAdapter, TabSpec } from '../tabs';
 import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
@@ -217,8 +217,9 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
   ): Promise<T>;
 }
 
-type BunProcess = ReturnType<typeof Bun.spawn>;
-type RunnerProcessSet = Set<BunProcess>;
+/** Abstracted process type compatible with both Bun and Node.js */
+type RuntimeProcess = SpawnResult;
+type RunnerProcessSet = Set<RuntimeProcess>;
 
 /**
  * Registry for tracking process sets across runner instances.
@@ -345,7 +346,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
   const reporter: Reporter = new ScopedReporter(eventBus, 'root', 'root');
   const envCache = new Map<string, string>();
   // Track processes spawned by this runner for cancellation
-  const runnerProcesses: RunnerProcessSet = new Set<BunProcess>();
+  const runnerProcesses: RunnerProcessSet = new Set<RuntimeProcess>();
 
   // Register this runner's process set with the global registry
   const registry = ProcessRegistry.getInstance();
@@ -393,6 +394,22 @@ export function createRunner<TContext extends Record<string, unknown>>(
     return result;
   };
 
+  /**
+   * Read text from a web ReadableStream
+   */
+  const streamToText = async (stream: ReadableStream<Uint8Array> | null): Promise<string> => {
+    if (!stream) return '';
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+    const decoder = new TextDecoder();
+    return chunks.map((chunk) => decoder.decode(chunk)).join('');
+  };
+
   /* Shared command execution helper */
   const executeCmd = async (
     cmd: ExecInput,
@@ -411,15 +428,19 @@ export function createRunner<TContext extends Record<string, unknown>>(
       throw new AbortError();
     }
 
+    // Get runtime for process spawning
+    const runtime = await getRuntime();
+
     try {
       if (isShellPromise(cmd)) {
         // Bun shell form: apply env and cwd, then await
+        // This only works in Bun runtime - in Node.js, ShellPromise won't exist
         await cmd.env(env).cwd(runCwd);
       } else if (Array.isArray(cmd)) {
-        // Array form: bypass shell entirely using Bun.spawn
-        const proc = Bun.spawn(cmd, {
+        // Array form: bypass shell entirely using runtime.spawn
+        const proc = runtime.spawn(cmd, {
           cwd: runCwd,
-          stdio: runQuiet ? ['inherit', 'pipe', 'pipe'] : ['inherit', 'inherit', 'inherit'],
+          stdio: runQuiet ? 'pipe' : 'inherit',
           env,
         });
 
@@ -433,8 +454,8 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
         if (exitCode !== 0 && exitCode !== null) {
           if (runQuiet) {
-            const stdout = await new Response(proc.stdout).text();
-            const stderr = await new Response(proc.stderr).text();
+            const stdout = await streamToText(proc.stdout);
+            const stderr = await streamToText(proc.stderr);
             const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
             throw new CommandError(`Command failed: ${cmdLabel}`, output);
           }
@@ -444,9 +465,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
         // String form: pass to sh -c
         const finalCmd = cmd.trim();
         if (runQuiet) {
-          const proc = Bun.spawn(['sh', '-c', finalCmd], {
+          const proc = runtime.spawn(['sh', '-c', finalCmd], {
             cwd: runCwd,
-            stdio: ['inherit', 'pipe', 'pipe'],
+            stdio: 'pipe',
             env,
           });
 
@@ -459,13 +480,17 @@ export function createRunner<TContext extends Record<string, unknown>>(
           }
 
           if (exitCode !== 0 && exitCode !== null) {
-            const stdout = await new Response(proc.stdout).text();
-            const stderr = await new Response(proc.stderr).text();
+            const stdout = await streamToText(proc.stdout);
+            const stderr = await streamToText(proc.stderr);
             const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
             throw new CommandError(`Command failed: ${finalCmd}`, output);
           }
         } else {
-          await $`${{ raw: finalCmd }}`.env(env).cwd(runCwd);
+          // Non-quiet string form: use shell with inherited stdio
+          const result = await runtime.shell(finalCmd, { cwd: runCwd, env });
+          if (result.exitCode !== 0) {
+            throw new CommandError(`Command failed: ${finalCmd}`, result.stderr || result.stdout);
+          }
         }
       }
     } catch (error) {
@@ -739,14 +764,17 @@ export function createRunner<TContext extends Record<string, unknown>>(
     const allEnv = getAllCachedEnv();
     const envVars = { ...process.env, ...allEnv };
 
+    // Get runtime for shell escaping
+    const runtime = await getRuntime();
+
     // Helper to convert ExecInput to string for tabs (tabs always use shell)
     const execInputToTabsString = (cmd: ExecInput): string => {
       if (typeof cmd === 'string') {
         return cmd;
       }
       if (Array.isArray(cmd)) {
-        // Convert array to shell-escaped string using Bun's escape
-        return cmd.map((arg) => $.escape(arg)).join(' ');
+        // Convert array to shell-escaped string using runtime's escape
+        return cmd.map((arg) => runtime.escapeShell(arg)).join(' ');
       }
       // ShellPromise cannot be converted to string for tabs
       throw new Error(
@@ -815,9 +843,9 @@ export function createRunner<TContext extends Record<string, unknown>>(
     // Single item - just run it directly with inherited stdio
     if (tabSpecs.length === 1) {
       const item = tabSpecs[0]!;
-      const proc = Bun.spawn(['sh', '-c', item.exec], {
+      const proc = runtime.spawn(['sh', '-c', item.exec], {
         cwd,
-        stdio: ['inherit', 'inherit', 'inherit'],
+        stdio: 'inherit',
         env: envVars,
       });
 
