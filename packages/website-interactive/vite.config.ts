@@ -48,62 +48,78 @@ export { runCli } from '${coreDir}/src/cli.ts';
     fs.writeFileSync(coreEntryPath, coreEntryContent);
 
     // Bundle core - use --outfile with full path (not --outdir)
+    // Use CommonJS format because WebContainer's Node.js doesn't support ESM
     execSync(
-      `bun build "${coreEntryPath}" --outfile "${path.join(outDir, 'core.js')}" --target node --format esm --external zod --external fast-glob --external @openpok/reporter-clack --external @openpok/prompter-clack`,
+      `bun build "${coreEntryPath}" --outfile "${path.join(outDir, 'core.js')}" --target node --format cjs --external zod --external fast-glob --external @openpok/reporter-clack --external @openpok/prompter-clack`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle reporter-clack
     execSync(
-      `bun build "${reporterDir}/src/index.ts" --outfile "${path.join(outDir, 'reporter-clack.js')}" --target node --format esm --external @openpok/core --external zod`,
+      `bun build "${reporterDir}/src/index.ts" --outfile "${path.join(outDir, 'reporter-clack.js')}" --target node --format cjs --external @openpok/core --external zod`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle prompter-clack
     execSync(
-      `bun build "${prompterDir}/src/index.ts" --outfile "${path.join(outDir, 'prompter-clack.js')}" --target node --format esm --external @openpok/core --external zod`,
+      `bun build "${prompterDir}/src/index.ts" --outfile "${path.join(outDir, 'prompter-clack.js')}" --target node --format cjs --external @openpok/core --external zod`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle zod
     execSync(
-      `bun build "zod" --outfile "${path.join(outDir, 'zod.js')}" --target node --format esm`,
+      `bun build "zod" --outfile "${path.join(outDir, 'zod.js')}" --target node --format cjs`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle fast-glob
     execSync(
-      `bun build "fast-glob" --outfile "${path.join(outDir, 'fast-glob.js')}" --target node --format esm`,
+      `bun build "fast-glob" --outfile "${path.join(outDir, 'fast-glob.js')}" --target node --format cjs`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
-    // Read all bundled files
+    // Post-process: Convert dynamic import() to require() for WebContainer compatibility
+    // WebContainer's Node.js doesn't support ESM dynamic imports
+    function convertDynamicImportsToRequire(code: string): string {
+      // Convert: await import("module") -> require("module")
+      // Convert: import("module") -> Promise.resolve(require("module"))
+      // Convert: await import(variable) -> require(variable)
+      return code
+        // Handle await import("...") pattern with string literals
+        .replace(/await\s+import\s*\(\s*["']([^"']+)["']\s*\)/g, 'require("$1")')
+        // Handle await import(variable) pattern with variables
+        .replace(/await\s+import\s*\(\s*([^)"']+)\s*\)/g, 'require($1)')
+        // Handle bare import("...") that returns a promise (without await)
+        .replace(/(?<!await\s+)import\s*\(\s*["']([^"']+)["']\s*\)/g, 'Promise.resolve(require("$1"))')
+        // Handle bare import(variable) that returns a promise (without await)
+        .replace(/(?<!await\s+)import\s*\(\s*([^)"']+)\s*\)/g, 'Promise.resolve(require($1))');
+    }
+
+    // Read and post-process all bundled files
     bundledFiles = {
-      'node_modules/@openpok/core/dist/index.js': fs.readFileSync(
-        path.join(outDir, 'core.js'),
-        'utf-8'
+      'node_modules/@openpok/core/dist/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'core.js'), 'utf-8')
       ),
-      'node_modules/@openpok/reporter-clack/dist/index.js': fs.readFileSync(
-        path.join(outDir, 'reporter-clack.js'),
-        'utf-8'
+      'node_modules/@openpok/reporter-clack/dist/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'reporter-clack.js'), 'utf-8')
       ),
-      'node_modules/@openpok/prompter-clack/dist/index.js': fs.readFileSync(
-        path.join(outDir, 'prompter-clack.js'),
-        'utf-8'
+      'node_modules/@openpok/prompter-clack/dist/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'prompter-clack.js'), 'utf-8')
       ),
-      'node_modules/zod/lib/index.mjs': fs.readFileSync(path.join(outDir, 'zod.js'), 'utf-8'),
-      'node_modules/fast-glob/out/index.js': fs.readFileSync(
-        path.join(outDir, 'fast-glob.js'),
-        'utf-8'
+      'node_modules/zod/lib/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'zod.js'), 'utf-8')
+      ),
+      'node_modules/fast-glob/out/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'fast-glob.js'), 'utf-8')
       ),
     };
 
     // Create package.json files for each package
+    // Use CommonJS (no "type": "module") for WebContainer compatibility
     bundledFiles['node_modules/@openpok/core/package.json'] = JSON.stringify(
       {
         name: '@openpok/core',
         version: '0.0.1',
-        type: 'module',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
         bin: { pok: './bin/pok.js' },
@@ -116,7 +132,6 @@ export { runCli } from '${coreDir}/src/cli.ts';
       {
         name: '@openpok/reporter-clack',
         version: '0.0.1',
-        type: 'module',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
       },
@@ -128,7 +143,6 @@ export { runCli } from '${coreDir}/src/cli.ts';
       {
         name: '@openpok/prompter-clack',
         version: '0.0.1',
-        type: 'module',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
       },
@@ -140,19 +154,44 @@ export { runCli } from '${coreDir}/src/cli.ts';
       {
         name: 'zod',
         version: '3.24.0',
-        type: 'module',
-        main: './lib/index.mjs',
-        exports: { '.': './lib/index.mjs' },
+        main: './lib/index.js',
+        exports: { '.': './lib/index.js' },
       },
       null,
       2
     );
 
+    // Save the original bundled fast-glob as the implementation
+    bundledFiles['node_modules/fast-glob/out/impl.js'] =
+      bundledFiles['node_modules/fast-glob/out/index.js'];
+
+    // Create a wrapper that re-exports fast-glob's default as named exports
+    // This is needed because bun bundles it as `module.exports = fg` but pok uses `require('fast-glob').glob(...)`
+    // Use CommonJS for WebContainer compatibility
+    bundledFiles['node_modules/fast-glob/out/index.js'] = `
+const fg = require('./impl.js');
+
+// Re-export the default
+module.exports = fg;
+
+// Also export named functions for compatibility
+// fast-glob's main function IS the glob function
+module.exports.glob = fg.glob || fg;
+module.exports.globSync = fg.globSync || fg.sync;
+module.exports.globStream = fg.globStream || fg.stream;
+module.exports.async = fg.async || fg;
+module.exports.sync = fg.sync;
+module.exports.stream = fg.stream;
+module.exports.generateTasks = fg.generateTasks;
+module.exports.isDynamicPattern = fg.isDynamicPattern;
+module.exports.escapePath = fg.escapePath;
+module.exports.convertPathToPattern = fg.convertPathToPattern;
+`;
+
     bundledFiles['node_modules/fast-glob/package.json'] = JSON.stringify(
       {
         name: 'fast-glob',
         version: '3.3.2',
-        type: 'module',
         main: './out/index.js',
         exports: { '.': './out/index.js' },
       },
@@ -160,9 +199,19 @@ export { runCli } from '${coreDir}/src/cli.ts';
       2
     );
 
-    // Create the pok CLI bin script
+    // Create the pok CLI bin script (CommonJS)
     bundledFiles['node_modules/@openpok/core/bin/pok.js'] = `#!/usr/bin/env node
-import { runCli } from '../dist/index.js';
+const { runCli } = require('@openpok/core');
+runCli(process.argv.slice(2)).catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+`;
+
+    // Create the .bin/pok script that makes \`pok\` available globally
+    // In WebContainers, node_modules/.bin is automatically in PATH
+    bundledFiles['node_modules/.bin/pok'] = `#!/usr/bin/env node
+const { runCli } = require('@openpok/core');
 runCli(process.argv.slice(2)).catch((err) => {
   console.error(err);
   process.exit(1);

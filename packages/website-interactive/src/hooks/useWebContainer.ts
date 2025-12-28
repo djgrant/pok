@@ -14,6 +14,7 @@ interface UseWebContainerResult {
 // Singleton pattern to ensure only one WebContainer instance
 let webContainerInstance: WebContainer | null = null;
 let webContainerPromise: Promise<WebContainer> | null = null;
+let mountPromise: Promise<void> | null = null;
 
 async function getWebContainer(): Promise<WebContainer> {
   if (webContainerInstance) {
@@ -24,8 +25,10 @@ async function getWebContainer(): Promise<WebContainer> {
     return webContainerPromise;
   }
 
+  console.log('[WebContainer] Booting new instance...');
   webContainerPromise = WebContainer.boot();
   webContainerInstance = await webContainerPromise;
+  mountPromise = null; // Reset mount promise for new instance
   return webContainerInstance;
 }
 
@@ -82,8 +85,18 @@ export function useWebContainer(): UseWebContainerResult {
         // Mount pre-bundled pok packages
         setStatus('installing');
 
+        // Only mount once - use singleton promise to prevent double-mounting
+        if (mountPromise) {
+          console.log('[WebContainer] Already mounting, waiting...');
+          await mountPromise;
+          setWebContainer(container);
+          setStatus('ready');
+          return;
+        }
+
         // Convert the flat file map to WebContainer's FileSystemTree format
         const bundleTree = createFileSystemTree(pokBundleFiles as Record<string, string>);
+        console.log('[WebContainer] Bundle tree keys:', Object.keys(bundleTree));
 
         // Create the full filesystem tree including package.json, pok.config.ts, and commands/
         const filesystemTree: FileSystemTree = {
@@ -117,10 +130,10 @@ export default {};
             directory: {
               'learn.ts': {
                 file: {
-                  contents: `import { defineCommand } from '@openpok/core';
-import { writeFileSync, readFileSync } from 'fs';
+                  contents: `const { defineCommand } = require('@openpok/core');
+const { writeFileSync, readFileSync } = require('fs');
 
-export const command = defineCommand({
+exports.command = defineCommand({
   label: 'Learn pok interactively',
   run: async (r) => {
     r.reporter.step('Welcome to pok!');
@@ -226,9 +239,9 @@ export const command = defineCommand({
         r.reporter.info('');
         r.reporter.info("Here's a simple \\"hello\\" command:");
         r.reporter.info('');
-        r.reporter.info('  import { defineCommand } from \\'@openpok/core\\';');
+        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
         r.reporter.info('');
-        r.reporter.info('  export const command = defineCommand({');
+        r.reporter.info('  exports.command = defineCommand({');
         r.reporter.info("    label: 'Say hello to the world',");
         r.reporter.info('    run: async (r) => {');
         r.reporter.info("      r.reporter.success('Hello, world!');");
@@ -245,9 +258,9 @@ export const command = defineCommand({
         });
 
         if (createIt === 'yes') {
-          const helloCode = \`import { defineCommand } from '@openpok/core';
+          const helloCode = \`const { defineCommand } = require('@openpok/core');
 
-export const command = defineCommand({
+exports.command = defineCommand({
   label: 'Say hello to the world',
   run: async (r) => {
     r.reporter.success('Hello, world!');
@@ -307,24 +320,26 @@ export const command = defineCommand({
         r.reporter.info('');
         r.reporter.info("Here's a \\"greet\\" command that takes a name:");
         r.reporter.info('');
-        r.reporter.info('  import { defineCommand } from \\'@openpok/core\\';');
+        r.reporter.info("  const { z } = require('zod');");
+        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
         r.reporter.info('');
-        r.reporter.info('  export const command = defineCommand({');
+        r.reporter.info('  exports.command = defineCommand({');
         r.reporter.info("    label: 'Greet someone by name',");
-        r.reporter.info('    args: {');
+        r.reporter.info('    context: {');
         r.reporter.info('      name: {');
-        r.reporter.info("        type: 'string',");
+        r.reporter.info("        from: 'flag',");
+        r.reporter.info('        schema: z.string(),');
         r.reporter.info("        description: 'Name of the person to greet',");
-        r.reporter.info('        required: true,');
         r.reporter.info('      },');
         r.reporter.info('      shout: {');
-        r.reporter.info("        type: 'boolean',");
+        r.reporter.info("        from: 'flag',");
+        r.reporter.info('        schema: z.boolean().default(false),');
         r.reporter.info("        description: 'Greet loudly in uppercase',");
         r.reporter.info('      },');
         r.reporter.info('    },');
-        r.reporter.info('    run: async (r, args) => {');
-        r.reporter.info("      let greeting = \\\`Hello, \\\${args.name}!\\\`;");
-        r.reporter.info('      if (args.shout) greeting = greeting.toUpperCase();');
+        r.reporter.info('    run: async (r, { context }) => {');
+        r.reporter.info("      let greeting = \\\`Hello, \\\${context.name}!\\\`;");
+        r.reporter.info('      if (context.shout) greeting = greeting.toUpperCase();');
         r.reporter.info('      r.reporter.success(greeting);');
         r.reporter.info('    },');
         r.reporter.info('  });');
@@ -339,24 +354,26 @@ export const command = defineCommand({
         });
 
         if (createIt === 'yes') {
-          const greetCode = \`import { defineCommand } from '@openpok/core';
+          const greetCode = \`const { z } = require('zod');
+const { defineCommand } = require('@openpok/core');
 
-export const command = defineCommand({
+exports.command = defineCommand({
   label: 'Greet someone by name',
-  args: {
+  context: {
     name: {
-      type: 'string',
+      from: 'flag',
+      schema: z.string(),
       description: 'Name of the person to greet',
-      required: true,
     },
     shout: {
-      type: 'boolean',
+      from: 'flag',
+      schema: z.boolean().default(false),
       description: 'Greet loudly in uppercase',
     },
   },
-  run: async (r, args) => {
-    let greeting = \\\`Hello, \\\${args.name}!\\\`;
-    if (args.shout) greeting = greeting.toUpperCase();
+  run: async (r, { context }) => {
+    let greeting = \\\`Hello, \\\${context.name}!\\\`;
+    if (context.shout) greeting = greeting.toUpperCase();
     r.reporter.success(greeting);
   },
 });
@@ -367,8 +384,8 @@ export const command = defineCommand({
           r.reporter.info('');
           r.reporter.info('Try running it with different arguments:');
           r.reporter.info('');
-          r.reporter.info('  pok greet --name=Alice');
-          r.reporter.info('  pok greet --name=Bob --shout');
+          r.reporter.info('  pok greet --name Alice');
+          r.reporter.info('  pok greet --name Bob --shout');
           r.reporter.info('  pok greet --help');
           r.reporter.info('');
 
@@ -378,7 +395,7 @@ export const command = defineCommand({
 
           if (runNow) {
             r.reporter.info('');
-            r.reporter.success('Go ahead! Try: pok greet --name=Alice');
+            r.reporter.success('Go ahead! Try: pok greet --name Alice');
             r.reporter.info('Run "pok learn" to return to this tutorial.');
             r.reporter.info('');
             break;
@@ -386,7 +403,7 @@ export const command = defineCommand({
         } else {
           r.reporter.info('');
           r.reporter.info('Feel free to experiment! Remember:');
-          r.reporter.info('  - Args are passed as --name=value or --flag');
+          r.reporter.info('  - Args are passed as --name value or --flag');
           r.reporter.info('  - Use --help to see available arguments');
           r.reporter.info('');
           await r.prompter.confirm({ message: 'Back to menu?' });
@@ -415,9 +432,9 @@ export const command = defineCommand({
         r.reporter.info('');
         r.reporter.info("Here's a command that launches three tabs:");
         r.reporter.info('');
-        r.reporter.info('  import { defineCommand } from \\'@openpok/core\\';');
+        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
         r.reporter.info('');
-        r.reporter.info('  export const command = defineCommand({');
+        r.reporter.info('  exports.command = defineCommand({');
         r.reporter.info("    label: 'Start development servers',");
         r.reporter.info('    run: async (r) => {');
         r.reporter.info('      await r.tabs([');
@@ -489,9 +506,17 @@ export const command = defineCommand({
           ...bundleTree,
         };
 
-        await container.mount(filesystemTree);
+        console.log('[WebContainer] Filesystem tree top-level keys:', Object.keys(filesystemTree));
+
+        mountPromise = container.mount(filesystemTree);
+        await mountPromise;
 
         if (isCancelled) return;
+
+        // Make the pok binary executable
+        console.log('[WebContainer] Making pok binary executable...');
+        const chmodProcess = await container.spawn('chmod', ['+x', 'node_modules/.bin/pok']);
+        await chmodProcess.exit;
 
         // No npm install needed - everything is pre-bundled!
         console.log('[WebContainer] Pre-bundled pok packages mounted successfully');

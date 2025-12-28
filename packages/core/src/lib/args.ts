@@ -281,7 +281,8 @@ function createError(message: string, contextDef: ContextDef, errorContext?: Err
  * Parse command line arguments against context definitions
  *
  * Supports:
- * - --flag value (string/enum flags)
+ * - --flag=value (string/enum flags with equals)
+ * - --flag value (string/enum flags with space)
  * - --flag (boolean flags, sets to true)
  * - --no-flag (boolean flags, sets to false)
  *
@@ -333,7 +334,20 @@ export function parseContext<C extends ContextDef>(
     // Check for --flag or --no-flag
     if (arg.startsWith('--')) {
       const isNegated = arg.startsWith('--no-');
-      const rawFlagName = isNegated ? arg.slice(5) : arg.slice(2);
+      const flagPart = isNegated ? arg.slice(5) : arg.slice(2);
+
+      // Support --flag=value syntax
+      let rawFlagName: string;
+      let inlineValue: string | undefined;
+      const equalsIndex = flagPart.indexOf('=');
+
+      if (equalsIndex !== -1) {
+        rawFlagName = flagPart.slice(0, equalsIndex);
+        inlineValue = flagPart.slice(equalsIndex + 1);
+      } else {
+        rawFlagName = flagPart;
+      }
+
       // Support both kebab-case (--dry-run) and camelCase (--dryRun)
       const flagName = kebabToCamel(rawFlagName);
       const fieldDef = contextDef[flagName];
@@ -351,12 +365,30 @@ export function parseContext<C extends ContextDef>(
       const info = schemaInfoCache.get(flagName)!;
 
       if (info.type === 'boolean') {
+        // Boolean flags don't accept inline values
+        if (inlineValue !== undefined) {
+          throw createError(
+            `Boolean flag --${flagName} does not accept a value. Use --${flagName} or --no-${flagName}`,
+            contextDef,
+            errorContext
+          );
+        }
         context[flagName] = !isNegated;
         i++;
       } else {
-        // String/enum flag - next arg is the value
-        const value = args[i + 1];
-        if (value === undefined || value.startsWith('--')) {
+        // String/enum flag - use inline value (--flag=value) or next arg (--flag value)
+        let value: string | undefined;
+        let advance: number;
+
+        if (inlineValue !== undefined) {
+          value = inlineValue;
+          advance = 1;
+        } else {
+          value = args[i + 1];
+          advance = 2;
+        }
+
+        if (value === undefined || (inlineValue === undefined && value.startsWith('--'))) {
           throw createError(`Flag --${flagName} requires a value`, contextDef, errorContext);
         }
 
@@ -372,7 +404,7 @@ export function parseContext<C extends ContextDef>(
         }
 
         context[flagName] = value;
-        i += 2;
+        i += advance;
       }
     } else {
       // Positional argument
