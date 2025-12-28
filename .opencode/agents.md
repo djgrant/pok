@@ -16,13 +16,3 @@ packages/
 commands/           # pok's own CLI commands
 test/               # Integration tests
 ```
-
-## Agents
-
-Use `@mention` to invoke:
-
-- `@delegator` - Break complex work into packages and delegate
-- `@build` - Run builds and checks, fix issues
-- `@tester` - Write and run tests
-- `@reviewer` - Code review (read-only)
-- `@architect` - Architecture planning
