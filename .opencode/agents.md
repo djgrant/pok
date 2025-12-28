@@ -2,6 +2,23 @@
 
 pok is a file-based CLI framework for TypeScript. This directory contains everything agents need to work effectively on this codebase.
 
+## Invoking Agents
+
+Use `@mention` to invoke a specific agent:
+
+```
+@delegator Break this into work packages and delegate
+@build Fix the type errors in packages/core
+@tester Add tests for the new feature
+@reviewer Review the changes in this PR
+```
+
+In `opencode run`, include the mention in the prompt:
+
+```bash
+opencode run "@build Fix type errors. Load the work-package skill."
+```
+
 ## What's Here
 
 ```
