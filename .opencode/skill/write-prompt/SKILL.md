@@ -7,15 +7,15 @@ description: Reference for delegating work to opencode subagents via `opencode r
 
 Run `opencode run "{prompt}"` to spawn a subagent. The process exits when the agent completes.
 
-## Referencing Work Packages
+## Delegating Work Packages
 
 ```
-opencode run "Complete .opencode/work/todo/{package-name}.md"
+opencode run "Complete .opencode/work/todo/{name}.md. Load the work-package skill."
 ```
 
 ## Resuming Sessions
 
-If a process is interrupted, find and resume it:
+If a process is interrupted:
 
 ```bash
 opencode session list
