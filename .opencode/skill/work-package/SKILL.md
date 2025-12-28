@@ -1,11 +1,16 @@
 ---
 name: work-package
-description: How to manage work package lifecycle when working on a delegated task
+description: How to complete a delegated work package
 ---
 
-# Work Package Lifecycle
+# Completing a Work Package
 
-When working on a work package:
+1. **Read** the work package to understand the task
+2. **Move** it from `todo/` to `in-progress/`
+3. **Do the work** - stay within the scope defined in the package
+4. **Verify** - type check, test, or whatever's appropriate
+5. **Move** to `completed/` when done
 
-1. Move from `todo/` to `in-progress/` when you start
-2. Move from `in-progress/` to `completed/` when done
+## Stay in Scope
+
+The work package defines what to change. Don't modify files outside that scope.

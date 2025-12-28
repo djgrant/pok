@@ -1,88 +1,28 @@
-# pok Agent Guide
+# pok
 
-pok is a file-based CLI framework for TypeScript. This directory contains everything agents need to work effectively on this codebase.
+A file-based CLI framework for TypeScript.
 
-## Invoking Agents
-
-Use `@mention` to invoke a specific agent:
+## Structure
 
 ```
-@delegator Break this into work packages and delegate
-@build Fix the type errors in packages/core
-@tester Add tests for the new feature
-@reviewer Review the changes in this PR
+packages/
+  core/             # Core framework (routing, tasks, events)
+  create/           # Project scaffolding
+  cmd/              # Global CLI launcher
+  tabs-ink/         # Tabbed terminal UI (Ink)
+  tabs-opentui/     # Tabbed terminal UI (OpenTUI)
+  reporter-clack/   # Terminal output
+  prompter-clack/   # Interactive prompts
+commands/           # pok's own CLI commands
+test/               # Integration tests
 ```
 
-In `opencode run`, include the mention in the prompt:
+## Agents
 
-```bash
-opencode run "@build Fix type errors. Load the work-package skill."
-```
+Use `@mention` to invoke:
 
-## What's Here
-
-```
-.opencode/
-├── agents.md        # This file - orientation
-├── codebase.md      # How to build, test, and navigate the repo
-├── conventions.md   # Coding standards and patterns
-├── vision.md        # Project goals and design principles
-│
-├── agent/           # Custom agents (build, reviewer, tester, documenter, architect)
-├── command/         # Slash commands (/check, /test, /docs)
-├── skill/           # Loadable skills
-│
-├── work/            # Work packages
-│   ├── todo/        # Planned work
-│   ├── in-progress/ # Active work
-│   └── completed/   # Done (for reference)
-│
-└── knowledge/       # Lessons learned
-```
-
-## Work Packages
-
-When working on a significant task, create or update a work package:
-
-**Location:** `.opencode/work/{todo,in-progress,completed}/`
-
-**Format:**
-```markdown
-# [Title]
-
-**Package:** core | create | tabs-ink | etc.
-
-## Problem
-[What's wrong or missing]
-
-## Current Approach
-[How it works now, if applicable]
-
-## Proposed Approach
-[What we'll do]
-
-## Why This Approach
-[Brief rationale]
-```
-
-Move files between directories as work progresses.
-
-## Knowledge (Lessons Learned)
-
-When you learn something important, add it to knowledge:
-
-**Location:** `.opencode/knowledge/YYYY-MM-DD-short-name.md`
-
-**Format:**
-```markdown
-# [One-line title]
-
-**Date:** YYYY-MM-DD
-**Package:** core | create | etc.
-
-[One or two sentences. No more than needed.]
-```
-
-Keep lessons brief. Over-learning is worse than under-learning.
-
-All agents may write to the knowledge directory.
+- `@delegator` - Break complex work into packages and delegate
+- `@build` - Run builds and checks, fix issues
+- `@tester` - Write and run tests
+- `@reviewer` - Code review (read-only)
+- `@architect` - Architecture planning

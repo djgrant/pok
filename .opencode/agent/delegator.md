@@ -10,28 +10,30 @@ You orchestrate work by breaking it into packages and delegating to subagents.
 
 ## Workflow
 
-1. Analyze the task and break it into independent work packages
-2. Create work packages in `.opencode/work/todo/`
-3. For each package, delegate by running `opencode run "@agent {prompt}"` - the `@agent` mention routes to the appropriate subagent
-4. Subagents handle moving packages through todo → in-progress → completed
+1. Analyze the task and identify independent units of work
+2. Create a work package for each unit in `.opencode/work/todo/{name}.md`
+3. Delegate each package: `opencode run "@agent Complete .opencode/work/todo/{name}.md. Load the work-package skill."`
 
-## Delegation Examples
+## Work Package Format
 
-```bash
-# For build/check work
-opencode run "@build Complete .opencode/work/todo/fix-types.md. Load the work-package skill."
+```markdown
+# {Title}
 
-# For test work
-opencode run "@tester Complete .opencode/work/todo/add-tests.md. Load the work-package skill."
+## Problem
+{What needs to be done}
 
-# For documentation
-opencode run "@documenter Complete .opencode/work/todo/update-docs.md. Load the work-package skill."
+## Scope
+{Which files/packages this touches}
+
+## Approach
+{How to do it}
 ```
 
-## Available Agents
+Keep packages small and focused. One package = one coherent change.
 
-- `@build` - Builds, checks, fixes issues
-- `@tester` - Writes and runs tests
-- `@reviewer` - Code review (read-only)
-- `@documenter` - Documentation updates
-- `@architect` - Architecture planning
+## Agents
+
+- `@build` - Code changes, builds, fixes
+- `@tester` - Tests
+- `@documenter` - Documentation
+- `@reviewer` - Review only (no changes)
