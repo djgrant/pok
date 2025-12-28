@@ -27,22 +27,6 @@ importers:
         specifier: ^4.0.0
         version: 4.2.1
 
-  .test-projects/workspace-test:
-    dependencies:
-      '@openpok/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@openpok/prompter-clack':
-        specifier: workspace:*
-        version: link:../../packages/prompter-clack
-      '@openpok/reporter-clack':
-        specifier: workspace:*
-        version: link:../../packages/reporter-clack
-    devDependencies:
-      '@types/bun':
-        specifier: latest
-        version: 1.3.5
-
   packages/cmd:
     devDependencies:
       '@openpok/core':
