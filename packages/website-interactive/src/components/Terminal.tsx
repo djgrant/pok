@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebContainer } from '@webcontainer/api';
@@ -8,31 +8,10 @@ interface TerminalProps {
   webContainer: WebContainer | null;
 }
 
-export interface TerminalHandle {
-  writeCommand: (command: string) => void;
-}
-
-export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
-  { webContainer },
-  ref
-) {
+export function Terminal({ webContainer }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const shellWriterRef = useRef<WritableStreamDefaultWriter<string> | null>(null);
-
-  // Expose writeCommand method via ref
-  useImperativeHandle(
-    ref,
-    () => ({
-      writeCommand: (command: string) => {
-        if (shellWriterRef.current) {
-          shellWriterRef.current.write(command + '\n');
-        }
-      },
-    }),
-    []
-  );
 
   useEffect(() => {
     if (!terminalRef.current || xtermRef.current) return;
@@ -74,7 +53,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    terminal.writeln('Welcome to pok interactive terminal!');
+    terminal.writeln('Starting pok...');
     terminal.writeln('');
 
     // Handle window resize
@@ -128,7 +107,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
       // Get input writer
       shellWriter = shellProcess.input.getWriter();
-      shellWriterRef.current = shellWriter;
 
       // Handle terminal input
       terminal.onData((data) => {
@@ -148,6 +126,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
           rows: terminal.rows,
         });
       }
+
+      // Auto-run 'pok learn' after shell is ready
+      // Small delay to ensure shell is fully initialized
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await shellWriter.write('pok learn\n');
     };
 
     setupShell().catch((err) => {
@@ -156,7 +139,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     });
 
     return () => {
-      shellWriterRef.current = null;
       shellWriter?.close();
       shellProcess?.kill();
     };
@@ -164,9 +146,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   return (
     <div className="terminal-container">
-      <div className="terminal-wrapper">
-        <div ref={terminalRef} style={{ height: '100%', width: '100%' }} />
-      </div>
+      <div ref={terminalRef} className="terminal-element" />
     </div>
   );
-});
+}
