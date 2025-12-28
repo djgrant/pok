@@ -69,6 +69,63 @@ describe('parseContext', () => {
     });
   });
 
+  describe('--flag=value syntax', () => {
+    it('parses --flag=value format for strings', () => {
+      const { context, rest } = parseContext(['--env=staging'], simpleContextDef);
+      expect(context.env).toBe('staging');
+      expect(rest).toEqual([]);
+    });
+
+    it('parses --flag=value format for enums', () => {
+      const { context } = parseContext(['--env=prod'], simpleContextDef);
+      expect(context.env).toBe('prod');
+    });
+
+    it('handles empty value with --flag=', () => {
+      const { context } = parseContext(['--tag='], simpleContextDef);
+      expect(context.tag).toBe('');
+    });
+
+    it('handles value containing equals sign', () => {
+      const { context } = parseContext(['--tag=a=b=c'], simpleContextDef);
+      expect(context.tag).toBe('a=b=c');
+    });
+
+    it('handles mixed --flag=value and --flag value syntax', () => {
+      const { context } = parseContext(
+        ['--env=dev', '--verbose', '--tag', 'v1.0'],
+        simpleContextDef
+      );
+      expect(context.env).toBe('dev');
+      expect(context.verbose).toBe(true);
+      expect(context.tag).toBe('v1.0');
+    });
+
+    it('throws for boolean flag with --flag=value syntax', () => {
+      expect(() => parseContext(['--verbose=true'], simpleContextDef)).toThrow(
+        'Boolean flag --verbose does not accept a value'
+      );
+    });
+
+    it('throws for invalid enum value with --flag=value syntax', () => {
+      expect(() => parseContext(['--env=invalid'], simpleContextDef)).toThrow(
+        'Invalid value for --env: invalid'
+      );
+    });
+
+    it('supports kebab-case with --flag=value syntax', () => {
+      const kebabContextDef = {
+        dryRun: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Dry run mode',
+        },
+      } satisfies ContextDef;
+      const { context } = parseContext(['--dry-run=test'], kebabContextDef);
+      expect(context.dryRun).toBe('test');
+    });
+  });
+
   describe('boolean flags', () => {
     it('sets boolean to true with --flag', () => {
       const { context } = parseContext(['--verbose'], simpleContextDef);
