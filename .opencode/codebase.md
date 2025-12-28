@@ -26,7 +26,7 @@ pok dev interactive # Start interactive tutorial
 | `@openpok/tabs-ink` | Tabbed UI with Ink/React |
 | `@openpok/tabs-opentui` | Tabbed UI with OpenTUI |
 
-For detailed package docs, see `@docs/packages/`.
+For detailed package docs, see `docs/packages/`.
 
 ## Key Directories
 

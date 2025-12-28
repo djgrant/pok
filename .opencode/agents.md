@@ -11,10 +11,9 @@ pok is a file-based CLI framework for TypeScript. This directory contains everyt
 ├── conventions.md   # Coding standards and patterns
 ├── vision.md        # Project goals and design principles
 │
-├── agent/           # Custom agents (reviewer, tester, documenter, architect)
+├── agent/           # Custom agents (build, reviewer, tester, documenter, architect)
 ├── command/         # Slash commands (/check, /test, /docs)
 ├── skill/           # Loadable skills
-├── tool/            # Custom LLM-callable tools
 │
 ├── work/            # Work packages
 │   ├── todo/        # Planned work
