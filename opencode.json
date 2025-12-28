@@ -5,5 +5,10 @@
     ".opencode/codebase.md",
     ".opencode/conventions.md",
     ".opencode/vision.md"
-  ]
+  ],
+  "permission": {
+    "skill": {
+      "write-prompt": "deny"
+    }
+  }
 }
