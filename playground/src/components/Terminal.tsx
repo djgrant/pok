@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebContainer } from '@webcontainer/api';
@@ -35,6 +35,15 @@ interface TerminalProps {
   command?: string;
   /** Delay in ms before running command (useful for coordinating startup) */
   startDelay?: number;
+  /** Whether this terminal is currently focused */
+  isFocused?: boolean;
+}
+
+export interface TerminalHandle {
+  /** Focus the terminal */
+  focus: () => void;
+  /** Clear the terminal screen */
+  clear: () => void;
 }
 
 /**
@@ -48,10 +57,27 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
   }) as T;
 }
 
-export function Terminal({ webContainer, command, startDelay = 0 }: TerminalProps) {
+export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
+  { webContainer, command, startDelay = 0, isFocused = false },
+  ref
+) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+
+  // Expose focus and clear methods to parent
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        xtermRef.current?.focus();
+      },
+      clear: () => {
+        xtermRef.current?.clear();
+      },
+    }),
+    []
+  );
 
   // Focus terminal when user clicks on it
   const handleContainerClick = useCallback(() => {
@@ -186,8 +212,11 @@ export function Terminal({ webContainer, command, startDelay = 0 }: TerminalProp
   }, [webContainer, command, startDelay]);
 
   return (
-    <div className="terminal-container" onClick={handleContainerClick}>
+    <div
+      className={`terminal-container ${isFocused ? 'terminal-focused' : ''}`}
+      onClick={handleContainerClick}
+    >
       <div ref={terminalRef} className="terminal-element" />
     </div>
   );
-}
+});

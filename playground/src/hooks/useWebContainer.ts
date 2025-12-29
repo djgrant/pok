@@ -129,7 +129,7 @@ export function useWebContainer(): UseWebContainerResult {
                     '@openpok/core': '0.0.1',
                     '@openpok/reporter-clack': '0.0.1',
                     '@openpok/prompter-clack': '0.0.1',
-                    '@openpok/introspect': '0.0.1',
+                    // introspect is now bundled directly, not as a separate package
                     zod: '3.24.0',
                     'fast-glob': '3.3.2',
                     'cli-highlight': '2.1.11',
@@ -151,9 +151,30 @@ export default {};
             directory: {
               'introspect.ts': {
                 file: {
-                  contents: `// Re-export the introspect command from @openpok/introspect
-const { command } = require('@openpok/introspect');
-exports.command = command;
+                  contents: `// Introspect command - uses the bundled introspect module
+const { defineCommand } = require('@openpok/core');
+const { z } = require('zod');
+const { runIntrospect } = require('@openpok/introspect');
+
+exports.command = defineCommand({
+  label: 'View files in a directory with live updates',
+  context: {
+    path: {
+      from: 'flag',
+      schema: z.string().optional().describe('Directory to watch'),
+    },
+    depth: {
+      from: 'flag',
+      schema: z.coerce.number().optional().default(3).describe('Maximum depth for file tree'),
+    },
+  },
+  run: async (_r, ctx) => {
+    await runIntrospect({
+      path: ctx.context.path,
+      depth: ctx.context.depth,
+    });
+  },
+});
 `,
                 },
               },

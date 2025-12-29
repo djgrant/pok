@@ -168,11 +168,25 @@ function renderPreview(
 }
 
 function renderStatusBar(state: IntrospectState, cols: number): string {
-  const controls = '[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit';
-  const fileInfo = state.entries[state.selectedIndex]?.name ?? '';
-  const padding = Math.max(0, cols - controls.length - fileInfo.length - 4);
+  const isNarrow = cols < 80;
 
-  return `${GRAY}\u2514${YELLOW}${controls}${RESET}${' '.repeat(padding)}${DIM}${fileInfo}${RESET}${GRAY}\u2518${RESET}`;
+  // Use abbreviated controls for narrow terminals
+  const controls = isNarrow
+    ? '\u2191\u2193 \u2502 Enter \u2502 ? \u2502 q'
+    : '[\u2191\u2193/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit';
+
+  const fileInfo = state.entries[state.selectedIndex]?.name ?? '';
+
+  // Truncate file info if needed to fit
+  const availableWidth = cols - controls.length - 4;
+  const truncatedFileInfo =
+    fileInfo.length > availableWidth
+      ? fileInfo.slice(0, Math.max(0, availableWidth - 1)) + '\u2026'
+      : fileInfo;
+
+  const padding = Math.max(0, cols - controls.length - truncatedFileInfo.length - 4);
+
+  return `${GRAY}\u2514${YELLOW}${controls}${RESET}${' '.repeat(padding)}${DIM}${truncatedFileInfo}${RESET}${GRAY}\u2518${RESET}`;
 }
 
 function renderHelpOverlay(cols: number, _rows: number): string[] {
@@ -180,8 +194,8 @@ function renderHelpOverlay(cols: number, _rows: number): string[] {
     '',
     '  Keyboard Controls  ',
     '',
-    '  ↑ / k      Move up',
-    '  ↓ / j      Move down',
+    '  \u2191 / k      Move up',
+    '  \u2193 / j      Move down',
     '  Enter      Expand/collapse directory',
     '  PgUp       Scroll preview up',
     '  PgDn       Scroll preview down',
@@ -197,7 +211,7 @@ function renderHelpOverlay(cols: number, _rows: number): string[] {
   const leftPad = Math.floor((cols - boxWidth) / 2);
   const padStr = ' '.repeat(leftPad);
 
-  lines.push(`${padStr}${BOLD}${CYAN}\u250C${'─'.repeat(boxWidth - 2)}\u2510${RESET}`);
+  lines.push(`${padStr}${BOLD}${CYAN}\u250C${'\u2500'.repeat(boxWidth - 2)}\u2510${RESET}`);
 
   for (const line of helpContent) {
     const contentPad = boxWidth - line.length - 2;
@@ -206,7 +220,7 @@ function renderHelpOverlay(cols: number, _rows: number): string[] {
     );
   }
 
-  lines.push(`${padStr}${CYAN}\u2514${'─'.repeat(boxWidth - 2)}\u2518${RESET}`);
+  lines.push(`${padStr}${CYAN}\u2514${'\u2500'.repeat(boxWidth - 2)}\u2518${RESET}`);
 
   return lines;
 }

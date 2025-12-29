@@ -78,7 +78,7 @@ body {
   flex-direction: column;
 }
 
-/* Two-terminal layout */
+/* Two-terminal layout - 1/3 + 2/3 split */
 .terminals-container {
   display: flex;
   flex: 1;
@@ -86,13 +86,58 @@ body {
 }
 
 .terminal-pane {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   border-right: 1px solid var(--border-color);
 }
 
+/* Left pane (learn) takes 1/3 */
+.terminal-pane:first-child {
+  flex: 1;
+}
+
+/* Right pane (introspect) takes 2/3 */
 .terminal-pane:last-child {
+  flex: 2;
   border-right: none;
+}
+
+/* Tab title bar */
+.terminal-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.terminal-title-text {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-weight: 500;
+}
+
+.terminal-title-shortcut {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.terminal-title-shortcut kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.0625rem 0.25rem;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.625rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  color: var(--text-secondary);
 }
 
 /* Focus states for accessibility */
@@ -112,7 +157,8 @@ body {
 
 /* Terminal styles */
 .terminal-container {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   padding: 0.5rem;
   overflow: hidden;
@@ -347,4 +393,50 @@ body {
 
 .unsupported-browser .browser-link:hover {
   background: var(--border-color);
+}
+
+/* Shortcuts bar */
+.shortcuts-bar {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.shortcut-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shortcut-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 0.125rem 0.375rem;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-xs);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+/* Active panel background highlight - subtle difference */
+.terminal-pane-active {
+  background: var(--bg-elevated);
+}
+
+.terminal-pane-active .terminal-title {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.terminal-pane-active .terminal-title-text {
+  color: var(--accent);
 }

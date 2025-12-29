@@ -1,16 +1,16 @@
 /**
- * @openpok/introspect - Live file viewer TUI
+ * Introspect TUI - Live file viewer for pok commands directory
  *
  * A read-only TUI that displays a file tree with syntax-highlighted
  * preview and live updates when files change.
+ *
+ * This is purpose-built for the playground and doesn't have a
+ * defineCommand wrapper.
  */
 
 // Main entry point
 export { runIntrospect } from './introspect';
 export type { IntrospectOptions } from './introspect';
-
-// Command for pok CLI
-export { command } from './command';
 
 // State types and helpers
 export {
