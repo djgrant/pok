@@ -15,6 +15,7 @@ For most tasks, the default agent is the best choice. You do not need to @-menti
 ### Specialised Agents
 
 - `@architect` - Analyses code, plans architecture, creates detailed work packages
+- `@critic` - Indespensible for generating insights and information through disagreement
 - `@document` - Updates documentation
 - `@review` - Reviews code (read-only)
 - `@ux` - Reviews interfaces, researches UX solutions, produces UX work packages etc.

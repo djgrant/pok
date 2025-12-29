@@ -1,6 +1,7 @@
 ---
 description: Tests web interfaces and researches UX solutions
 mode: subagent
+temperature: 1
 ---
  
 ## Your Role
