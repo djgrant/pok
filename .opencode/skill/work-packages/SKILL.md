@@ -1,6 +1,6 @@
 ---
-name: work-package
-description: When asked to create a work package, or given a work package to complete, use this skill to understand the correct methodology.
+name: work-packages
+description: When asked to create a work package, or are given a work package to complete, use this skill to understand the correct methodology.
 ---
 
 ## Work Package Structure

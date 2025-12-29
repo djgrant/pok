@@ -2,12 +2,12 @@
 description: Test web UI in browser
 ---
 
-## Prerequisites
-
-Load required skills:
+## Required skills:
 
 1) browser skill
 2) scientific-method skill
+
+## Prerequisites
 
 Start servers:
 
