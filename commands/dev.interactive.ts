@@ -10,6 +10,6 @@ export const command = defineCommand({
   label: 'Interactive Tutorial',
   run: async (r) => {
     r.reporter.info('Starting interactive tutorial at http://localhost:5173');
-    await r.exec('bun run --cwd packages/website-interactive dev');
+    await r.exec('bun run --cwd playground dev');
   },
 });

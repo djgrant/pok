@@ -252,7 +252,7 @@ To avoid slow npm install, packages are bundled at build time using a Vite plugi
 ## Files
 
 ```
-packages/website-interactive/
+playground/
 ├── src/
 │   ├── App.tsx              # Main app, renders header + terminal
 │   ├── index.css            # Minimal styles (~200 lines)
