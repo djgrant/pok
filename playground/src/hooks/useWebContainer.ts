@@ -129,8 +129,10 @@ export function useWebContainer(): UseWebContainerResult {
                     '@openpok/core': '0.0.1',
                     '@openpok/reporter-clack': '0.0.1',
                     '@openpok/prompter-clack': '0.0.1',
+                    '@openpok/introspect': '0.0.1',
                     zod: '3.24.0',
                     'fast-glob': '3.3.2',
+                    'cli-highlight': '2.1.11',
                   },
                 },
                 null,
@@ -147,373 +149,179 @@ export default {};
           },
           commands: {
             directory: {
+              'introspect.ts': {
+                file: {
+                  contents: `// Re-export the introspect command from @openpok/introspect
+const { command } = require('@openpok/introspect');
+exports.command = command;
+`,
+                },
+              },
               'learn.ts': {
                 file: {
                   contents: `const { defineCommand } = require('@openpok/core');
-const { writeFileSync, readFileSync } = require('fs');
+const { writeFileSync, mkdirSync, existsSync } = require('fs');
+const { execSync } = require('child_process');
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+const HELLO_CODE = \`const { defineCommand } = require('@openpok/core');
+
+exports.command = defineCommand({
+  label: 'Say hello',
+  run: async (r) => {
+    r.reporter.success('Hello!');
+  },
+});
+\`;
+
+const GREET_CODE = \`const { z } = require('zod');
+const { defineCommand } = require('@openpok/core');
+
+exports.command = defineCommand({
+  label: 'Greet someone',
+  context: {
+    name: {
+      from: 'flag',
+      schema: z.string(),
+    },
+  },
+  run: async (r, { context }) => {
+    r.reporter.success(\\\`Hello, \\\${context.name}!\\\`);
+  },
+});
+\`;
+
+const DEV_CODE = \`const { defineCommand } = require('@openpok/core');
+
+exports.command = defineCommand({
+  label: 'Development servers',
+  run: async (r) => {
+    await r.tabs([
+      r.exec('npm run server'),
+      r.exec('npm run watch'),
+    ]);
+  },
+});
+\`;
+
+function printBox(r, filename, code) {
+  const lines = code.trim().split('\\n');
+  const width = 50;
+  const padding = width - filename.length - 4;
+  
+  r.reporter.info('\\u250c\\u2500 ' + filename + ' ' + '\\u2500'.repeat(padding) + '\\u2510');
+  r.reporter.info('\\u2502' + ' '.repeat(width) + '\\u2502');
+  for (const line of lines) {
+    const padded = '  ' + line;
+    r.reporter.info('\\u2502' + padded.slice(0, width).padEnd(width) + '\\u2502');
+  }
+  r.reporter.info('\\u2502' + ' '.repeat(width) + '\\u2502');
+  r.reporter.info('\\u2514' + '\\u2500'.repeat(width + 2) + '\\u2518');
+}
 
 exports.command = defineCommand({
   label: 'Learn pok interactively',
   run: async (r) => {
-    r.reporter.step('Welcome to pok!');
-    r.reporter.info('');
-    r.reporter.info('This interactive tutorial will guide you through learning pok,');
-    r.reporter.info('a modern CLI framework for building developer tools.');
-    r.reporter.info('');
+    if (!existsSync('commands')) {
+      mkdirSync('commands');
+    }
 
     while (true) {
       const choice = await r.prompter.select({
-        message: 'What would you like to learn?',
+        message: 'What do you want to see?',
         options: [
-          { value: 'first', label: 'Your first command' },
-          { value: 'args', label: 'Arguments and flags' },
-          { value: 'tabs', label: 'Tabs (multi-process)' },
-          { value: 'source', label: 'How was this made?' },
-          { value: 'exit', label: 'Free exploration' },
+          { value: 'create', label: 'Create a command' },
+          { value: 'args', label: 'Add arguments' },
+          { value: 'tabs', label: 'See tabs' },
+          { value: 'exit', label: 'Explore freely' },
         ],
       });
 
       if (choice === 'exit') {
         r.reporter.info('');
-        r.reporter.success('Have fun exploring!');
+        r.reporter.info('Your commands are in ./commands');
         r.reporter.info('');
-        r.reporter.info('Try these commands:');
-        r.reporter.info('  pok --help     Show available commands');
-        r.reporter.info('  pok learn      Return to this tutorial');
+        r.reporter.info('Try:');
+        r.reporter.info('  pok         - see all commands');
+        r.reporter.info('  pok hello   - run hello command');
+        r.reporter.info('  pok --help  - see options');
         r.reporter.info('');
         break;
       }
 
-      // ========================================
-      // LESSON 3: How was this made?
-      // ========================================
-      if (choice === 'source') {
-        r.reporter.info('');
-        r.reporter.step('How was this made?');
-        r.reporter.info('');
-        r.reporter.info('This tutorial is itself a pok command!');
-        r.reporter.info('');
-        r.reporter.info('It uses:');
-        r.reporter.info('  - defineCommand() to define the learn command');
-        r.reporter.info('  - r.prompter.select() for interactive menus');
-        r.reporter.info('  - r.reporter.info/success/step() for styled output');
-        r.reporter.info('  - A while(true) loop to keep the menu running');
-        r.reporter.info('');
-        r.reporter.info("Let me show you the actual source code...");
-        r.reporter.info('');
+      r.reporter.info('');
 
+      if (choice === 'create') {
+        r.reporter.info('Creating commands/hello.ts...');
+        r.reporter.info('');
+        
+        writeFileSync('commands/hello.ts', HELLO_CODE);
+        
+        printBox(r, 'commands/hello.ts', HELLO_CODE);
+        
+        r.reporter.info('');
+        r.reporter.info('Running: pok hello');
+        r.reporter.info('');
+        
+        await sleep(300);
+        
         try {
-          const source = readFileSync('commands/learn.ts', 'utf-8');
-          r.reporter.info('--- commands/learn.ts ---');
-          r.reporter.info('');
-          const lines = source.split('\\n').slice(0, 40);
-          for (const line of lines) {
-            r.reporter.info(line);
-          }
-          if (source.split('\\n').length > 40) {
-            r.reporter.info('');
-            r.reporter.info('... (truncated - file continues)');
-          }
-          r.reporter.info('');
-          r.reporter.info('--- end of file ---');
+          execSync('node_modules/.bin/pok hello', { 
+            stdio: 'inherit',
+            cwd: process.cwd()
+          });
         } catch (e) {
-          r.reporter.warn('Could not read source file');
+          // Command output already shown
         }
-
+        
         r.reporter.info('');
-        r.reporter.info('Key concepts used in this tutorial:');
-        r.reporter.info('');
-        r.reporter.info('  1. defineCommand() - creates the command');
-        r.reporter.info('  2. r.reporter.info/success/step() - structured output');
-        r.reporter.info('  3. r.prompter.select() - interactive menus');
-        r.reporter.info('  4. r.prompter.confirm() - yes/no prompts');
-        r.reporter.info('  5. fs.writeFileSync() - create files');
-        r.reporter.info('  6. fs.readFileSync() - read files (like this source!)');
-        r.reporter.info('');
-        r.reporter.info('Want to learn more? Check out the pok repository:');
-        r.reporter.info('  https://github.com/notation/pok');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Back to menu?' });
-        continue;
+        r.reporter.info('Done. You just saw a command created and executed.');
       }
 
-      // ========================================
-      // LESSON 1: Your First Command
-      // ========================================
-      if (choice === 'first') {
-        r.reporter.info('');
-        r.reporter.step('Lesson 1: Your First Command');
-        r.reporter.info('');
-        r.reporter.info('Commands in pok are TypeScript files in the commands/ directory.');
-        r.reporter.info('Each file exports a command using defineCommand().');
-        r.reporter.info('');
-        r.reporter.info('A command has two main parts:');
-        r.reporter.info('  - label: A description shown in help');
-        r.reporter.info('  - run: The function that executes when the command runs');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Ready to see an example?' });
-
-        r.reporter.info('');
-        r.reporter.info("Here's a simple \\"hello\\" command:");
-        r.reporter.info('');
-        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
-        r.reporter.info('');
-        r.reporter.info('  exports.command = defineCommand({');
-        r.reporter.info("    label: 'Say hello to the world',");
-        r.reporter.info('    run: async (r) => {');
-        r.reporter.info("      r.reporter.success('Hello, world!');");
-        r.reporter.info('    },');
-        r.reporter.info('  });');
-        r.reporter.info('');
-
-        const createIt = await r.prompter.select({
-          message: 'Would you like me to create this command for you?',
-          options: [
-            { value: 'yes', label: 'Yes, create commands/hello.ts' },
-            { value: 'no', label: 'No, I\\'ll do it myself' },
-          ],
-        });
-
-        if (createIt === 'yes') {
-          const helloCode = \`const { defineCommand } = require('@openpok/core');
-
-exports.command = defineCommand({
-  label: 'Say hello to the world',
-  run: async (r) => {
-    r.reporter.success('Hello, world!');
-  },
-});
-\`;
-          writeFileSync('commands/hello.ts', helloCode);
-          r.reporter.info('');
-          r.reporter.success('Created commands/hello.ts');
-          r.reporter.info('');
-          r.reporter.info('Now try running it! Exit this tutorial and type:');
-          r.reporter.info('');
-          r.reporter.info('  pok hello');
-          r.reporter.info('');
-
-          const runNow = await r.prompter.confirm({ 
-            message: 'Exit tutorial to try it now?' 
-          });
-
-          if (runNow) {
-            r.reporter.info('');
-            r.reporter.success('Great! Type "pok hello" to run your command.');
-            r.reporter.info('Then run "pok learn" to continue learning.');
-            r.reporter.info('');
-            break;
-          }
-        } else {
-          r.reporter.info('');
-          r.reporter.info('No problem! Create the file yourself:');
-          r.reporter.info('  1. Create commands/hello.ts');
-          r.reporter.info('  2. Add the code shown above');
-          r.reporter.info('  3. Run: pok hello');
-          r.reporter.info('');
-          await r.prompter.confirm({ message: 'Back to menu?' });
-        }
-        continue;
-      }
-
-      // ========================================
-      // LESSON 2: Arguments and Flags
-      // ========================================
       if (choice === 'args') {
+        r.reporter.info('Creating commands/greet.ts...');
         r.reporter.info('');
-        r.reporter.step('Lesson 2: Arguments and Flags');
+        
+        writeFileSync('commands/greet.ts', GREET_CODE);
+        
+        printBox(r, 'commands/greet.ts', GREET_CODE);
+        
         r.reporter.info('');
-        r.reporter.info('Commands become more useful when they accept input.');
-        r.reporter.info('pok supports arguments and flags via the "args" property.');
+        r.reporter.info('Running: pok greet --name World');
         r.reporter.info('');
-        r.reporter.info('Each argument is defined with:');
-        r.reporter.info('  - type: string, number, or boolean');
-        r.reporter.info('  - description: shown in --help');
-        r.reporter.info('  - required: whether it must be provided');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Ready to see an example?' });
-
-        r.reporter.info('');
-        r.reporter.info("Here's a \\"greet\\" command that takes a name:");
-        r.reporter.info('');
-        r.reporter.info("  const { z } = require('zod');");
-        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
-        r.reporter.info('');
-        r.reporter.info('  exports.command = defineCommand({');
-        r.reporter.info("    label: 'Greet someone by name',");
-        r.reporter.info('    context: {');
-        r.reporter.info('      name: {');
-        r.reporter.info("        from: 'flag',");
-        r.reporter.info('        schema: z.string(),');
-        r.reporter.info("        description: 'Name of the person to greet',");
-        r.reporter.info('      },');
-        r.reporter.info('      shout: {');
-        r.reporter.info("        from: 'flag',");
-        r.reporter.info('        schema: z.boolean().default(false),');
-        r.reporter.info("        description: 'Greet loudly in uppercase',");
-        r.reporter.info('      },');
-        r.reporter.info('    },');
-        r.reporter.info('    run: async (r, { context }) => {');
-        r.reporter.info("      let greeting = \\\`Hello, \\\${context.name}!\\\`;");
-        r.reporter.info('      if (context.shout) greeting = greeting.toUpperCase();');
-        r.reporter.info('      r.reporter.success(greeting);');
-        r.reporter.info('    },');
-        r.reporter.info('  });');
-        r.reporter.info('');
-
-        const createIt = await r.prompter.select({
-          message: 'Would you like me to create this command?',
-          options: [
-            { value: 'yes', label: 'Yes, create commands/greet.ts' },
-            { value: 'no', label: 'No, I\\'ll explore on my own' },
-          ],
-        });
-
-        if (createIt === 'yes') {
-          const greetCode = \`const { z } = require('zod');
-const { defineCommand } = require('@openpok/core');
-
-exports.command = defineCommand({
-  label: 'Greet someone by name',
-  context: {
-    name: {
-      from: 'flag',
-      schema: z.string(),
-      description: 'Name of the person to greet',
-    },
-    shout: {
-      from: 'flag',
-      schema: z.boolean().default(false),
-      description: 'Greet loudly in uppercase',
-    },
-  },
-  run: async (r, { context }) => {
-    let greeting = \\\`Hello, \\\${context.name}!\\\`;
-    if (context.shout) greeting = greeting.toUpperCase();
-    r.reporter.success(greeting);
-  },
-});
-\`;
-          writeFileSync('commands/greet.ts', greetCode);
-          r.reporter.info('');
-          r.reporter.success('Created commands/greet.ts');
-          r.reporter.info('');
-          r.reporter.info('Try running it with different arguments:');
-          r.reporter.info('');
-          r.reporter.info('  pok greet --name Alice');
-          r.reporter.info('  pok greet --name Bob --shout');
-          r.reporter.info('  pok greet --help');
-          r.reporter.info('');
-
-          const runNow = await r.prompter.confirm({ 
-            message: 'Exit tutorial to try it?' 
+        
+        await sleep(300);
+        
+        try {
+          execSync('node_modules/.bin/pok greet --name World', { 
+            stdio: 'inherit',
+            cwd: process.cwd()
           });
-
-          if (runNow) {
-            r.reporter.info('');
-            r.reporter.success('Go ahead! Try: pok greet --name Alice');
-            r.reporter.info('Run "pok learn" to return to this tutorial.');
-            r.reporter.info('');
-            break;
-          }
-        } else {
-          r.reporter.info('');
-          r.reporter.info('Feel free to experiment! Remember:');
-          r.reporter.info('  - Args are passed as --name value or --flag');
-          r.reporter.info('  - Use --help to see available arguments');
-          r.reporter.info('');
-          await r.prompter.confirm({ message: 'Back to menu?' });
+        } catch (e) {
+          // Command output already shown
         }
-        continue;
+        
+        r.reporter.info('');
+        r.reporter.info('Done. Flags become context. Schema validates them.');
       }
 
-      // ========================================
-      // LESSON: Tabs (Multi-Process)
-      // ========================================
       if (choice === 'tabs') {
+        r.reporter.info('Tabs run multiple processes side by side.');
         r.reporter.info('');
-        r.reporter.step('Tabs: Multi-Process Management');
+        
+        printBox(r, 'commands/dev.ts', DEV_CODE);
+        
         r.reporter.info('');
-        r.reporter.info('Pok can run multiple processes in a tabbed terminal interface.');
-        r.reporter.info('Each tab shows its own output, and you can switch between them.');
+        r.reporter.info('In a real terminal, this opens a tabbed interface.');
+        r.reporter.info('Each tab shows its process output.');
+        r.reporter.info('Switch with <- ->, quit with q.');
         r.reporter.info('');
-        r.reporter.info('This is perfect for development workflows like:');
-        r.reporter.info('  - Running a dev server + file watcher');
-        r.reporter.info('  - Running tests + linter simultaneously');
-        r.reporter.info('  - Database + API server + frontend dev server');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Ready to see how it works?' });
-
-        r.reporter.info('');
-        r.reporter.info("Here's a command that launches three tabs:");
-        r.reporter.info('');
-        r.reporter.info("  const { defineCommand } = require('@openpok/core');");
-        r.reporter.info('');
-        r.reporter.info('  exports.command = defineCommand({');
-        r.reporter.info("    label: 'Start development servers',");
-        r.reporter.info('    run: async (r) => {');
-        r.reporter.info('      await r.tabs([');
-        r.reporter.info("        r.exec('npm run dev'),");
-        r.reporter.info("        r.exec('npm run watch:css'),");
-        r.reporter.info("        r.exec('stripe listen'),");
-        r.reporter.info("      ], { name: 'Development' });");
-        r.reporter.info('    },');
-        r.reporter.info('  });');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Continue?' });
-
-        r.reporter.info('');
-        r.reporter.info('When running tabs, you can:');
-        r.reporter.info('  - Use arrow keys (<- ->) to switch between tabs');
-        r.reporter.info('  - Scroll through each tab\\'s output');
-        r.reporter.info('  - See status indicators (running/done/error)');
-        r.reporter.info('  - Press q to quit all processes');
-        r.reporter.info('');
-        r.reporter.info('You can also use tasks with tabs:');
-        r.reporter.info('');
-        r.reporter.info('  await r.tabs([');
-        r.reporter.info('    r.run(devServerTask),');
-        r.reporter.info('    r.run(watcherTask),');
-        r.reporter.info("    r.exec('stripe listen'),");
-        r.reporter.info('  ]);');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Continue?' });
-
-        r.reporter.info('');
-        r.reporter.step('Setup Required');
-        r.reporter.info('');
-        r.reporter.info('To use tabs, you need to configure a tabs adapter.');
-        r.reporter.info('Add this to your pok.config.ts:');
-        r.reporter.info('');
-        r.reporter.info("  import { createRouter } from '@openpok/core';");
-        r.reporter.info("  import { createTabsAdapter } from '@openpok/tabs-ink';");
-        r.reporter.info('');
-        r.reporter.info('  export default createRouter({');
-        r.reporter.info('    tabs: createTabsAdapter(),');
-        r.reporter.info('  });');
-        r.reporter.info('');
-        r.reporter.info('Then install the package:');
-        r.reporter.info('');
-        r.reporter.info('  npm install @openpok/tabs-ink');
-        r.reporter.info('');
-
-        r.reporter.info('');
-        r.reporter.warn('Note: Tabs require a real terminal (TUI) and cannot');
-        r.reporter.warn('be demonstrated in this browser-based tutorial.');
-        r.reporter.info('');
-        r.reporter.info('Try tabs locally by cloning the pok repository:');
-        r.reporter.info('  https://github.com/notation/pok');
-        r.reporter.info('');
-
-        await r.prompter.confirm({ message: 'Back to menu?' });
-        continue;
+        r.reporter.warn("(Can't demo in browser - tabs need a real terminal.)");
       }
+
+      r.reporter.info('');
+      await sleep(500);
     }
   },
 });
