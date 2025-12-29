@@ -1,6 +1,5 @@
 ---
 description: Check documentation accuracy
-agent: build
 ---
 
 Review @docs/ for accuracy against current code.

@@ -1,6 +1,5 @@
 ---
 description: Run tests and fix failures
-agent: build
 ---
 
 Run `pok test`. If any tests fail, analyze the failures and fix them.
