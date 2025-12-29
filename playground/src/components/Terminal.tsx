@@ -31,6 +31,10 @@ const TERMINAL_THEME = {
 
 interface TerminalProps {
   webContainer: WebContainer | null;
+  /** Command to auto-run when shell is ready */
+  command?: string;
+  /** Delay in ms before running command (useful for coordinating startup) */
+  startDelay?: number;
 }
 
 /**
@@ -44,7 +48,7 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
   }) as T;
 }
 
-export function Terminal({ webContainer }: TerminalProps) {
+export function Terminal({ webContainer, command, startDelay = 0 }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -72,8 +76,7 @@ export function Terminal({ webContainer }: TerminalProps) {
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    terminal.writeln('Starting pok...');
-    terminal.writeln('');
+
 
     // Auto-focus terminal for immediate keyboard input
     terminal.focus();
@@ -160,10 +163,12 @@ export function Terminal({ webContainer }: TerminalProps) {
         });
       }
 
-      // Auto-run 'pok learn' after shell is ready
-      // Small delay to ensure shell is fully initialized
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await shellWriter.write('pok learn\n');
+      // Auto-run command after shell is ready
+      // Small delay to ensure shell is fully initialized, plus any startDelay for coordination
+      await new Promise((resolve) => setTimeout(resolve, 100 + startDelay));
+      if (command) {
+        await shellWriter.write(`${command}\n`);
+      }
     };
 
     setupShell().catch((err) => {
@@ -178,7 +183,7 @@ export function Terminal({ webContainer }: TerminalProps) {
       shellWriter?.close();
       shellProcess?.kill();
     };
-  }, [webContainer]);
+  }, [webContainer, command, startDelay]);
 
   return (
     <div className="terminal-container" onClick={handleContainerClick}>

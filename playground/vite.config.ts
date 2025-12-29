@@ -23,10 +23,11 @@ function pokBundlePlugin(): Plugin {
   async function buildBundle() {
     if (bundledFiles) return bundledFiles;
 
-    const rootDir = path.resolve(__dirname, '../..');
+    const rootDir = path.resolve(__dirname, '..');
     const coreDir = path.join(rootDir, 'packages/core');
     const reporterDir = path.join(rootDir, 'packages/reporter-clack');
     const prompterDir = path.join(rootDir, 'packages/prompter-clack');
+    const introspectDir = path.join(rootDir, 'packages/introspect');
 
     const outDir = path.join(__dirname, '.pok-bundle');
 
@@ -63,6 +64,18 @@ export { runCli } from '${coreDir}/src/cli.ts';
     // Bundle prompter-clack
     execSync(
       `bun build "${prompterDir}/src/index.ts" --outfile "${path.join(outDir, 'prompter-clack.js')}" --target node --format cjs --external @openpok/core --external zod`,
+      { cwd: rootDir, stdio: 'inherit' }
+    );
+
+    // Bundle introspect
+    execSync(
+      `bun build "${introspectDir}/src/index.ts" --outfile "${path.join(outDir, 'introspect.js')}" --target node --format cjs --external @openpok/core --external zod --external cli-highlight`,
+      { cwd: rootDir, stdio: 'inherit' }
+    );
+
+    // Bundle cli-highlight (dependency of introspect)
+    execSync(
+      `bun build "cli-highlight" --outfile "${path.join(outDir, 'cli-highlight.js')}" --target node --format cjs`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
@@ -106,11 +119,17 @@ export { runCli } from '${coreDir}/src/cli.ts';
       'node_modules/@openpok/prompter-clack/dist/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'prompter-clack.js'), 'utf-8')
       ),
+      'node_modules/@openpok/introspect/dist/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'introspect.js'), 'utf-8')
+      ),
       'node_modules/zod/lib/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'zod.js'), 'utf-8')
       ),
       'node_modules/fast-glob/out/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'fast-glob.js'), 'utf-8')
+      ),
+      'node_modules/cli-highlight/dist/index.js': convertDynamicImportsToRequire(
+        fs.readFileSync(path.join(outDir, 'cli-highlight.js'), 'utf-8')
       ),
     };
 
@@ -143,6 +162,28 @@ export { runCli } from '${coreDir}/src/cli.ts';
       {
         name: '@openpok/prompter-clack',
         version: '0.0.1',
+        main: './dist/index.js',
+        exports: { '.': './dist/index.js' },
+      },
+      null,
+      2
+    );
+
+    bundledFiles['node_modules/@openpok/introspect/package.json'] = JSON.stringify(
+      {
+        name: '@openpok/introspect',
+        version: '0.0.1',
+        main: './dist/index.js',
+        exports: { '.': './dist/index.js' },
+      },
+      null,
+      2
+    );
+
+    bundledFiles['node_modules/cli-highlight/package.json'] = JSON.stringify(
+      {
+        name: 'cli-highlight',
+        version: '2.1.11',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
       },
