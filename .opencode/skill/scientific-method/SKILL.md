@@ -1,32 +1,34 @@
 ---
-name: iterate
-description: When a task requires multiple cycles of observation and verification, use hypothesis-driven iteration. Create a tracking work package, observe state, form hypothesis, act, verify against hypothesis, and repeat until goal achieved.
+name: scientific-method
+description: When a task requires observation and verification, use this skill to deliver exceptional results by following hypothesis-driven iteration. 
 ---
 
 # Iterative Loop
 
 ## The Loop
 
-1. **Observe** - Understand current state (screenshot, read output, check files)
+1. **Evaluate** - Understand current state (screenshot, read output, check files)
 2. **Hypothesize** - Write down what you think is happening and what will fix it
-3. **Act** - Do it (or delegate it)
+3. **Act** - Conduct the experiment
 4. **Verify** - Check result against your hypothesis
 5. **Repeat** - Until goal achieved
 
 ## Tracking Progress
 
-Create a work package to track iterations:
+Create a work package, and within it track the iterations:
 
 ```markdown
-# {Goal}
+# Goal
+{What you are trying to achieve}
 
 ## Current Hypothesis
 {What you think is happening and what will fix it}
 
 ## Iterations
-### 1.
-- Observed: {what you saw}
-- Hypothesis: {what you thought}
+
+### Iteration {n}
+- Hypothesis: {what you thought would happen}
+- Observed: {what actually happened}
 - Action: {what you did}
 - Result: {what happened}
 ```

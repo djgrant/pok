@@ -2,9 +2,14 @@
 description: Test web UI in browser
 ---
 
-Load the browser skill. Use the iterate skill for hypothesis-driven testing.
-
 ## Prerequisites
+
+Load required skills:
+
+1) browser skill
+2) scientific-method skill
+
+Start servers:
 
 ```bash
 # Terminal 1: Start dev server
