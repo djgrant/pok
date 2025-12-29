@@ -1,6 +1,6 @@
 ---
 name: browser
-description: When testing or verifying web UI (especially packages/website-interactive), start the browser server, take screenshots to observe state, interact with elements, and verify visually. Always screenshot before and after interactions.
+description: When testing or verifying web UI use this skill to start the browser server, take screenshots to observe state, interact with elements, and verify visually.
 ---
 
 # Browser Interaction
