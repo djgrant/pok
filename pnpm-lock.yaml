@@ -190,7 +190,7 @@ importers:
         specifier: ^19.2.0
         version: 19.2.7
 
-  packages/website-interactive:
+  playground:
     dependencies:
       '@webcontainer/api':
         specifier: ^1.5.1
