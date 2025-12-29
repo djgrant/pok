@@ -1,13 +1,55 @@
-import { Terminal } from './components/Terminal';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Terminal, TerminalHandle } from './components/Terminal';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { RefreshIcon, AlertIcon } from './components/Icons';
 import { useWebContainer } from './hooks/useWebContainer';
 import { useBrowserSupport } from './hooks/useBrowserSupport';
 
+type FocusedPanel = 'left' | 'right';
+
 export function App() {
   const { isSupported, message } = useBrowserSupport();
   const { webContainer, status, error } = useWebContainer();
+
+  const leftTerminalRef = useRef<TerminalHandle>(null);
+  const rightTerminalRef = useRef<TerminalHandle>(null);
+  const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>('left');
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+
+      if (isMod && e.key === '1') {
+        e.preventDefault();
+        setFocusedPanel('left');
+        leftTerminalRef.current?.focus();
+      } else if (isMod && e.key === '2') {
+        e.preventDefault();
+        setFocusedPanel('right');
+        rightTerminalRef.current?.focus();
+      } else if (isMod && e.key === 'k') {
+        e.preventDefault();
+        if (focusedPanel === 'left') {
+          leftTerminalRef.current?.clear();
+        } else {
+          rightTerminalRef.current?.clear();
+        }
+      }
+    },
+    [focusedPanel]
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Track which panel is focused when user clicks
+  const handlePanelFocus = useCallback((panel: FocusedPanel) => {
+    setFocusedPanel(panel);
+  }, []);
 
   if (!isSupported) {
     return <UnsupportedBrowser message={message} />;
@@ -59,12 +101,49 @@ export function App() {
   return (
     <div className="app">
       <div className="terminals-container">
-        <div className="terminal-pane">
-          <Terminal webContainer={webContainer} command="pok learn" />
+        <div
+          className={`terminal-pane ${focusedPanel === 'left' ? 'terminal-pane-active' : ''}`}
+          onClick={() => handlePanelFocus('left')}
+        >
+          <div className="terminal-title">
+            <span className="terminal-title-text">pok learn</span>
+            <span className="terminal-title-shortcut">
+              <kbd>Cmd</kbd>+<kbd>1</kbd>
+            </span>
+          </div>
+          <Terminal
+            ref={leftTerminalRef}
+            webContainer={webContainer}
+            command="pok learn"
+            isFocused={focusedPanel === 'left'}
+          />
         </div>
-        <div className="terminal-pane">
-          <Terminal webContainer={webContainer} command="pok introspect" startDelay={200} />
+        <div
+          className={`terminal-pane ${focusedPanel === 'right' ? 'terminal-pane-active' : ''}`}
+          onClick={() => handlePanelFocus('right')}
+        >
+          <div className="terminal-title">
+            <span className="terminal-title-text">pok introspect</span>
+            <span className="terminal-title-shortcut">
+              <kbd>Cmd</kbd>+<kbd>2</kbd>
+            </span>
+          </div>
+          <Terminal
+            ref={rightTerminalRef}
+            webContainer={webContainer}
+            command="pok introspect"
+            startDelay={200}
+            isFocused={focusedPanel === 'right'}
+          />
         </div>
+      </div>
+      <div className="shortcuts-bar">
+        <span className="shortcut-hint">
+          <kbd>Cmd</kbd>+<kbd>1</kbd>/<kbd>2</kbd> Switch panels
+        </span>
+        <span className="shortcut-hint">
+          <kbd>Cmd</kbd>+<kbd>K</kbd> Clear terminal
+        </span>
       </div>
     </div>
   );

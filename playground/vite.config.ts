@@ -27,7 +27,8 @@ function pokBundlePlugin(): Plugin {
     const coreDir = path.join(rootDir, 'packages/core');
     const reporterDir = path.join(rootDir, 'packages/reporter-clack');
     const prompterDir = path.join(rootDir, 'packages/prompter-clack');
-    const introspectDir = path.join(rootDir, 'packages/introspect');
+    // Introspect is now bundled from playground/src/introspect
+    const introspectDir = path.join(__dirname, 'src/introspect');
 
     const outDir = path.join(__dirname, '.pok-bundle');
 
@@ -67,9 +68,9 @@ export { runCli } from '${coreDir}/src/cli.ts';
       { cwd: rootDir, stdio: 'inherit' }
     );
 
-    // Bundle introspect
+    // Bundle introspect from playground/src/introspect
     execSync(
-      `bun build "${introspectDir}/src/index.ts" --outfile "${path.join(outDir, 'introspect.js')}" --target node --format cjs --external @openpok/core --external zod --external cli-highlight`,
+      `bun build "${introspectDir}/index.ts" --outfile "${path.join(outDir, 'introspect.js')}" --target node --format cjs --external zod --external cli-highlight`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 

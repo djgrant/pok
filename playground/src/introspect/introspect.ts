@@ -9,7 +9,6 @@ import {
   toggleDirectory,
   scrollPreview,
   getSelectedFilePath,
-  type IntrospectState,
 } from './state';
 import { refreshTree, readFileContent } from './tree';
 import { render, showCursor, clearScreen } from './render';
@@ -88,6 +87,21 @@ export async function runIntrospect(options: IntrospectOptions = {}): Promise<vo
 
   // Promise to wait for quit
   return new Promise<void>((resolve) => {
+    // Signal handler references (defined before cleanup so they can be removed)
+    let handleSignal: (() => void) | null = null;
+
+    const cleanup = (): void => {
+      // Remove signal handlers to prevent accumulation
+      if (handleSignal) {
+        process.off('SIGINT', handleSignal);
+        process.off('SIGTERM', handleSignal);
+      }
+      cleanupInput();
+      watcher.stop();
+      showCursor(stdout);
+      clearScreen(stdout);
+    };
+
     // Input handlers
     const cleanupInput = setupInput(stdin, {
       onUp: () => {
@@ -121,23 +135,13 @@ export async function runIntrospect(options: IntrospectOptions = {}): Promise<vo
       },
     });
 
-    const cleanup = (): void => {
-      cleanupInput();
-      watcher.stop();
-      showCursor(stdout);
-      clearScreen(stdout);
-    };
-
     // Handle process termination
-    process.on('SIGINT', () => {
+    handleSignal = () => {
       cleanup();
       resolve();
-    });
-
-    process.on('SIGTERM', () => {
-      cleanup();
-      resolve();
-    });
+    };
+    process.on('SIGINT', handleSignal);
+    process.on('SIGTERM', handleSignal);
 
     // Initial render
     renderUI();

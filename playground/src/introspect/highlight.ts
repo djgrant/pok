@@ -2,6 +2,7 @@
  * Syntax highlighting using cli-highlight.
  */
 
+// @ts-expect-error - cli-highlight doesn't have types in playground context
 import { highlight } from 'cli-highlight';
 import * as path from 'node:path';
 
