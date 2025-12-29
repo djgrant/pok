@@ -1,36 +1,20 @@
 ---
-name: self-improve
-description: When you learn something worth remembering, or the project changes, or you find a way to improve the agentic system, use this skill to update agent documentation
+name: record-learnings
+description: When you learn something particularly notable, use this skill to record it
 ---
 
-# Updating Agent Documentation
+When you learn something notable (i.e. not general knowledge, normally something specific to the project), and deem that it could be useful to your future self, record the learning for posterity.
 
-This skill covers when and how to update the files in `.opencode/`.
+### Adding Learnings
 
-## Files and Their Purpose
+Learning documents are store in ./.opencode/learnings.
 
-| File | Purpose | Update Frequency |
-|------|---------|------------------|
-| `agents.md` | Directory orientation | Rarely - only when structure changes |
-| `conventions.md` | Coding standards | When patterns evolve |
-| `vision.md` | Project goals | When there is a fundamental change in direction and it is explicitly requested by the user |
-| `knowledge/*.md` | Lessons learned | When you learn something (not general knowledge) that will likely be worth noting for posterity |
-| `work/*.md` | Work packages | When you are asked or need to track your work |
+Each document should be understood by its filename:
 
-## How to Update
+*Template*: `{yyyy-mm-dd}-(package:{package})-({title})-(tags:{tags}).md`
+*Example*: `2025-12-25-(package:core)-(event ordering)-(tags:adapators,emit,sync).md`
 
-Keep updates minimal. These documents should be scannable, not exhaustive.
-
-### Adding Knowledge
-
-The knowledge document should be understood by its filename.
-
-```
-template: {yyyy-mm-dd}-(package:{package})-({title})-(tags:{tags}).md
-example: 2025-12-25-(package:core)-(event ordering)-(tags:adapators,emit,sync).md
-```
-
-The document should contain metadata and a very concise record of the learning.
+The document should contain metadata and a very concise record of the learning:
 
 ```markdown
 ---
@@ -46,9 +30,14 @@ tags:
 [One or two sentences. No more than needed.]
 ```
 
-### Updating Codebase/Conventions
+### Codebase Knowledge
+
+For updating general information about the codebase, do not use the learning directory. Instead, update ./.opencode/agents.md directly.
+
+When updating agents.md, ensure you follow these best practices:
 
 - Make surgical edits, don't rewrite sections
 - Preserve existing structure
 - Reference specific code when possible
 - Keep it very concise
+- Do not modify vision without consulting the user

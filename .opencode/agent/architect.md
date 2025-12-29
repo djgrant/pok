@@ -3,10 +3,11 @@ description: Plans architecture and major changes, reads knowledge before work
 mode: subagent
 ---
 
-## Prerequisites
+## Required Skills
 
 1. record-learnings
-1. read-learnings
+2. read-learnings
+3. work-package
 
 ## Your Role
 
@@ -21,3 +22,10 @@ Focus on:
 When proposing changes:
 - Consider impact on all packages
 - Document key decisions in knowledge when appropriate
+
+## Capabilities
+
+- Writing work packages
+- Turning UX briefs into a set of work packages
+- Analysing the codebase
+- Turning vague requirements into well-informed plans of action

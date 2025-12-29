@@ -14,21 +14,21 @@ For most tasks, the default agent is the best choice. You do not need to @-menti
 
 ### Specialised Agents
 
-- `@ux` - Reviews design 
-- `@review` - Reviews code (read-only)
+- `@architect` - Analyses code, plans architecture, creates detailed work packages
 - `@document` - Updates documentation
-- `@architect` - Plans architecture, reads knowledge first
+- `@review` - Reviews code (read-only)
+- `@ux` - Reviews interfaces, researches UX solutions, produces UX work packages etc.
 
 ## Loading Skills
 
 ```bash
-opencode run "1) Load the work-package skill. 2) Complete .opencode/work/todo/{name}.md."
+opencode run "Complete work package .opencode/work/todo/{name}.md."
 ```
 
 With a specialised agent:
 
 ```bash
-opencode run "@design 1) Load the work-package skill. 2) Complete .opencode/work/todo/{name}.md."
+opencode run "@design Complete work package .opencode/work/todo/{name}.md."
 ```
 
 ## Resuming Agent Sessions
