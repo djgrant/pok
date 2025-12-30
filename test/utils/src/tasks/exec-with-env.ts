@@ -1,4 +1,4 @@
-import { defineTask } from '@openpok/core';
+import { defineTask } from '@pokjs/core';
 import { mockEnv } from '../mocks/env';
 
 export const execWithEnv = defineTask({

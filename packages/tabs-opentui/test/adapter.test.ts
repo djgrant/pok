@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createEventBus, type CLIEvent } from '@openpok/core';
+import { createEventBus, type CLIEvent } from '@pokjs/core';
 
 // =============================================================================
 // Mock process TTY status for adapter TTY checks
@@ -29,14 +29,14 @@ function restoreTTY() {
 // Test Adapter Exports
 // =============================================================================
 
-describe('@openpok/tabs-opentui - exports', () => {
+describe('@pokjs/tabs-opentui - exports', () => {
   it('exports createTabsAdapter function', async () => {
-    const module = await import('@openpok/tabs-opentui');
+    const module = await import('@pokjs/tabs-opentui');
     expect(typeof module.createTabsAdapter).toBe('function');
   });
 
   it('exports createEventAdapter function', async () => {
-    const module = await import('@openpok/tabs-opentui');
+    const module = await import('@pokjs/tabs-opentui');
     expect(typeof module.createEventAdapter).toBe('function');
   });
 });
@@ -46,10 +46,10 @@ describe('@openpok/tabs-opentui - exports', () => {
 // =============================================================================
 
 describe('createTabsAdapter', () => {
-  let adapter: ReturnType<typeof import('@openpok/tabs-opentui').createTabsAdapter>;
+  let adapter: ReturnType<typeof import('@pokjs/tabs-opentui').createTabsAdapter>;
 
   beforeEach(async () => {
-    const { createTabsAdapter } = await import('@openpok/tabs-opentui');
+    const { createTabsAdapter } = await import('@pokjs/tabs-opentui');
     adapter = createTabsAdapter();
   });
 
@@ -97,7 +97,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdout is not TTY', async () => {
     mockTTY(false, true);
-    const { createEventAdapter } = await import('@openpok/tabs-opentui');
+    const { createEventAdapter } = await import('@pokjs/tabs-opentui');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdout to be a TTY');
@@ -105,7 +105,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdin is not TTY', async () => {
     mockTTY(true, false);
-    const { createEventAdapter } = await import('@openpok/tabs-opentui');
+    const { createEventAdapter } = await import('@pokjs/tabs-opentui');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdin to be a TTY');

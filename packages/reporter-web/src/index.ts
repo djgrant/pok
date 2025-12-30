@@ -1,5 +1,5 @@
 /**
- * @openpok/reporter-web
+ * @pokjs/reporter-web
  *
  * Web/React implementation of the ReporterAdapter interface.
  * Provides a store for state management and React hooks for subscription.

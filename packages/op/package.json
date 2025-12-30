@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/op",
+  "name": "@pokjs/op",
   "version": "0.0.1",
   "description": "Operation utilities for pok CLI applications",
   "keywords": [
@@ -9,7 +9,7 @@
     "bun",
     "terminal",
     "pok",
-    "openpok",
+    "pokjs",
     "operations",
     "utilities",
     "helpers"
@@ -44,7 +44,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@openpok/core": "workspace:*"
+    "@pokjs/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

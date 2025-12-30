@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/tabs-opentui",
+  "name": "@pokjs/tabs-opentui",
   "version": "0.0.1",
   "description": "OpenTUI-based tab renderer for pok CLI applications",
   "keywords": [
@@ -9,7 +9,7 @@
     "bun",
     "terminal",
     "pok",
-    "openpok",
+    "pokjs",
     "tabs",
     "opentui",
     "react",
@@ -53,12 +53,12 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.2.0",
-    "@openpok/core": "workspace:*",
-    "@openpok/tabs-core": "workspace:*"
+    "@pokjs/core": "workspace:*",
+    "@pokjs/tabs-core": "workspace:*"
   },
   "peerDependencies": {
-    "@openpok/core": "workspace:*",
-    "@openpok/tabs-core": "workspace:*"
+    "@pokjs/core": "workspace:*",
+    "@pokjs/tabs-core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

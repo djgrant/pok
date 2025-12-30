@@ -77,12 +77,12 @@ type TextOptions = {
 };
 ```
 
-## Using @openpok/prompter-clack
+## Using @pokjs/prompter-clack
 
 The recommended implementation uses [@clack/prompts](https://github.com/natemoo-re/clack):
 
 ```typescript
-import { createPrompter } from '@openpok/prompter-clack';
+import { createPrompter } from '@pokjs/prompter-clack';
 
 const prompter = createPrompter();
 
@@ -150,7 +150,7 @@ env: {
 For testing, use the raw prompter that accepts pre-defined responses:
 
 ```typescript
-import { createRawPrompter } from '@openpok/core';
+import { createRawPrompter } from '@pokjs/core';
 
 const prompter = createRawPrompter({
   responses: [
@@ -190,7 +190,7 @@ const prompter = createRawPrompter({
 When the user cancels (Ctrl+C), implementations should exit gracefully:
 
 ```typescript
-// @openpok/prompter-clack handles this:
+// @pokjs/prompter-clack handles this:
 if (p.isCancel(result)) {
   process.exit(0);
 }
@@ -201,7 +201,7 @@ if (p.isCancel(result)) {
 Implement your own prompter:
 
 ```typescript
-import type { Prompter } from '@openpok/core';
+import type { Prompter } from '@pokjs/core';
 
 const myPrompter: Prompter = {
   async select(options) {
@@ -230,4 +230,4 @@ const myPrompter: Prompter = {
 
 - [Router](./router.md) - Using the prompter
 - [defineCommand](./define-command.md) - Context that triggers prompts
-- [@openpok/prompter-clack](../packages/prompter-clack.md) - Clack implementation
+- [@pokjs/prompter-clack](../packages/prompter-clack.md) - Clack implementation

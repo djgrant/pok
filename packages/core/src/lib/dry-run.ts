@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { dryRunContext, createDryRunReporter } from '@openpok/core';
+ * import { dryRunContext, createDryRunReporter } from '@pokjs/core';
  *
  * export const command = defineCommand({
  *   label: 'Deploy to environment',

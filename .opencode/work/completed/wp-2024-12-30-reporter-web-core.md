@@ -36,7 +36,7 @@ Using `useSyncExternalStore` will provide seamless React 18+ integration while k
 
 ## Acceptance Criteria
 - [x] `createReporterStore()` returns store with `getState()`, `subscribe()`, `getSnapshot()`
-- [x] Store correctly processes all CLIEvent types from `@openpok/core`
+- [x] Store correctly processes all CLIEvent types from `@pokjs/core`
 - [x] React hooks work with `useSyncExternalStore`
 - [x] Temporal markers auto-clear after 600ms
 - [x] Unit tests for all event types
@@ -78,7 +78,7 @@ None (foundation phase)
 
 - `packages/reporter-web/src/adapter.ts` - ReporterAdapter implementation:
   - `createWebReporterAdapter(store)` - Pipes EventBus events to store
-  - Implements `ReporterAdapter` interface from @openpok/core
+  - Implements `ReporterAdapter` interface from @pokjs/core
   - Idempotent `stop()` method per adapter contract
 
 - `packages/reporter-web/src/index.ts` - Public exports
@@ -108,4 +108,4 @@ The implementation successfully provides a foundation for React-based rendering 
 2. **Immutable updates** - State is replaced entirely on each event, enabling React's referential equality checks
 3. **Selective hooks with memoization** - `useActivity` and `useGroup` use refs to avoid unnecessary re-renders
 4. **Configurable temporal markers** - Delay can be customized and disabled for testing
-5. **Clean adapter interface** - Follows existing ReporterAdapter contract from @openpok/core
+5. **Clean adapter interface** - Follows existing ReporterAdapter contract from @pokjs/core

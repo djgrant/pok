@@ -5,7 +5,7 @@
  * Connects the EventBus to a ReporterStore for state management.
  */
 
-import type { ReporterAdapter, ReporterAdapterController, EventBus } from '@openpok/core';
+import type { ReporterAdapter, ReporterAdapterController, EventBus } from '@pokjs/core';
 import type { ReporterStoreWithHandler } from './store';
 
 /**
@@ -16,8 +16,8 @@ import type { ReporterStoreWithHandler } from './store';
  *
  * @example
  * ```typescript
- * import { createReporterStore, createWebReporterAdapter } from '@openpok/reporter-web';
- * import { createEventBus } from '@openpok/core';
+ * import { createReporterStore, createWebReporterAdapter } from '@pokjs/reporter-web';
+ * import { createEventBus } from '@pokjs/core';
  *
  * const store = createReporterStore();
  * const adapter = createWebReporterAdapter(store);

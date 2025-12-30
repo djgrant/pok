@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/tabs-core",
+  "name": "@pokjs/tabs-core",
   "version": "0.0.1",
   "description": "Core tab management utilities for pok CLI applications",
   "keywords": [
@@ -9,7 +9,7 @@
     "bun",
     "terminal",
     "pok",
-    "openpok",
+    "pokjs",
     "tabs",
     "tab-management",
     "process-manager"
@@ -44,7 +44,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@openpok/core": "workspace:*",
+    "@pokjs/core": "workspace:*",
     "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
@@ -56,7 +56,7 @@
     "@types/bun": "latest",
     "@types/react": "^19.2.0",
     "react": "^19.2.0",
-    "@openpok/core": "workspace:*"
+    "@pokjs/core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

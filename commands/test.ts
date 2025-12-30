@@ -4,7 +4,7 @@
  * Runs the test suite using Bun's built-in test runner
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Run tests',

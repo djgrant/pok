@@ -1,4 +1,4 @@
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 import { isInstalled, isAuthenticated, getAuthErrorMessage } from './op';
 
 export const opInstalled = defineCheck({

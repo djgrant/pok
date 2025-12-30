@@ -30,7 +30,7 @@ import {
   type EventBus,
   type Reporter,
   type ReporterAdapter,
-} from '@openpok/core';
+} from '@pokjs/core';
 ```
 
 ## CLIEvent Types
@@ -179,8 +179,8 @@ interface ReporterAdapterController {
 ### Using an Adapter
 
 ```typescript
-import { run } from '@openpok/core';
-import { createReporterAdapter } from '@openpok/reporter-clack';
+import { run } from '@pokjs/core';
+import { createReporterAdapter } from '@pokjs/reporter-clack';
 
 await run(args, {
   // ...
@@ -209,7 +209,7 @@ run: async (r, ctx) => {
 ## Type Guards
 
 ```typescript
-import { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from '@openpok/core';
+import { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from '@pokjs/core';
 
 eventBus.subscribe((event) => {
   if (isLogEvent(event)) {
@@ -229,7 +229,7 @@ eventBus.subscribe((event) => {
 For testing, use the raw adapter that collects events:
 
 ```typescript
-import { createRawReporterAdapter } from '@openpok/core';
+import { createRawReporterAdapter } from '@pokjs/core';
 
 const { adapter, getEvents } = createRawReporterAdapter();
 
@@ -283,4 +283,4 @@ The adapter handles these events to pause/resume rendering.
 
 - [Runner](./runner.md) - Using the reporter
 - [Architecture](../architecture.md) - Event system overview
-- [@openpok/reporter-clack](../packages/reporter-clack.md) - Clack adapter
+- [@pokjs/reporter-clack](../packages/reporter-clack.md) - Clack adapter

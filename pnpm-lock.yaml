@@ -12,13 +12,13 @@ importers:
         specifier: ^2.1.11
         version: 2.1.11
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:packages/core
-      '@openpok/prompter-clack':
+      '@pokjs/prompter-clack':
         specifier: workspace:*
         version: link:packages/prompter-clack
-      '@openpok/reporter-clack':
+      '@pokjs/reporter-clack':
         specifier: workspace:*
         version: link:packages/reporter-clack
       '@types/bun':
@@ -33,13 +33,13 @@ importers:
 
   packages/cmd:
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/prompter-clack':
+      '@pokjs/prompter-clack':
         specifier: workspace:*
         version: link:../prompter-clack
-      '@openpok/reporter-clack':
+      '@pokjs/reporter-clack':
         specifier: workspace:*
         version: link:../reporter-clack
       '@types/bun':
@@ -52,7 +52,7 @@ importers:
         specifier: ^3.3.2
         version: 3.3.3
     devDependencies:
-      '@openpok/test-utils':
+      '@pokjs/test-utils':
         specifier: workspace:*
         version: link:../../test/utils
       '@types/bun':
@@ -67,13 +67,13 @@ importers:
       '@clack/prompts':
         specifier: ^0.11.0
         version: 0.11.0
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/prompter-clack':
+      '@pokjs/prompter-clack':
         specifier: workspace:*
         version: link:../prompter-clack
-      '@openpok/reporter-clack':
+      '@pokjs/reporter-clack':
         specifier: workspace:*
         version: link:../reporter-clack
       zod:
@@ -86,7 +86,7 @@ importers:
 
   packages/op:
     dependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -102,7 +102,7 @@ importers:
       '@clack/prompts':
         specifier: ^0.11.0
         version: 0.11.0
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -119,10 +119,10 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/test-utils':
+      '@pokjs/test-utils':
         specifier: workspace:*
         version: link:../../test/utils
       '@types/bun':
@@ -135,10 +135,10 @@ importers:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.2.3
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/test-utils':
+      '@pokjs/test-utils':
         specifier: workspace:*
         version: link:../../test/utils
       '@types/bun':
@@ -150,7 +150,7 @@ importers:
 
   packages/tabs-core:
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
       '@types/bun':
@@ -172,10 +172,10 @@ importers:
         specifier: ^19.2.0
         version: 19.2.3
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/tabs-core':
+      '@pokjs/tabs-core':
         specifier: workspace:*
         version: link:../tabs-core
       '@types/bun':
@@ -200,10 +200,10 @@ importers:
         specifier: ^7.1.2
         version: 7.1.2
     devDependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../core
-      '@openpok/tabs-core':
+      '@pokjs/tabs-core':
         specifier: workspace:*
         version: link:../tabs-core
       '@types/bun':
@@ -252,10 +252,10 @@ importers:
 
   test:
     dependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@openpok/test-utils':
+      '@pokjs/test-utils':
         specifier: workspace:*
         version: link:utils
       zod:
@@ -268,7 +268,7 @@ importers:
 
   test/utils:
     dependencies:
-      '@openpok/core':
+      '@pokjs/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@xterm/headless':

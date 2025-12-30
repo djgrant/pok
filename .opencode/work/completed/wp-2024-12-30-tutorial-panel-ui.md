@@ -86,7 +86,7 @@ Separating the panel UI from WebContainer integration (Phase 6) will allow faste
 
 ### Design Decisions
 
-- **Inline Components**: The Phase 2 components in `@openpok/reporter-web` use React 18 types, while the playground uses React 19. Rather than fight with type compatibility, the headless components are inlined in the TutorialPanel. They follow the same patterns and CSS classes.
+- **Inline Components**: The Phase 2 components in `@pokjs/reporter-web` use React 18 types, while the playground uses React 19. Rather than fight with type compatibility, the headless components are inlined in the TutorialPanel. They follow the same patterns and CSS classes.
 
 - **Auto-scroll Timing**: 100ms delay before scroll (not 600ms) since the 600ms is already handled in the engine's auto-progress. This provides smoother UX.
 

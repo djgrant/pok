@@ -204,7 +204,7 @@ type TabsRunnerOptions = {
 };
 ```
 
-Requires a tabs adapter (e.g., `@openpok/tabs-ink`):
+Requires a tabs adapter (e.g., `@pokjs/tabs-ink`):
 
 ```typescript
 run: async (r) => {
@@ -278,7 +278,7 @@ interface CommandReporter {
 Thrown when a command fails, includes captured output:
 
 ```typescript
-import { CommandError } from '@openpok/core';
+import { CommandError } from '@pokjs/core';
 
 run: async (r) => {
   try {
@@ -296,7 +296,7 @@ run: async (r) => {
 Thrown when execution is cancelled via AbortSignal:
 
 ```typescript
-import { AbortError } from '@openpok/core';
+import { AbortError } from '@pokjs/core';
 
 // This is handled internally - commands can be cancelled
 // when running in parallel mode and another command fails
@@ -334,7 +334,7 @@ pok handles process lifecycle:
 ### Complete Command
 
 ```typescript
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 import { buildTask, testTask, deployTask } from '../tasks';
 import { dockerRunning } from '../checks';
 

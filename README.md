@@ -1,6 +1,6 @@
 # pok
 
-[![npm version](https://img.shields.io/npm/v/@openpok/core.svg)](https://www.npmjs.com/package/@openpok/core)
+[![npm version](https://img.shields.io/npm/v/@pokjs/core.svg)](https://www.npmjs.com/package/@pokjs/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/notation-dev/openpok/actions/workflows/ci.yml/badge.svg)](https://github.com/notation-dev/openpok/actions/workflows/ci.yml)
 
@@ -87,25 +87,25 @@ await r.run(migrate);
 
 ```bash
 # Create a new project
-bun create @openpok/create my-cli
+bun create @pokjs/create my-cli
 
 # Or add to existing project
-bun add @openpok/core zod
+bun add @pokjs/core zod
 ```
 
 ## Packages
 
 | Package                   | Description                                                  |
 | ------------------------- | ------------------------------------------------------------ |
-| `@openpok/core`           | Core framework—command routing, task execution, event system |
-| `@openpok/cmd`            | Global CLI launcher—install once, run anywhere               |
-| `@openpok/create`         | Project scaffolding CLI                                      |
-| `@openpok/op`             | Operation utilities for common CLI patterns                  |
-| `@openpok/prompter-clack` | Interactive prompts adapter (Clack)                          |
-| `@openpok/reporter-clack` | Terminal output adapter (Clack)                              |
-| `@openpok/tabs-core`      | Shared tabs state management                                 |
-| `@openpok/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
-| `@openpok/tabs-opentui`   | Tabbed terminal UI (OpenTUI/React)                           |
+| `@pokjs/core`           | Core framework—command routing, task execution, event system |
+| `@pokjs/cmd`            | Global CLI launcher—install once, run anywhere               |
+| `@pokjs/create`         | Project scaffolding CLI                                      |
+| `@pokjs/op`             | Operation utilities for common CLI patterns                  |
+| `@pokjs/prompter-clack` | Interactive prompts adapter (Clack)                          |
+| `@pokjs/reporter-clack` | Terminal output adapter (Clack)                              |
+| `@pokjs/tabs-core`      | Shared tabs state management                                 |
+| `@pokjs/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
+| `@pokjs/tabs-opentui`   | Tabbed terminal UI (OpenTUI/React)                           |
 
 ## Documentation
 

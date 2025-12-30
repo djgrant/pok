@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/create",
+  "name": "@pokjs/create",
   "version": "0.0.1",
   "description": "Scaffold a new pok project",
   "type": "module",
@@ -27,9 +27,9 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
-    "@openpok/core": "workspace:*",
-    "@openpok/prompter-clack": "workspace:*",
-    "@openpok/reporter-clack": "workspace:*",
+    "@pokjs/core": "workspace:*",
+    "@pokjs/prompter-clack": "workspace:*",
+    "@pokjs/reporter-clack": "workspace:*",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -43,6 +43,6 @@
     "create",
     "scaffold",
     "pok",
-    "openpok"
+    "pokjs"
   ]
 }

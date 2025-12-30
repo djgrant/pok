@@ -116,7 +116,7 @@ type ReporterState = {
 
 **Acceptance Criteria**:
 - [ ] `createReporterStore()` returns store with `getState()`, `subscribe()`, `getSnapshot()`
-- [ ] Store correctly processes all CLIEvent types from `@openpok/core`
+- [ ] Store correctly processes all CLIEvent types from `@pokjs/core`
 - [ ] React hooks work with `useSyncExternalStore`
 - [ ] Temporal markers auto-clear after 600ms
 - [ ] Unit tests for all event types

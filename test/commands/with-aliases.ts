@@ -1,7 +1,7 @@
 /**
  * Test command with aliases.
  */
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Command with aliases',

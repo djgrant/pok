@@ -4,7 +4,7 @@
  * Formats code using Prettier
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Format code',

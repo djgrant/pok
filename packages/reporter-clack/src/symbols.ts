@@ -5,7 +5,7 @@
  * The appropriate set is selected based on OutputConfig.
  */
 
-import type { OutputConfig } from '@openpok/core';
+import type { OutputConfig } from '@pokjs/core';
 
 /**
  * Complete set of symbols used in CLI output

@@ -5,7 +5,7 @@
  * Run with: bun packages/reporter-clack/test/generate-fixtures.ts
  */
 
-import { createEventBus, type CLIEvent } from '@openpok/core';
+import { createEventBus, type CLIEvent } from '@pokjs/core';
 import { createReporterAdapter } from '../src';
 import { createVirtualTerminal } from './utils';
 import { writeFileSync } from 'fs';

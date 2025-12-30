@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/website",
+  "name": "@pokjs/website",
   "private": true,
   "type": "module",
   "scripts": {

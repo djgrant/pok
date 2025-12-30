@@ -5,7 +5,7 @@
  * Designed for React integration via useSyncExternalStore.
  */
 
-import type { ActivityId, GroupId, GroupLayout, LogLevel } from '@openpok/core';
+import type { ActivityId, GroupId, GroupLayout, LogLevel } from '@pokjs/core';
 
 /**
  * Root lifecycle status

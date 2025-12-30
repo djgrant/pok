@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { defineCommand } from '@openpok/core';
-import { tasks } from '@openpok/test-utils';
+import { defineCommand } from '@pokjs/core';
+import { tasks } from '@pokjs/test-utils';
 
 const { execSimple, execWithParams } = tasks;
 

@@ -1,7 +1,7 @@
 /**
- * @openpok/test-utils
+ * @pokjs/test-utils
  *
- * Test utilities for openpok packages.
+ * Test utilities for pokjs packages.
  */
 
 export { normalizeEvents, filterEvents, eventTypes } from './normalize';

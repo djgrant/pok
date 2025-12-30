@@ -1,17 +1,17 @@
-# @openpok/create
+# @pokjs/create
 
 Project scaffolding CLI for pok projects.
 
 ## Usage
 
 ```bash
-bun create @openpok/create my-project
+bun create @pokjs/create my-project
 ```
 
 Or with a specific directory:
 
 ```bash
-bun create @openpok/create ./path/to/project
+bun create @pokjs/create ./path/to/project
 ```
 
 ## What It Creates
@@ -37,9 +37,9 @@ my-project/
     "pok": "bun pok"
   },
   "dependencies": {
-    "@openpok/core": "latest",
-    "@openpok/prompter-clack": "latest",
-    "@openpok/reporter-clack": "latest"
+    "@pokjs/core": "latest",
+    "@pokjs/prompter-clack": "latest",
+    "@pokjs/reporter-clack": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -51,7 +51,7 @@ my-project/
 
 ```typescript
 // commands/hello.ts
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Say hello',
@@ -67,9 +67,9 @@ The create CLI prompts for:
 
 1. **Project name** - Used in package.json
 2. **Plugins** - Which adapters to include:
-   - `@openpok/prompter-clack` (recommended)
-   - `@openpok/reporter-clack` (recommended)
-   - `@openpok/tabs-ink` (optional)
+   - `@pokjs/prompter-clack` (recommended)
+   - `@pokjs/reporter-clack` (recommended)
+   - `@pokjs/tabs-ink` (optional)
 
 ## Post-Installation
 
@@ -85,15 +85,15 @@ bun pok hello  # Runs hello command
 ## Programmatic Usage
 
 ```typescript
-import { generatePackageJson, generateTsConfig, generateExampleCommand } from '@openpok/create';
+import { generatePackageJson, generateTsConfig, generateExampleCommand } from '@pokjs/create';
 
 const pkg = generatePackageJson({
   name: 'my-cli',
-  plugins: ['@openpok/prompter-clack', '@openpok/reporter-clack'],
+  plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
 });
 ```
 
 ## Related
 
 - [Getting Started](../getting-started.md)
-- [@openpok/core](./core.md)
+- [@pokjs/core](./core.md)

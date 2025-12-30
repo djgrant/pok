@@ -5,7 +5,7 @@
  * Framework-agnostic - used by both Ink and OpenTUI adapters.
  */
 
-import type { CLIEvent, ActivityId, GroupId } from '@openpok/core';
+import type { CLIEvent, ActivityId, GroupId } from '@pokjs/core';
 import type { EventDrivenState, ActivityNode, GroupNode } from './types.js';
 
 /**

@@ -1,18 +1,18 @@
-# @openpok/prompter-clack
+# @pokjs/prompter-clack
 
 Interactive prompts adapter for pok using [Clack](https://github.com/natemoo-re/clack).
 
 ## Installation
 
 ```bash
-bun add @openpok/prompter-clack
+bun add @pokjs/prompter-clack
 ```
 
 ## Usage
 
 ```typescript
-import { run } from '@openpok/core';
-import { createPrompter } from '@openpok/prompter-clack';
+import { run } from '@pokjs/core';
+import { createPrompter } from '@pokjs/prompter-clack';
 
 await run(args, {
   prompter: createPrompter(),

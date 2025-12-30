@@ -7,7 +7,7 @@
  * The reporter utilities are inlined here because we can't import from browser modules.
  */
 
-const { defineCommand } = require("@openpok/core");
+const { defineCommand } = require("@pokjs/core");
 const { writeFileSync, mkdirSync, existsSync } = require("fs");
 const { execSync } = require("child_process");
 
@@ -275,7 +275,7 @@ function stepIndicator(current, total, title) {
 // Code Templates
 // ============================================================================
 
-const HELLO_CODE = `const { defineCommand } = require('@openpok/core');
+const HELLO_CODE = `const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Say hello',
@@ -286,7 +286,7 @@ exports.command = defineCommand({
 `;
 
 const GREET_CODE = `const { z } = require('zod');
-const { defineCommand } = require('@openpok/core');
+const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Greet someone',
@@ -302,7 +302,7 @@ exports.command = defineCommand({
 });
 `;
 
-const DEV_CODE = `const { defineCommand } = require('@openpok/core');
+const DEV_CODE = `const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Development servers',
@@ -316,7 +316,7 @@ exports.command = defineCommand({
 });
 `;
 
-const TASK_CODE = `const { defineCommand, defineTask } = require('@openpok/core');
+const TASK_CODE = `const { defineCommand, defineTask } = require('@pokjs/core');
 
 // Define a reusable task
 const greetTask = defineTask({

@@ -8,7 +8,7 @@
 import * as React from 'react';
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
-import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@openpok/core';
+import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@pokjs/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';

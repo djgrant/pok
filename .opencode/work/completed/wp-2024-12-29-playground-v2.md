@@ -98,7 +98,7 @@ Each option is a sequence of actions, not a lesson.
 
 ### Completed Components
 
-1. **`@openpok/introspect` package** - New package with TUI file viewer
+1. **`@pokjs/introspect` package** - New package with TUI file viewer
    - File tree navigation
    - Syntax highlighting via cli-highlight
    - Live file watching
@@ -131,7 +131,7 @@ All features tested and working:
 ### Known Issues
 
 - Monorepo build (`pnpm build`) has a pre-existing circular dependency issue (not caused by this work)
-- Playground works independently via `pnpm --filter @openpok/playground dev`
+- Playground works independently via `pnpm --filter @pokjs/playground dev`
 
 ## Evaluation
 

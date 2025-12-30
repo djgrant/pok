@@ -1,4 +1,4 @@
-# @openpok/core
+# @pokjs/core
 
 A file-based CLI framework with declarative command definitions, type-safe task execution, and plugin-based TTY adapters.
 
@@ -26,12 +26,12 @@ This design:
 
 ```bash
 # Core framework (required)
-pnpm add @openpok/core
+pnpm add @pokjs/core
 
 # TTY adapters (choose what you need)
-pnpm add @openpok/prompter-clack   # For prompts
-pnpm add @openpok/reporter-clack   # For output rendering
-pnpm add @openpok/tabs-ink         # For tabbed console
+pnpm add @pokjs/prompter-clack   # For prompts
+pnpm add @pokjs/reporter-clack   # For output rendering
+pnpm add @pokjs/tabs-ink         # For tabbed console
 ```
 
 ## Quick Start
@@ -40,9 +40,9 @@ Create an entry point with TTY adapters:
 
 ```typescript
 #!/usr/bin/env bun
-import { run } from '@openpok/core';
-import { createPrompter } from '@openpok/prompter-clack';
-import { createTabsAdapter } from '@openpok/tabs-ink';
+import { run } from '@pokjs/core';
+import { createPrompter } from '@pokjs/prompter-clack';
+import { createTabsAdapter } from '@pokjs/tabs-ink';
 import * as path from 'path';
 
 async function main(): Promise<void> {
@@ -83,7 +83,7 @@ Commands are defined using `defineCommand()`:
 
 ```typescript
 import { z } from 'zod';
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Start development server',
@@ -126,7 +126,7 @@ Tasks encapsulate reusable units of work with environment requirements:
 
 ```typescript
 import { z } from 'zod';
-import { defineTask, defineEnv } from '@openpok/core';
+import { defineTask, defineEnv } from '@pokjs/core';
 
 const serverEnv = defineEnv({
   requiredVars: z.object({
@@ -183,7 +183,7 @@ run: async (r, ctx) => {
 
 ### TTY Adapters
 
-The framework uses a plugin system for terminal UI. TTY adapters implement the interfaces in `@openpok/core/tty`:
+The framework uses a plugin system for terminal UI. TTY adapters implement the interfaces in `@pokjs/core/tty`:
 
 ```typescript
 interface TTYAdapter {
@@ -218,7 +218,7 @@ If no tabs adapter is provided, `r.tabs()` throws a helpful error with installat
 **Creating custom adapters:**
 
 ```typescript
-import type { TTYAdapter } from '@openpok/core/tty';
+import type { TTYAdapter } from '@pokjs/core/tty';
 
 const myAdapter: TTYAdapter = {
   logger: {
@@ -252,7 +252,7 @@ const myAdapter: TTYAdapter = {
 Define reusable checks for command prerequisites:
 
 ```typescript
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 
 export const dockerRunning = defineCheck({
   label: 'Docker running',
@@ -277,7 +277,7 @@ export const command = defineCommand({
 ### Router
 
 ```typescript
-import { run } from '@openpok/core';
+import { run } from '@pokjs/core';
 
 await run(args, {
   commandsDir: string,   // Path to commands directory
@@ -342,16 +342,16 @@ defineCheck({
 
 ```typescript
 // Logging
-import { info, success, done, warn, error, step, dim, header, divider } from '@openpok/core';
+import { info, success, done, warn, error, step, dim, header, divider } from '@pokjs/core';
 
 // Prompts
-import { text, secret, confirm, select, multiselect, intro, outro } from '@openpok/core';
+import { text, secret, confirm, select, multiselect, intro, outro } from '@pokjs/core';
 
 // Shell
-import { commandExists, getVersion, getPackageManager } from '@openpok/core';
+import { commandExists, getVersion, getPackageManager } from '@pokjs/core';
 
 // Spinner
-import { task, check } from '@openpok/core';
+import { task, check } from '@pokjs/core';
 ```
 
 ### Coercion Helpers
@@ -359,7 +359,7 @@ import { task, check } from '@openpok/core';
 For parsing environment variables:
 
 ```typescript
-import { asInt, asBool, asList, asDate } from '@openpok/core';
+import { asInt, asBool, asList, asDate } from '@pokjs/core';
 
 const schema = z.object({
   PORT: asInt, // "8080" -> 8080

@@ -84,12 +84,12 @@ export default defineConfig({
         {
           text: 'Packages',
           items: [
-            { text: '@openpok/core', link: '/packages/core' },
-            { text: '@openpok/create', link: '/packages/create' },
-            { text: '@openpok/prompter-clack', link: '/packages/prompter-clack' },
-            { text: '@openpok/reporter-clack', link: '/packages/reporter-clack' },
-            { text: '@openpok/tabs-core', link: '/packages/tabs-core' },
-            { text: '@openpok/tabs-ink', link: '/packages/tabs-ink' },
+            { text: '@pokjs/core', link: '/packages/core' },
+            { text: '@pokjs/create', link: '/packages/create' },
+            { text: '@pokjs/prompter-clack', link: '/packages/prompter-clack' },
+            { text: '@pokjs/reporter-clack', link: '/packages/reporter-clack' },
+            { text: '@pokjs/tabs-core', link: '/packages/tabs-core' },
+            { text: '@pokjs/tabs-ink', link: '/packages/tabs-ink' },
           ],
         },
       ],

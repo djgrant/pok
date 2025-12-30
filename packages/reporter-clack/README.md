@@ -1,18 +1,18 @@
-# @openpok/reporter-clack
+# @pokjs/reporter-clack
 
 Terminal output adapter for pok using [Clack](https://github.com/natemoo-re/clack).
 
 ## Installation
 
 ```bash
-bun add @openpok/reporter-clack
+bun add @pokjs/reporter-clack
 ```
 
 ## Usage
 
 ```typescript
-import { run } from '@openpok/core';
-import { createReporterAdapter } from '@openpok/reporter-clack';
+import { run } from '@pokjs/core';
+import { createReporterAdapter } from '@pokjs/reporter-clack';
 
 await run(args, {
   reporterAdapter: createReporterAdapter(),
@@ -40,10 +40,10 @@ createReporterAdapter({
 
 ```typescript
 // Main adapter
-import { createReporterAdapter } from '@openpok/reporter-clack';
+import { createReporterAdapter } from '@pokjs/reporter-clack';
 
 // Symbol customization
-import { getSymbols, UNICODE_SYMBOLS, ASCII_SYMBOLS } from '@openpok/reporter-clack';
+import { getSymbols, UNICODE_SYMBOLS, ASCII_SYMBOLS } from '@pokjs/reporter-clack';
 ```
 
 ## Documentation

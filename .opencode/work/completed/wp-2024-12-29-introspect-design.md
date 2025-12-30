@@ -63,7 +63,7 @@ A read-only TUI that displays:
 │   📄 greet.ts                                                    │
 │   📄 learn.ts                                                    │
 ├──────────────────────────────────────────────────────────────────┤
-│  1│ const { defineCommand } = require('@openpok/core');          │
+│  1│ const { defineCommand } = require('@pokjs/core');          │
 │  2│                                                              │
 │  3│ exports.command = defineCommand({                            │
 │  4│   label: 'Say hello to the world',                           │
@@ -406,7 +406,7 @@ If this hypothesis is wrong (e.g., WebContainer has issues with raw mode), we ca
 
 ### Implementation Complete
 
-The `@openpok/introspect` package has been created with all planned features:
+The `@pokjs/introspect` package has been created with all planned features:
 
 **Package Structure:**
 ```
@@ -437,7 +437,7 @@ packages/introspect/
 8. Unicode box-drawing characters for clean borders
 
 **Dependencies:**
-- `@openpok/core: workspace:*`
+- `@pokjs/core: workspace:*`
 - `cli-highlight: ^2.1.11`
 
 **Type checking:** Passes with `bun tsc --noEmit`
