@@ -86,9 +86,8 @@ export function useTutorialActions(
   /**
    * Run a command in the WebContainer.
    * - Switches to terminal tab
-   * - Spawns the command via shell
-   * - Captures output
-   * - Returns exit code and output lines
+   * - Sends command to the existing shell via event bus
+   * - Returns immediately (command runs in background)
    */
   const runCommand = useCallback(
     async (command: string): Promise<{ exitCode: number; output: string[] }> => {
@@ -103,51 +102,18 @@ export function useTutorialActions(
         throw new Error('WebContainer not ready');
       }
 
-      setIsLoading(true);
-      setError(null);
+      // Switch to terminal tab first
+      setActiveTerminal();
 
-      try {
-        // Switch to terminal tab first
-        setActiveTerminal();
+      // Send command to terminal via event bus
+      // The terminal will execute it in its existing shell
+      eventBus.emit({ type: 'terminal:run', command });
 
-        const output: string[] = [];
-
-        // Spawn the command via shell
-        const process = await webContainer.spawn('sh', ['-c', command]);
-
-        // Collect output from stdout
-        const reader = process.output.getReader();
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              // Split by newlines and add to output
-              const lines = value.split('\n').filter((line) => line.length > 0);
-              output.push(...lines);
-            }
-          }
-        } finally {
-          reader.releaseLock();
-        }
-
-        // Wait for process to exit
-        const exitCode = await process.exit;
-
-        if (exitCode !== 0) {
-          setError(`Command failed with exit code ${exitCode}`);
-        }
-
-        return { exitCode, output };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(`Failed to run command: ${message}`);
-        throw err;
-      } finally {
-        setIsLoading(false);
-      }
+      // Return immediately - command runs in background in the terminal
+      // We don't wait for output since the user sees it in the terminal
+      return { exitCode: 0, output: [] };
     },
-    [webContainer, setActiveTerminal]
+    [webContainer, setActiveTerminal, eventBus]
   );
 
   /**
