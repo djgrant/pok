@@ -1,44 +1,111 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { Terminal, TerminalHandle } from './components/Terminal';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Sidebar } from './components/Sidebar';
+import { TabBar } from './components/TabBar';
+import { TabContent } from './components/TabContent';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
-import { RefreshIcon, AlertIcon } from './components/Icons';
+import { RefreshIcon, AlertIcon, MenuIcon } from './components/Icons';
 import { useWebContainer } from './hooks/useWebContainer';
 import { useBrowserSupport } from './hooks/useBrowserSupport';
-
-type FocusedPanel = 'left' | 'right';
+import { useWorkspace } from './hooks/useWorkspace';
+import { useEventBus } from './hooks/useEventBus';
+import { TerminalHandle } from './components/Terminal';
 
 export function App() {
   const { isSupported, message } = useBrowserSupport();
   const { webContainer, status, error } = useWebContainer();
+  const workspace = useWorkspace();
+  const eventBus = useEventBus();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const leftTerminalRef = useRef<TerminalHandle>(null);
-  const rightTerminalRef = useRef<TerminalHandle>(null);
-  const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>('left');
+  // Track terminal refs for clearing
+  const terminalRefs = useRef<Map<string, TerminalHandle>>(new Map());
+
+  // Register a terminal ref
+  const registerTerminalRef = useCallback((tabId: string, handle: TerminalHandle | null) => {
+    if (handle) {
+      terminalRefs.current.set(tabId, handle);
+    } else {
+      terminalRefs.current.delete(tabId);
+    }
+  }, []);
+
+  // Clear the active terminal
+  const clearActiveTerminal = useCallback(() => {
+    const activeTab = workspace.tabs.find((t) => t.id === workspace.activeTabId);
+    if (activeTab?.type === 'terminal') {
+      const terminalHandle = terminalRefs.current.get(activeTab.id);
+      terminalHandle?.clear();
+    }
+  }, [workspace.tabs, workspace.activeTabId]);
+
+  // Toggle split view
+  const toggleSplitView = useCallback(() => {
+    if (workspace.splitTabId) {
+      workspace.setSplitTab(null);
+    } else {
+      // Find another terminal tab to split with
+      const otherTab = workspace.tabs.find(
+        (t) => t.type === 'terminal' && t.id !== workspace.activeTabId
+      );
+      if (otherTab) {
+        workspace.setSplitTab(otherTab.id);
+      }
+    }
+  }, [workspace]);
+
+  // Close mobile menu when clicking backdrop
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
+
+  // Toggle mobile menu
+  const toggleMobileMenu = useCallback(() => {
+    setMobileMenuOpen((prev) => !prev);
+  }, []);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
 
-      if (isMod && e.key === '1') {
+      // Cmd+1-9 to switch tabs
+      if (isMod && e.key >= '1' && e.key <= '9') {
         e.preventDefault();
-        setFocusedPanel('left');
-        leftTerminalRef.current?.focus();
-      } else if (isMod && e.key === '2') {
-        e.preventDefault();
-        setFocusedPanel('right');
-        rightTerminalRef.current?.focus();
-      } else if (isMod && e.key === 'k') {
-        e.preventDefault();
-        if (focusedPanel === 'left') {
-          leftTerminalRef.current?.clear();
-        } else {
-          rightTerminalRef.current?.clear();
+        const tabIndex = parseInt(e.key, 10) - 1;
+        if (tabIndex < workspace.tabs.length) {
+          workspace.setActiveTab(workspace.tabs[tabIndex].id);
         }
       }
+
+      // Cmd+B to toggle sidebar
+      if (isMod && e.key === 'b') {
+        e.preventDefault();
+        workspace.toggleSidebar();
+      }
+
+      // Cmd+W to close current tab (if closeable)
+      if (isMod && e.key === 'w') {
+        e.preventDefault();
+        const activeTab = workspace.tabs.find((t) => t.id === workspace.activeTabId);
+        if (activeTab?.closeable) {
+          workspace.closeTab(activeTab.id);
+        }
+      }
+
+      // Cmd+\ to toggle split view
+      if (isMod && e.key === '\\') {
+        e.preventDefault();
+        toggleSplitView();
+      }
+
+      // Cmd+K to clear active terminal
+      if (isMod && e.key === 'k') {
+        e.preventDefault();
+        clearActiveTerminal();
+      }
     },
-    [focusedPanel]
+    [workspace, toggleSplitView, clearActiveTerminal]
   );
 
   useEffect(() => {
@@ -46,10 +113,12 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Track which panel is focused when user clicks
-  const handlePanelFocus = useCallback((panel: FocusedPanel) => {
-    setFocusedPanel(panel);
-  }, []);
+  // Close mobile menu when sidebar is toggled via keyboard
+  useEffect(() => {
+    if (workspace.sidebarCollapsed) {
+      setMobileMenuOpen(false);
+    }
+  }, [workspace.sidebarCollapsed]);
 
   if (!isSupported) {
     return <UnsupportedBrowser message={message} />;
@@ -100,51 +169,98 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="terminals-container">
-        <div
-          className={`terminal-pane ${focusedPanel === 'left' ? 'terminal-pane-active' : ''}`}
-          onClick={() => handlePanelFocus('left')}
-        >
-          <div className="terminal-title">
-            <span className="terminal-title-text">pok learn</span>
-            <span className="terminal-title-shortcut">
-              <kbd>Cmd</kbd>+<kbd>1</kbd>
-            </span>
+      <header className="app-header">
+        <div className="app-header-left">
+          <button
+            className="mobile-menu-button"
+            onClick={toggleMobileMenu}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+          >
+            <MenuIcon size={18} />
+          </button>
+          <div className="app-header-title">
+            <span className="app-wordmark">pok</span>
+            <span className="app-header-subtitle">playground</span>
           </div>
-          <Terminal
-            ref={leftTerminalRef}
-            webContainer={webContainer}
-            command="pok learn"
-            isFocused={focusedPanel === 'left'}
-          />
         </div>
-        <div
-          className={`terminal-pane ${focusedPanel === 'right' ? 'terminal-pane-active' : ''}`}
-          onClick={() => handlePanelFocus('right')}
+        <button
+          className="app-header-reset"
+          onClick={() => window.location.reload()}
+          aria-label="Reset playground"
         >
-          <div className="terminal-title">
-            <span className="terminal-title-text">pok introspect</span>
-            <span className="terminal-title-shortcut">
-              <kbd>Cmd</kbd>+<kbd>2</kbd>
-            </span>
-          </div>
-          <Terminal
-            ref={rightTerminalRef}
-            webContainer={webContainer}
-            command="pok introspect"
-            startDelay={200}
-            isFocused={focusedPanel === 'right'}
+          <RefreshIcon size={14} />
+          Reset
+        </button>
+      </header>
+
+      <div className="app-body">
+        {/* Mobile menu backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="mobile-menu-backdrop"
+            onClick={closeMobileMenu}
+            aria-hidden="true"
           />
+        )}
+
+        <Sidebar
+          tabs={workspace.tabs}
+          activeTabId={workspace.activeTabId}
+          collapsed={workspace.sidebarCollapsed}
+          expandedFolders={workspace.expandedFolders}
+          webcontainer={webContainer}
+          eventBus={eventBus}
+          onTabClick={(id) => {
+            workspace.setActiveTab(id);
+            setMobileMenuOpen(false);
+          }}
+          onToggle={workspace.toggleSidebar}
+          onToggleFolder={workspace.toggleFolder}
+          onFileClick={(filePath) => {
+            workspace.openFileTab(filePath);
+            setMobileMenuOpen(false);
+          }}
+          mobileOpen={mobileMenuOpen}
+        />
+
+        <div className="content-area">
+          <TabBar
+            tabs={workspace.tabs}
+            activeTabId={workspace.activeTabId}
+            onTabClick={workspace.setActiveTab}
+            onTabClose={workspace.closeTab}
+          />
+
+          <div className="content-main">
+            {workspace.tabs.map((tab) => (
+              <TabContent
+                key={tab.id}
+                tab={tab}
+                webContainer={webContainer}
+                isActive={tab.id === workspace.activeTabId}
+                eventBus={eventBus}
+                onTerminalRef={(handle) => registerTerminalRef(tab.id, handle)}
+              />
+            ))}
+          </div>
         </div>
       </div>
-      <div className="shortcuts-bar">
+
+      <footer className="shortcuts-bar">
         <span className="shortcut-hint">
-          <kbd>Cmd</kbd>+<kbd>1</kbd>/<kbd>2</kbd> Switch panels
+          <kbd>Cmd</kbd>+<kbd>1-9</kbd> Switch tabs
+        </span>
+        <span className="shortcut-hint">
+          <kbd>Cmd</kbd>+<kbd>B</kbd> Toggle sidebar
         </span>
         <span className="shortcut-hint">
           <kbd>Cmd</kbd>+<kbd>K</kbd> Clear terminal
         </span>
-      </div>
+        <span className="shortcut-hint">
+          <kbd>Cmd</kbd>+<kbd>W</kbd> Close tab
+        </span>
+      </footer>
     </div>
   );
 }

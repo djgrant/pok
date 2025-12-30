@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebContainer } from '@webcontainer/api';
+import { UseEventBusResult } from '../hooks/useEventBus';
 import '@xterm/xterm/css/xterm.css';
 
 // Tokyo Night theme for xterm - matches the app's color scheme
@@ -37,6 +38,8 @@ interface TerminalProps {
   startDelay?: number;
   /** Whether this terminal is currently focused */
   isFocused?: boolean;
+  /** Event bus for emitting file events */
+  eventBus?: UseEventBusResult;
 }
 
 export interface TerminalHandle {
@@ -57,8 +60,39 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
   }) as T;
 }
 
+/**
+ * Regex to match pok file event markers in terminal output.
+ * Format: \x1b]pok:file:<type>:<path>\x07
+ *
+ * Uses OSC (Operating System Command) escape sequence:
+ * - \x1b] starts OSC
+ * - \x07 (BEL) ends OSC
+ */
+const FILE_EVENT_REGEX = /\x1b\]pok:file:(created|updated|deleted):([^\x07]+)\x07/g;
+
+/**
+ * Process terminal output data to extract and emit file events.
+ * Returns the data with file event markers stripped out.
+ */
+function processFileEvents(
+  data: string,
+  eventBus: UseEventBusResult | undefined
+): string {
+  if (!eventBus) return data;
+
+  let match;
+  while ((match = FILE_EVENT_REGEX.exec(data)) !== null) {
+    const [, type, path] = match;
+    const eventType = `file:${type}` as 'file:created' | 'file:updated' | 'file:deleted';
+    eventBus.emit({ type: eventType, path });
+  }
+
+  // Strip the markers from the output so they don't show in terminal
+  return data.replace(FILE_EVENT_REGEX, '');
+}
+
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
-  { webContainer, command, startDelay = 0, isFocused = false },
+  { webContainer, command, startDelay = 0, isFocused = false, eventBus },
   ref
 ) {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -151,11 +185,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       outputStreamController = new AbortController();
 
       // Pipe shell output to terminal with abort signal
+      // Also intercept file events from the learn command
       shellProcess.output
         .pipeTo(
           new WritableStream({
             write(data) {
-              terminal.write(data);
+              // Process file events and strip markers from output
+              const cleanedData = processFileEvents(data, eventBus);
+              terminal.write(cleanedData);
             },
           }),
           { signal: outputStreamController.signal }
@@ -209,7 +246,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       shellWriter?.close();
       shellProcess?.kill();
     };
-  }, [webContainer, command, startDelay]);
+  }, [webContainer, command, startDelay, eventBus]);
 
   return (
     <div
