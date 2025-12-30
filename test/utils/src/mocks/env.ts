@@ -1,4 +1,4 @@
-import { defineEnv } from '@openpok/core';
+import { defineEnv } from '@pokjs/core';
 import { mockResolver, simpleResolver } from './resolver';
 
 export const mockEnv = defineEnv({

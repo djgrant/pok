@@ -7,9 +7,9 @@
 
 import { useState, useCallback } from 'react';
 import { Box, Text, useInput, useStdout } from 'ink';
-import type { EventBus } from '@openpok/core';
-import type { ActivityNode } from '@openpok/tabs-core';
-import { findTabsGroup, getTabsGroupActivities } from '@openpok/tabs-core';
+import type { EventBus } from '@pokjs/core';
+import type { ActivityNode } from '@pokjs/tabs-core';
+import { findTabsGroup, getTabsGroupActivities } from '@pokjs/tabs-core';
 import { useEventBus } from './use-event-bus.js';
 
 type EventDrivenAppProps = {

@@ -1,14 +1,14 @@
-# @openpok/tabs-core
+# @pokjs/tabs-core
 
 Shared logic for tabbed terminal UI adapters. Framework-agnostic types, state management, and process handling.
 
 ## Installation
 
 ```bash
-bun add @openpok/tabs-core
+bun add @pokjs/tabs-core
 ```
 
-This package is typically a dependency of tabs adapter implementations (like `@openpok/tabs-ink`), not installed directly.
+This package is typically a dependency of tabs adapter implementations (like `@pokjs/tabs-ink`), not installed directly.
 
 ## What It Provides
 
@@ -17,7 +17,7 @@ This package is typically a dependency of tabs adapter implementations (like `@o
 Shared state reducer for tabs UI:
 
 ```typescript
-import { createInitialState, reducer } from '@openpok/tabs-core';
+import { createInitialState, reducer } from '@pokjs/tabs-core';
 
 const state = createInitialState();
 const newState = reducer(state, { type: 'TAB_SELECT', tabId: 'tab-1' });
@@ -28,7 +28,7 @@ const newState = reducer(state, { type: 'TAB_SELECT', tabId: 'tab-1' });
 Handles spawning and managing tab processes:
 
 ```typescript
-import { ProcessManager } from '@openpok/tabs-core';
+import { ProcessManager } from '@pokjs/tabs-core';
 
 const pm = new ProcessManager({
   onOutput: (tabId, data) => {
@@ -52,13 +52,13 @@ import type {
   ActivityNode, // Event-driven activity
   GroupNode, // Event-driven group
   EventDrivenState, // Full UI state
-} from '@openpok/tabs-core';
+} from '@pokjs/tabs-core';
 ```
 
 ### Status Indicators
 
 ```typescript
-import { STATUS_INDICATORS, getStatusIndicator } from '@openpok/tabs-core';
+import { STATUS_INDICATORS, getStatusIndicator } from '@pokjs/tabs-core';
 
 // STATUS_INDICATORS = {
 //   running: '●',
@@ -126,7 +126,7 @@ const OUTPUT_BATCH_MS = 16;
 ## Usage in Adapter
 
 ```typescript
-import { createInitialState, reducer, ProcessManager } from '@openpok/tabs-core';
+import { createInitialState, reducer, ProcessManager } from '@pokjs/tabs-core';
 
 function createTabsAdapter(): TabsAdapter {
   return {
@@ -158,5 +158,5 @@ function createTabsAdapter(): TabsAdapter {
 
 ## Related
 
-- [@openpok/tabs-ink](./tabs-ink.md) - Ink implementation
+- [@pokjs/tabs-ink](./tabs-ink.md) - Ink implementation
 - [API Reference: Tabs](../api/tabs.md)

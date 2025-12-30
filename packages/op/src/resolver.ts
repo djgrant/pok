@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { TypedEnvResolver, ResolverResult } from '@openpok/core';
+import type { TypedEnvResolver, ResolverResult } from '@pokjs/core';
 import { type OpVault, type InferOpVaultKeys, parseOpRef } from './vault';
 import * as op from './op';
 

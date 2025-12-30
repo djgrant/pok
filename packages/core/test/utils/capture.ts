@@ -6,7 +6,7 @@
  */
 
 import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '../../src';
-import { normalizeEvents } from '@openpok/test-utils';
+import { normalizeEvents } from '@pokjs/test-utils';
 import { COMMANDS_DIR, PROJECT_ROOT } from './paths';
 
 /**

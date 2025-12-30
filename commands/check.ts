@@ -4,7 +4,7 @@
  * Allows running all checks at once via `pok check all`
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Run checks',

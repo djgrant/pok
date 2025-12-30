@@ -5,7 +5,7 @@ The router is the entry point for pok CLIs. It discovers commands from the files
 ## Import
 
 ```typescript
-import { run, buildCommandTree } from '@openpok/core';
+import { run, buildCommandTree } from '@pokjs/core';
 ```
 
 ## run
@@ -35,10 +35,10 @@ type RouterConfig = {
 
 ```typescript
 #!/usr/bin/env bun
-import { run } from '@openpok/core';
-import { createPrompter } from '@openpok/prompter-clack';
-import { createReporterAdapter } from '@openpok/reporter-clack';
-import { createTabsAdapter } from '@openpok/tabs-ink';
+import { run } from '@pokjs/core';
+import { createPrompter } from '@pokjs/prompter-clack';
+import { createReporterAdapter } from '@pokjs/reporter-clack';
+import { createTabsAdapter } from '@pokjs/tabs-ink';
 import * as path from 'path';
 
 await run(process.argv.slice(2), {
@@ -77,7 +77,7 @@ Each command file exports a `command` object:
 
 ```typescript
 // commands/build.ts
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Build the project',

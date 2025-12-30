@@ -182,9 +182,9 @@ What would you like to learn?
 +-- commands/
 |   +-- learn.ts
 +-- node_modules/  (pre-bundled)
-    +-- @openpok/core
-    +-- @openpok/prompter-clack
-    +-- @openpok/reporter-clack
+    +-- @pokjs/core
+    +-- @pokjs/prompter-clack
+    +-- @pokjs/reporter-clack
 ```
 
 ### Terminal Configuration

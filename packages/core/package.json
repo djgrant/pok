@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/core",
+  "name": "@pokjs/core",
   "version": "0.0.1",
   "description": "Core framework for building CLI applications with pok",
   "keywords": [
@@ -9,7 +9,7 @@
     "bun",
     "terminal",
     "pok",
-    "openpok",
+    "pokjs",
     "cli-framework",
     "command-routing",
     "file-based-routing"
@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@openpok/test-utils": "workspace:*",
+    "@pokjs/test-utils": "workspace:*",
     "zod": "^4.0.0"
   },
   "peerDependencies": {

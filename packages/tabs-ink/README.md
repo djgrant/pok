@@ -1,18 +1,18 @@
-# @openpok/tabs-ink
+# @pokjs/tabs-ink
 
 Tabbed terminal UI adapter for pok using [Ink](https://github.com/vadimdemedes/ink).
 
 ## Installation
 
 ```bash
-bun add @openpok/tabs-ink
+bun add @pokjs/tabs-ink
 ```
 
 ## Usage
 
 ```typescript
-import { run } from '@openpok/core';
-import { createTabsAdapter } from '@openpok/tabs-ink';
+import { run } from '@pokjs/core';
+import { createTabsAdapter } from '@pokjs/tabs-ink';
 
 await run(args, {
   tabs: createTabsAdapter(),

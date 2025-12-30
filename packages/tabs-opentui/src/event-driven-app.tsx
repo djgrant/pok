@@ -8,9 +8,9 @@
 import { useState, useCallback } from 'react';
 import { useKeyboard, useTerminalDimensions } from '@opentui/react';
 import type { KeyEvent } from '@opentui/core';
-import type { EventBus } from '@openpok/core';
-import type { ActivityNode } from '@openpok/tabs-core';
-import { findTabsGroup, getTabsGroupActivities } from '@openpok/tabs-core';
+import type { EventBus } from '@pokjs/core';
+import type { ActivityNode } from '@pokjs/tabs-core';
+import { findTabsGroup, getTabsGroupActivities } from '@pokjs/tabs-core';
 import { useEventBus } from './use-event-bus.js';
 
 type EventDrivenAppProps = {

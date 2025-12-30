@@ -6,9 +6,9 @@ import {
   MAX_OUTPUT_LINES,
   MAX_LINE_LENGTH,
   BUFFER_WARNING_THRESHOLD,
-} from '@openpok/tabs-core';
+} from '@pokjs/tabs-core';
 import type { TabProcess } from './types.js';
-import type { TabSpec, TabsOptions } from '@openpok/core';
+import type { TabSpec, TabsOptions } from '@pokjs/core';
 
 const OUTPUT_BATCH_MS = 16;
 

@@ -12,7 +12,7 @@
 The fastest way to get started is with the scaffolding CLI:
 
 ```bash
-bun create @openpok/create my-cli
+bun create @pokjs/create my-cli
 cd my-cli
 bun install
 ```
@@ -27,12 +27,12 @@ This creates a project with:
 
 ```bash
 # Core framework (required)
-bun add @openpok/core zod
+bun add @pokjs/core zod
 
 # TTY adapters (choose what you need)
-bun add @openpok/prompter-clack   # Interactive prompts
-bun add @openpok/reporter-clack   # Terminal output rendering
-bun add @openpok/tabs-ink         # Tabbed terminal UI (optional)
+bun add @pokjs/prompter-clack   # Interactive prompts
+bun add @pokjs/reporter-clack   # Terminal output rendering
+bun add @pokjs/tabs-ink         # Tabbed terminal UI (optional)
 ```
 
 ## Project Structure
@@ -54,10 +54,10 @@ Create a `pok` file (or any name) as your CLI entry point:
 
 ```typescript
 #!/usr/bin/env bun
-import { run } from '@openpok/core';
-import { createPrompter } from '@openpok/prompter-clack';
-import { createReporterAdapter } from '@openpok/reporter-clack';
-import { createTabsAdapter } from '@openpok/tabs-ink';
+import { run } from '@pokjs/core';
+import { createPrompter } from '@pokjs/prompter-clack';
+import { createReporterAdapter } from '@pokjs/reporter-clack';
+import { createTabsAdapter } from '@pokjs/tabs-ink';
 import * as path from 'path';
 
 await run(process.argv.slice(2), {
@@ -81,7 +81,7 @@ chmod +x pok
 Create `commands/hello.ts`:
 
 ```typescript
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Say hello',
@@ -106,7 +106,7 @@ Commands can accept typed flags:
 ```typescript
 // commands/greet.ts
 import { z } from 'zod';
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Greet someone',
@@ -144,7 +144,7 @@ Use the runner's `exec` method:
 
 ```typescript
 // commands/build.ts
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Build project',
@@ -161,7 +161,7 @@ Structure your output with groups and activities:
 
 ```typescript
 // commands/setup.ts
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Setup development environment',

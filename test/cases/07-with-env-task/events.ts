@@ -1,3 +1,3 @@
-import type { CLIEvent } from '@openpok/core';
+import type { CLIEvent } from '@pokjs/core';
 
 export const events: CLIEvent[] = [];

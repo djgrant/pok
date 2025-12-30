@@ -37,7 +37,7 @@ pok's environment system provides type-safe secret management with context-aware
 
 ```typescript
 import { z } from 'zod';
-import { defineEnvResolver } from '@openpok/core';
+import { defineEnvResolver } from '@pokjs/core';
 
 const envResolver = defineEnvResolver({
   requiredContext: z.object({
@@ -215,7 +215,7 @@ const bootstrapTask = defineTask({
 Combine multiple resolvers:
 
 ```typescript
-import { defineCompositeResolver } from '@openpok/core';
+import { defineCompositeResolver } from '@pokjs/core';
 
 const compositeResolver = defineCompositeResolver({
   requiredContext: z.object({

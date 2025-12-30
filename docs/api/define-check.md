@@ -5,7 +5,7 @@ Defines a pre-flight check that validates preconditions before command execution
 ## Import
 
 ```typescript
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 ```
 
 ## Signature
@@ -37,8 +37,8 @@ type CheckConfig = {
 ### Basic Check
 
 ```typescript
-import { defineCheck } from '@openpok/core';
-import { commandExists } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
+import { commandExists } from '@pokjs/core';
 
 export const dockerInstalled = defineCheck({
   label: 'Docker installed',
@@ -54,7 +54,7 @@ export const dockerInstalled = defineCheck({
 ### Check with Remediation Steps
 
 ```typescript
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 import { $ } from 'bun';
 
 export const dockerRunning = defineCheck({
@@ -78,7 +78,7 @@ export const dockerRunning = defineCheck({
 ### Check with Single Remediation
 
 ```typescript
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 
 export const dockerInstalled = defineCheck({
   label: 'Docker installed',
@@ -97,7 +97,7 @@ export const dockerInstalled = defineCheck({
 ### Check Node Version
 
 ```typescript
-import { defineCheck, getNodeMajorVersion } from '@openpok/core';
+import { defineCheck, getNodeMajorVersion } from '@pokjs/core';
 
 export const nodeVersion = defineCheck({
   label: 'Node.js >= 18',
@@ -113,7 +113,7 @@ export const nodeVersion = defineCheck({
 ### Check File Exists
 
 ```typescript
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 import { exists } from 'fs/promises';
 
 export const envFileExists = defineCheck({
@@ -131,7 +131,7 @@ export const envFileExists = defineCheck({
 ### Static Checks
 
 ```typescript
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 import { dockerRunning, nodeVersion } from './checks';
 
 export const command = defineCommand({
@@ -160,7 +160,7 @@ export const command = defineCommand({
 Checks can depend on the resolved context:
 
 ```typescript
-import { defineCommand, defineCheck } from '@openpok/core';
+import { defineCommand, defineCheck } from '@pokjs/core';
 import { z } from 'zod';
 
 const prodConfirmation = defineCheck({
@@ -289,7 +289,7 @@ import {
   getVersion, // Get version of a command
   getNodeMajorVersion,
   getPackageManager,
-} from '@openpok/core';
+} from '@pokjs/core';
 ```
 
 ## Related

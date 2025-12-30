@@ -159,7 +159,7 @@ const myTask = defineTask({
 ### Basic Adapter
 
 ```typescript
-import type { ReporterAdapter, EventBus, CLIEvent } from '@openpok/core';
+import type { ReporterAdapter, EventBus, CLIEvent } from '@pokjs/core';
 
 const myAdapter: ReporterAdapter = {
   start(eventBus: EventBus) {
@@ -258,7 +258,7 @@ const spinnerAdapter: ReporterAdapter = {
 ### Raw Reporter Adapter
 
 ```typescript
-import { createRawReporterAdapter } from '@openpok/core';
+import { createRawReporterAdapter } from '@pokjs/core';
 
 test('command emits correct events', async () => {
   const { adapter, getEvents } = createRawReporterAdapter();
@@ -420,4 +420,4 @@ r.reporter.error('Error');
 
 - [API Reference: Events](../api/events.md)
 - [Architecture](../architecture.md)
-- [@openpok/reporter-clack](../packages/reporter-clack.md)
+- [@pokjs/reporter-clack](../packages/reporter-clack.md)

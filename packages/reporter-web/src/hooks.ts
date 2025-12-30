@@ -7,7 +7,7 @@
  */
 
 import { useSyncExternalStore, useCallback, useRef } from 'react';
-import type { ActivityId, GroupId } from '@openpok/core';
+import type { ActivityId, GroupId } from '@pokjs/core';
 import type { ReporterStore, ReporterState, ActivityState, GroupState } from './types';
 
 /**

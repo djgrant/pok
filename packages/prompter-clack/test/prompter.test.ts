@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { createPrompter } from '@openpok/prompter-clack';
+import { createPrompter } from '@pokjs/prompter-clack';
 
 // =============================================================================
 // Note: Testing the prompter-clack implementation is challenging because:
@@ -87,7 +87,7 @@ describe('prompter method signatures', () => {
 
 // =============================================================================
 // Type Compatibility Tests
-// Verify that the prompter satisfies the Prompter interface from @openpok/core
+// Verify that the prompter satisfies the Prompter interface from @pokjs/core
 // =============================================================================
 
 describe('type compatibility', () => {

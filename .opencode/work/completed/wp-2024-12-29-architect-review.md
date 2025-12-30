@@ -3,7 +3,7 @@
 ## Problem
 
 Code review before commit. A significant piece of work has been completed that includes:
-1. A new `@openpok/introspect` package - TUI file viewer with syntax highlighting and live file watching
+1. A new `@pokjs/introspect` package - TUI file viewer with syntax highlighting and live file watching
 2. A redesigned playground - Two-terminal layout with `pok learn` and `pok introspect` running side by side
 
 ## Scope
@@ -23,7 +23,7 @@ Code review before commit. A significant piece of work has been completed that i
 
 ## Results
 
-### 1. Package Structure Review: `@openpok/introspect`
+### 1. Package Structure Review: `@pokjs/introspect`
 
 **Follows Conventions:**
 - ESM module (`"type": "module"`)
@@ -31,7 +31,7 @@ Code review before commit. A significant piece of work has been completed that i
 - Correct repository metadata
 - MIT license present
 - Zod v4 as peer dependency
-- Proper workspace reference to `@openpok/core`
+- Proper workspace reference to `@pokjs/core`
 - tsconfig.json extends base and references core
 
 **Issues Found:**
@@ -40,7 +40,7 @@ Code review before commit. A significant piece of work has been completed that i
 |-------|----------|-------------|
 | Missing README.md | Minor | Other packages have README.md, this one doesn't |
 | Missing homepage/bugs in package.json | Minor | Other packages include these fields |
-| No test-utils devDependency | Minor | Other packages include `@openpok/test-utils` for testing |
+| No test-utils devDependency | Minor | Other packages include `@pokjs/test-utils` for testing |
 
 ### 2. Code Quality Analysis
 
@@ -71,7 +71,7 @@ Code review before commit. A significant piece of work has been completed that i
 
 **Finding:** TypeScript errors when running `tsc` directly:
 ```
-src/command.ts(5,31): error TS2307: Cannot find module '@openpok/core' or its corresponding type declarations.
+src/command.ts(5,31): error TS2307: Cannot find module '@pokjs/core' or its corresponding type declarations.
 src/command.ts(21,15): error TS7006: Parameter '_r' implicitly has an 'any' type.
 src/command.ts(21,19): error TS7006: Parameter 'ctx' implicitly has an 'any' type.
 ```
@@ -80,7 +80,7 @@ src/command.ts(21,19): error TS7006: Parameter 'ctx' implicitly has an 'any' typ
 1. TypeScript's project references require building dependencies first
 2. The monorepo uses Bun for development which resolves workspace packages differently
 3. Bun tests pass successfully (13/13), confirming runtime correctness
-4. This is an existing pattern in the codebase - `@openpok/core` itself has similar TS errors when checked with `tsc -b`
+4. This is an existing pattern in the codebase - `@pokjs/core` itself has similar TS errors when checked with `tsc -b`
 
 **Recommendation:** Not a blocker. The codebase uses Bun for execution, not tsc.
 
@@ -158,7 +158,7 @@ None. The code is functional and well-structured.
 
 1. **Add README.md to introspect package**
    ```markdown
-   # @openpok/introspect
+   # @pokjs/introspect
    
    Live file viewer TUI for pok commands directory.
    

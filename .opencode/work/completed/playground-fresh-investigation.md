@@ -133,7 +133,7 @@ A command has two main parts:
 
 **The code examples are verbose:**
 ```javascript
-const { defineCommand } = require('@openpok/core');
+const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Say hello to the world',

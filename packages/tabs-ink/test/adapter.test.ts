@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from 'bun:test';
-import { createEventBus, type CLIEvent, type EventBus } from '@openpok/core';
+import { createEventBus, type CLIEvent, type EventBus } from '@pokjs/core';
 
 // =============================================================================
 // Mock process TTY status for adapter TTY checks
@@ -29,24 +29,24 @@ function restoreTTY() {
 // Test Adapter Exports
 // =============================================================================
 
-describe('@openpok/tabs-ink - exports', () => {
+describe('@pokjs/tabs-ink - exports', () => {
   it('exports createTabsAdapter function', async () => {
-    const module = await import('@openpok/tabs-ink');
+    const module = await import('@pokjs/tabs-ink');
     expect(typeof module.createTabsAdapter).toBe('function');
   });
 
   it('exports createEventAdapter function', async () => {
-    const module = await import('@openpok/tabs-ink');
+    const module = await import('@pokjs/tabs-ink');
     expect(typeof module.createEventAdapter).toBe('function');
   });
 
   it('exports useEventBus hook', async () => {
-    const module = await import('@openpok/tabs-ink');
+    const module = await import('@pokjs/tabs-ink');
     expect(typeof module.useEventBus).toBe('function');
   });
 
   it('re-exports state management from tabs-core', async () => {
-    const module = await import('@openpok/tabs-ink');
+    const module = await import('@pokjs/tabs-ink');
     expect(typeof module.createInitialState).toBe('function');
     expect(typeof module.reducer).toBe('function');
     expect(typeof module.getTabsGroupActivities).toBe('function');
@@ -59,10 +59,10 @@ describe('@openpok/tabs-ink - exports', () => {
 // =============================================================================
 
 describe('createTabsAdapter', () => {
-  let adapter: ReturnType<typeof import('@openpok/tabs-ink').createTabsAdapter>;
+  let adapter: ReturnType<typeof import('@pokjs/tabs-ink').createTabsAdapter>;
 
   beforeEach(async () => {
-    const { createTabsAdapter } = await import('@openpok/tabs-ink');
+    const { createTabsAdapter } = await import('@pokjs/tabs-ink');
     adapter = createTabsAdapter();
   });
 
@@ -110,7 +110,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdout is not TTY', async () => {
     mockTTY(false, true);
-    const { createEventAdapter } = await import('@openpok/tabs-ink');
+    const { createEventAdapter } = await import('@pokjs/tabs-ink');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdout to be a TTY');
@@ -118,7 +118,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdin is not TTY', async () => {
     mockTTY(true, false);
-    const { createEventAdapter } = await import('@openpok/tabs-ink');
+    const { createEventAdapter } = await import('@pokjs/tabs-ink');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdin to be a TTY');
@@ -131,7 +131,7 @@ describe('createEventAdapter', () => {
 
 describe('State management re-exports', () => {
   it('createInitialState creates empty state', async () => {
-    const { createInitialState } = await import('@openpok/tabs-ink');
+    const { createInitialState } = await import('@pokjs/tabs-ink');
     const state = createInitialState();
 
     expect(state.appName).toBeUndefined();
@@ -143,7 +143,7 @@ describe('State management re-exports', () => {
   });
 
   it('reducer handles root:start event', async () => {
-    const { createInitialState, reducer } = await import('@openpok/tabs-ink');
+    const { createInitialState, reducer } = await import('@pokjs/tabs-ink');
     const state = createInitialState();
 
     const event: CLIEvent = {
@@ -159,7 +159,7 @@ describe('State management re-exports', () => {
   });
 
   it('reducer handles group:start event', async () => {
-    const { createInitialState, reducer } = await import('@openpok/tabs-ink');
+    const { createInitialState, reducer } = await import('@pokjs/tabs-ink');
     const state = createInitialState();
 
     const event: CLIEvent = {
@@ -177,7 +177,7 @@ describe('State management re-exports', () => {
   });
 
   it('findTabsGroup finds tabs layout group', async () => {
-    const { createInitialState, reducer, findTabsGroup } = await import('@openpok/tabs-ink');
+    const { createInitialState, reducer, findTabsGroup } = await import('@pokjs/tabs-ink');
 
     let state = createInitialState();
     state = reducer(state, {
@@ -202,7 +202,7 @@ describe('State management re-exports', () => {
 
   it('getTabsGroupActivities returns activities in tabs group', async () => {
     const { createInitialState, reducer, getTabsGroupActivities } =
-      await import('@openpok/tabs-ink');
+      await import('@pokjs/tabs-ink');
 
     let state = createInitialState();
     const groupId = 'tabs-group' as any;
@@ -240,7 +240,7 @@ describe('State management re-exports', () => {
 
 describe('useEventBus hook', () => {
   it('is exported as a function', async () => {
-    const { useEventBus } = await import('@openpok/tabs-ink');
+    const { useEventBus } = await import('@pokjs/tabs-ink');
     expect(typeof useEventBus).toBe('function');
   });
 });

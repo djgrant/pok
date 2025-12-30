@@ -2,7 +2,7 @@
  * Template generators for scaffolding
  */
 
-import type { MultiselectOption } from '@openpok/core';
+import type { MultiselectOption } from '@pokjs/core';
 
 export type ProjectConfig = {
   name: string;
@@ -28,7 +28,7 @@ export const TEMPLATES: Template[] = [
     name: 'starter',
     label: 'Starter (recommended)',
     hint: 'Interactive prompts + beautiful output',
-    plugins: ['@openpok/prompter-clack', '@openpok/reporter-clack'],
+    plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
   },
   {
     name: 'minimal',
@@ -40,7 +40,7 @@ export const TEMPLATES: Template[] = [
     name: 'full',
     label: 'Full',
     hint: 'All plugins including tabbed UI',
-    plugins: ['@openpok/prompter-clack', '@openpok/reporter-clack', '@openpok/tabs-ink'],
+    plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack', '@pokjs/tabs-ink'],
   },
   {
     name: 'custom',
@@ -56,17 +56,17 @@ export const TEMPLATES: Template[] = [
 
 export const AVAILABLE_PLUGINS: MultiselectOption<string>[] = [
   {
-    value: '@openpok/prompter-clack',
+    value: '@pokjs/prompter-clack',
     label: 'Prompter (clack)',
     hint: 'Interactive prompts for user input',
   },
   {
-    value: '@openpok/reporter-clack',
+    value: '@pokjs/reporter-clack',
     label: 'Reporter (clack)',
     hint: 'Beautiful CLI output and spinners',
   },
   {
-    value: '@openpok/tabs-ink',
+    value: '@pokjs/tabs-ink',
     label: 'Tabs (ink)',
     hint: 'Tabbed UI for parallel processes',
   },
@@ -78,7 +78,7 @@ export const AVAILABLE_PLUGINS: MultiselectOption<string>[] = [
 
 export function generatePackageJson(config: ProjectConfig): string {
   const deps: Record<string, string> = {
-    '@openpok/core': 'latest',
+    '@pokjs/core': 'latest',
   };
 
   // Add selected plugins
@@ -126,7 +126,7 @@ export function generateExampleCommand(): string {
  * Run with: pok hello
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Say hello',
@@ -142,7 +142,7 @@ export function generateBuildCommand(): string {
  * Build command
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Build project',

@@ -27,7 +27,7 @@ packages/<name>/
 
 ```json
 {
-  "name": "@openpok/<name>",
+  "name": "@pokjs/<name>",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -41,7 +41,7 @@ packages/<name>/
     "build": "tsc"
   },
   "dependencies": {
-    "@openpok/core": "workspace:*"
+    "@pokjs/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
@@ -92,8 +92,8 @@ Use `workspace:*` for internal dependencies:
 ```json
 {
   "dependencies": {
-    "@openpok/core": "workspace:*",
-    "@openpok/tabs-core": "workspace:*"
+    "@pokjs/core": "workspace:*",
+    "@pokjs/tabs-core": "workspace:*"
   }
 }
 ```

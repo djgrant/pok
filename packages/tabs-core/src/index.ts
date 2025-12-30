@@ -1,5 +1,5 @@
 /**
- * @openpok/tabs-core
+ * @pokjs/tabs-core
  *
  * Shared logic for CLI tabs adapters (Ink, OpenTUI).
  * Framework-agnostic types, state management, and process handling.

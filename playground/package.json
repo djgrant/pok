@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/playground",
+  "name": "@pokjs/playground",
   "version": "0.0.1",
   "private": true,
   "description": "Interactive pok learning website with browser terminal",

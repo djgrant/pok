@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
 /**
- * @openpok/create - Scaffold a new pok project
+ * @pokjs/create - Scaffold a new pok project
  *
  * Usage:
- *   bun create @openpok/create my-project
- *   bunx @openpok/create my-project
+ *   bun create @pokjs/create my-project
+ *   bunx @pokjs/create my-project
  *
- * This is a pok app itself, using @openpok/core for the CLI framework.
+ * This is a pok app itself, using @pokjs/core for the CLI framework.
  */
 
 import * as path from 'path';
-import { runCli } from '@openpok/core';
+import { runCli } from '@pokjs/core';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const packageRoot = path.resolve(__dirname, '..');

@@ -1,19 +1,19 @@
 #!/usr/bin/env bun
 /**
- * @openpok/cmd - Global CLI launcher for pok
+ * @pokjs/cmd - Global CLI launcher for pok
  *
  * This is a thin wrapper that:
- * 1. Tries to import @openpok/core from the current project
+ * 1. Tries to import @pokjs/core from the current project
  * 2. Calls runCli() to handle the actual CLI logic
  * 3. Shows helpful error messages if requirements are not met
  *
- * Install globally with: bun add -g @openpok/cmd
- * Then run `pok` from any project with @openpok/core installed.
+ * Install globally with: bun add -g @pokjs/cmd
+ * Then run `pok` from any project with @pokjs/core installed.
  */
 
 async function main() {
   try {
-    const { runCli } = await import('@openpok/core');
+    const { runCli } = await import('@pokjs/core');
     await runCli(process.argv.slice(2));
   } catch (error) {
     // Check if it's a module resolution error
@@ -24,12 +24,12 @@ async function main() {
         error.message.includes('Module not found'))
     ) {
       console.error(
-        'Error: @openpok/core is not installed in this project.\n\n' +
+        'Error: @pokjs/core is not installed in this project.\n\n' +
           'Requirements:\n' +
           '  - Bun runtime: https://bun.sh\n' +
-          '  - @openpok/core installed in your project\n\n' +
+          '  - @pokjs/core installed in your project\n\n' +
           'Install with:\n' +
-          '  bun add @openpok/core\n'
+          '  bun add @pokjs/core\n'
       );
       process.exit(1);
     }

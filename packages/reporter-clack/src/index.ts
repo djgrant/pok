@@ -1,5 +1,5 @@
 /**
- * @openpok/reporter-clack
+ * @pokjs/reporter-clack
  *
  * Clack-based implementation of the ReporterAdapter interface.
  * Consumes CLI events and renders them using @clack/prompts.

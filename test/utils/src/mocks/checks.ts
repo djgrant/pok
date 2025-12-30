@@ -1,4 +1,4 @@
-import { defineCheck } from '@openpok/core';
+import { defineCheck } from '@pokjs/core';
 
 export const alwaysPass = defineCheck({
   label: 'Always passes',

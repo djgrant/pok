@@ -5,7 +5,7 @@ Defines a CLI command with type-safe context, pre-flight checks, and execution l
 ## Import
 
 ```typescript
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 ```
 
 ## Signature
@@ -44,7 +44,7 @@ type ContextFieldDef = {
 ### Basic Command
 
 ```typescript
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Build the project',
@@ -58,7 +58,7 @@ export const command = defineCommand({
 
 ```typescript
 import { z } from 'zod';
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Deploy to environment',
@@ -91,7 +91,7 @@ export const command = defineCommand({
 ### Command with Pre-flight Checks
 
 ```typescript
-import { defineCommand, defineCheck } from '@openpok/core';
+import { defineCommand, defineCheck } from '@pokjs/core';
 
 const dockerRunning = defineCheck({
   label: 'Docker running',

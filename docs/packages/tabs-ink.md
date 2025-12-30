@@ -1,18 +1,18 @@
-# @openpok/tabs-ink
+# @pokjs/tabs-ink
 
 Tabbed terminal UI adapter using [Ink](https://github.com/vadimdemedes/ink) (React for CLI).
 
 ## Installation
 
 ```bash
-bun add @openpok/tabs-ink
+bun add @pokjs/tabs-ink
 ```
 
 ## Usage
 
 ```typescript
-import { run } from '@openpok/core';
-import { createTabsAdapter } from '@openpok/tabs-ink';
+import { run } from '@pokjs/core';
+import { createTabsAdapter } from '@pokjs/tabs-ink';
 
 await run(args, {
   tabs: createTabsAdapter(),
@@ -97,7 +97,7 @@ Returns a TabsAdapter that renders using Ink.
 For event-driven rendering (advanced):
 
 ```typescript
-import { createEventAdapter } from '@openpok/tabs-ink';
+import { createEventAdapter } from '@pokjs/tabs-ink';
 
 const adapter = createEventAdapter({
   eventBus,
@@ -110,7 +110,7 @@ const adapter = createEventAdapter({
 React hook for consuming events:
 
 ```typescript
-import { useEventBus } from '@openpok/tabs-ink';
+import { useEventBus } from '@pokjs/tabs-ink';
 
 function MyComponent({ eventBus }) {
   const state = useEventBus(eventBus);
@@ -143,6 +143,6 @@ On quit or error:
 
 ## Related
 
-- [@openpok/tabs-core](./tabs-core.md) - Shared logic
+- [@pokjs/tabs-core](./tabs-core.md) - Shared logic
 - [API Reference: Tabs](../api/tabs.md)
 - [Runner](../api/runner.md) - Using `r.tabs()`

@@ -4,7 +4,7 @@
  * Launches the documentation website
  */
 
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Documentation',

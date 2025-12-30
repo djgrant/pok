@@ -1,19 +1,19 @@
 /**
  * Types for tabs-ink
  *
- * Re-exports shared types from @openpok/tabs-core and defines implementation-specific types.
+ * Re-exports shared types from @pokjs/tabs-core and defines implementation-specific types.
  */
 
 import type { ChildProcess } from 'node:child_process';
-import type { TabProcess as BaseTabProcess } from '@openpok/tabs-core';
+import type { TabProcess as BaseTabProcess } from '@pokjs/tabs-core';
 
 // =============================================================================
-// Re-exports from @openpok/tabs-core
+// Re-exports from @pokjs/tabs-core
 // =============================================================================
 
-export type { TabStatus, ActivityNode, GroupNode, EventDrivenState } from '@openpok/tabs-core';
+export type { TabStatus, ActivityNode, GroupNode, EventDrivenState } from '@pokjs/tabs-core';
 
-export { MAX_OUTPUT_LINES } from '@openpok/tabs-core';
+export { MAX_OUTPUT_LINES } from '@pokjs/tabs-core';
 
 // =============================================================================
 // Implementation-specific types for tabs-ink

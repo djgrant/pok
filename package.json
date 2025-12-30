@@ -1,5 +1,5 @@
 {
-  "name": "openpok",
+  "name": "pokjs",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -22,9 +22,9 @@
     "publish": "pok publish"
   },
   "devDependencies": {
-    "@openpok/core": "workspace:*",
-    "@openpok/prompter-clack": "workspace:*",
-    "@openpok/reporter-clack": "workspace:*",
+    "@pokjs/core": "workspace:*",
+    "@pokjs/prompter-clack": "workspace:*",
+    "@pokjs/reporter-clack": "workspace:*",
     "@types/bun": "latest",
     "typescript": "^5.8.3",
     "zod": "^4.0.0"

@@ -1,5 +1,5 @@
 {
-  "name": "@openpok/reporter-web",
+  "name": "@pokjs/reporter-web",
   "version": "0.0.1",
   "description": "Web/React event reporter for pok CLI applications",
   "keywords": [
@@ -9,7 +9,7 @@
     "bun",
     "terminal",
     "pok",
-    "openpok",
+    "pokjs",
     "reporter",
     "react",
     "web"
@@ -46,11 +46,11 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^18.2.0",
-    "@openpok/test-utils": "workspace:*",
-    "@openpok/core": "workspace:*"
+    "@pokjs/test-utils": "workspace:*",
+    "@pokjs/core": "workspace:*"
   },
   "peerDependencies": {
-    "@openpok/core": "workspace:*",
+    "@pokjs/core": "workspace:*",
     "react": "^18.0.0 || ^19.0.0"
   },
   "engines": {

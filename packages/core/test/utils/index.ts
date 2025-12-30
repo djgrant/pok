@@ -1,5 +1,5 @@
 /**
- * Test utilities for @openpok/core.
+ * Test utilities for @pokjs/core.
  *
  * @example
  * ```ts
@@ -23,4 +23,4 @@ export {
 export { COMMANDS_DIR, CASES_DIR, PROJECT_ROOT } from './paths';
 
 // Re-export from test-utils package
-export { normalizeEvents, filterEvents, eventTypes } from '@openpok/test-utils';
+export { normalizeEvents, filterEvents, eventTypes } from '@pokjs/test-utils';

@@ -5,10 +5,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Vite plugin to bundle @openpok/core and dependencies for WebContainer.
+ * Vite plugin to bundle @pokjs/core and dependencies for WebContainer.
  *
  * At build time, this plugin:
- * 1. Uses bun build to bundle @openpok/core, reporter-clack, prompter-clack
+ * 1. Uses bun build to bundle @pokjs/core, reporter-clack, prompter-clack
  * 2. Bundles zod and fast-glob
  * 3. Creates a virtual module with all bundled code as a JSON object
  *
@@ -36,9 +36,9 @@ function pokBundlePlugin(): Plugin {
     }
     fs.mkdirSync(outDir, { recursive: true });
 
-    console.log('[pok-bundle] Building @openpok/core bundle for WebContainer...');
+    console.log('[pok-bundle] Building @pokjs/core bundle for WebContainer...');
 
-    // Bundle @openpok/core with all dependencies
+    // Bundle @pokjs/core with all dependencies
     // We create a single entry file that re-exports everything
     const coreEntryContent = `
 export * from '${coreDir}/src/index.ts';
@@ -50,19 +50,19 @@ export { runCli } from '${coreDir}/src/cli.ts';
     // Bundle core - use --outfile with full path (not --outdir)
     // Use CommonJS format because WebContainer's Node.js doesn't support ESM
     execSync(
-      `bun build "${coreEntryPath}" --outfile "${path.join(outDir, 'core.js')}" --target node --format cjs --external zod --external fast-glob --external @openpok/reporter-clack --external @openpok/prompter-clack`,
+      `bun build "${coreEntryPath}" --outfile "${path.join(outDir, 'core.js')}" --target node --format cjs --external zod --external fast-glob --external @pokjs/reporter-clack --external @pokjs/prompter-clack`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle reporter-clack
     execSync(
-      `bun build "${reporterDir}/src/index.ts" --outfile "${path.join(outDir, 'reporter-clack.js')}" --target node --format cjs --external @openpok/core --external zod`,
+      `bun build "${reporterDir}/src/index.ts" --outfile "${path.join(outDir, 'reporter-clack.js')}" --target node --format cjs --external @pokjs/core --external zod`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
     // Bundle prompter-clack
     execSync(
-      `bun build "${prompterDir}/src/index.ts" --outfile "${path.join(outDir, 'prompter-clack.js')}" --target node --format cjs --external @openpok/core --external zod`,
+      `bun build "${prompterDir}/src/index.ts" --outfile "${path.join(outDir, 'prompter-clack.js')}" --target node --format cjs --external @pokjs/core --external zod`,
       { cwd: rootDir, stdio: 'inherit' }
     );
 
@@ -97,13 +97,13 @@ export { runCli } from '${coreDir}/src/cli.ts';
 
     // Read and post-process all bundled files
     bundledFiles = {
-      'node_modules/@openpok/core/dist/index.js': convertDynamicImportsToRequire(
+      'node_modules/@pokjs/core/dist/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'core.js'), 'utf-8')
       ),
-      'node_modules/@openpok/reporter-clack/dist/index.js': convertDynamicImportsToRequire(
+      'node_modules/@pokjs/reporter-clack/dist/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'reporter-clack.js'), 'utf-8')
       ),
-      'node_modules/@openpok/prompter-clack/dist/index.js': convertDynamicImportsToRequire(
+      'node_modules/@pokjs/prompter-clack/dist/index.js': convertDynamicImportsToRequire(
         fs.readFileSync(path.join(outDir, 'prompter-clack.js'), 'utf-8')
       ),
       'node_modules/zod/lib/index.js': convertDynamicImportsToRequire(
@@ -116,9 +116,9 @@ export { runCli } from '${coreDir}/src/cli.ts';
 
     // Create package.json files for each package
     // Use CommonJS (no "type": "module") for WebContainer compatibility
-    bundledFiles['node_modules/@openpok/core/package.json'] = JSON.stringify(
+    bundledFiles['node_modules/@pokjs/core/package.json'] = JSON.stringify(
       {
-        name: '@openpok/core',
+        name: '@pokjs/core',
         version: '0.0.1',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
@@ -128,9 +128,9 @@ export { runCli } from '${coreDir}/src/cli.ts';
       2
     );
 
-    bundledFiles['node_modules/@openpok/reporter-clack/package.json'] = JSON.stringify(
+    bundledFiles['node_modules/@pokjs/reporter-clack/package.json'] = JSON.stringify(
       {
-        name: '@openpok/reporter-clack',
+        name: '@pokjs/reporter-clack',
         version: '0.0.1',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
@@ -139,9 +139,9 @@ export { runCli } from '${coreDir}/src/cli.ts';
       2
     );
 
-    bundledFiles['node_modules/@openpok/prompter-clack/package.json'] = JSON.stringify(
+    bundledFiles['node_modules/@pokjs/prompter-clack/package.json'] = JSON.stringify(
       {
-        name: '@openpok/prompter-clack',
+        name: '@pokjs/prompter-clack',
         version: '0.0.1',
         main: './dist/index.js',
         exports: { '.': './dist/index.js' },
@@ -200,8 +200,8 @@ module.exports.convertPathToPattern = fg.convertPathToPattern;
     );
 
     // Create the pok CLI bin script (CommonJS)
-    bundledFiles['node_modules/@openpok/core/bin/pok.js'] = `#!/usr/bin/env node
-const { runCli } = require('@openpok/core');
+    bundledFiles['node_modules/@pokjs/core/bin/pok.js'] = `#!/usr/bin/env node
+const { runCli } = require('@pokjs/core');
 runCli(process.argv.slice(2)).catch((err) => {
   console.error(err);
   process.exit(1);
@@ -211,7 +211,7 @@ runCli(process.argv.slice(2)).catch((err) => {
     // Create the .bin/pok script that makes \`pok\` available globally
     // In WebContainers, node_modules/.bin is automatically in PATH
     bundledFiles['node_modules/.bin/pok'] = `#!/usr/bin/env node
-const { runCli } = require('@openpok/core');
+const { runCli } = require('@pokjs/core');
 runCli(process.argv.slice(2)).catch((err) => {
   console.error(err);
   process.exit(1);

@@ -5,9 +5,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { EventBus, CLIEvent } from '@openpok/core';
-import type { EventDrivenState } from '@openpok/tabs-core';
-import { createInitialState, reducer } from '@openpok/tabs-core';
+import type { EventBus, CLIEvent } from '@pokjs/core';
+import type { EventDrivenState } from '@pokjs/tabs-core';
+import { createInitialState, reducer } from '@pokjs/tabs-core';
 
 /**
  * Hook to subscribe to EventBus and manage state

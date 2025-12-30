@@ -16,7 +16,7 @@ The dry run pattern provides:
 
 ```typescript
 import { z } from 'zod';
-import { defineCommand, dryRunContext, createDryRunReporter } from '@openpok/core';
+import { defineCommand, dryRunContext, createDryRunReporter } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Deploy to environment',
@@ -227,7 +227,7 @@ run: async (r, ctx) => {
 For type-safe context handling:
 
 ```typescript
-import { type WithDryRun } from '@openpok/core';
+import { type WithDryRun } from '@pokjs/core';
 
 type MyContext = {
   env: 'dev' | 'staging' | 'prod';

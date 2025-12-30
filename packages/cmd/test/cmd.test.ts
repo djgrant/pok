@@ -1,5 +1,5 @@
 /**
- * Integration tests for @openpok/cmd
+ * Integration tests for @pokjs/cmd
  *
  * Tests the global CLI launcher behavior.
  */
@@ -12,7 +12,7 @@ import * as os from 'os';
 
 const CMD_BIN = path.resolve(import.meta.dir, '../bin/pok.ts');
 
-describe('@openpok/cmd', () => {
+describe('@pokjs/cmd', () => {
   describe('when used in a project with commands', () => {
     let tempDir: string;
 
@@ -34,7 +34,7 @@ describe('@openpok/cmd', () => {
       fs.writeFileSync(
         path.join(tempDir, 'commands', 'hello.ts'),
         `
-import { defineCommand } from '@openpok/core';
+import { defineCommand } from '@pokjs/core';
 
 export const command = defineCommand({
   label: 'Say hello',
@@ -46,7 +46,7 @@ export const command = defineCommand({
       );
 
       // Link to the workspace packages by creating node_modules symlinks
-      const nodeModulesDir = path.join(tempDir, 'node_modules', '@openpok');
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokjs');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
@@ -92,7 +92,7 @@ export const command = defineCommand({
       );
 
       // Link core so it can be imported
-      const nodeModulesDir = path.join(tempDir, 'node_modules', '@openpok');
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokjs');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
       const packagesDir = path.resolve(import.meta.dir, '../..');

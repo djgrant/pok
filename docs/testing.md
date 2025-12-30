@@ -18,7 +18,7 @@ pok provides test utilities that allow you to:
 A non-interactive prompter for testing. Pre-configure responses instead of requiring user input.
 
 ```typescript
-import { createRawPrompter } from '@openpok/core';
+import { createRawPrompter } from '@pokjs/core';
 
 // Simple usage - uses sensible defaults
 const prompter = createRawPrompter();
@@ -68,7 +68,7 @@ createRawPrompter({
 A minimal reporter that captures events without terminal output.
 
 ```typescript
-import { createRawReporterAdapter } from '@openpok/core';
+import { createRawReporterAdapter } from '@pokjs/core';
 
 const events: CLIEvent[] = [];
 const reporterAdapter = createRawReporterAdapter({
@@ -106,7 +106,7 @@ controller.stop();
 
 ```typescript
 import { describe, it, expect } from 'bun:test';
-import { run, createRawReporterAdapter, createRawPrompter } from '@openpok/core';
+import { run, createRawReporterAdapter, createRawPrompter } from '@pokjs/core';
 
 describe('my-command', () => {
   it('runs successfully', async () => {
@@ -181,7 +181,7 @@ For testing commands that use environment variables, create mock resolvers.
 
 ```typescript
 import { z } from 'zod';
-import { defineEnvResolver } from '@openpok/core';
+import { defineEnvResolver } from '@pokjs/core';
 
 export const mockResolver = defineEnvResolver({
   requiredContext: z.object({
@@ -198,7 +198,7 @@ export const mockResolver = defineEnvResolver({
 ### Using Mock Environments in Tests
 
 ```typescript
-import { defineEnv } from '@openpok/core';
+import { defineEnv } from '@pokjs/core';
 import { mockResolver } from './mocks/resolver';
 
 // Create a mock environment
@@ -243,7 +243,7 @@ export const simpleResolver = defineEnvResolver({
 When comparing events across test runs, use normalization to handle dynamic IDs and timestamps.
 
 ```typescript
-import { normalizeEvents, filterEvents, eventTypes } from '@openpok/test-utils';
+import { normalizeEvents, filterEvents, eventTypes } from '@pokjs/test-utils';
 
 // Normalize removes dynamic values (ids, timestamps)
 const normalized = normalizeEvents(events);
@@ -264,7 +264,7 @@ Create a reusable helper for your test suite:
 
 ```typescript
 // test/utils/capture.ts
-import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '@openpok/core';
+import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '@pokjs/core';
 
 export async function captureEvents(args: string[], options: { selectResponses?: unknown[] } = {}) {
   const events: CLIEvent[] = [];

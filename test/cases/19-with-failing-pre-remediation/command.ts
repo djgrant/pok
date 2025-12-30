@@ -1,5 +1,5 @@
-import { defineCommand } from '@openpok/core';
-import { mocks } from '@openpok/test-utils';
+import { defineCommand } from '@pokjs/core';
+import { mocks } from '@pokjs/test-utils';
 
 const { alwaysPass, alwaysFailWithRemediation } = mocks;
 

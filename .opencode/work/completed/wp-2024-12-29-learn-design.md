@@ -286,13 +286,13 @@ async function printBox(filename: string, code: string, r: Runner) {
 ## The Actual Code
 
 ```typescript
-const { defineCommand } = require('@openpok/core');
+const { defineCommand } = require('@pokjs/core');
 const { writeFileSync, mkdirSync, existsSync } = require('fs');
 const { execSync } = require('child_process');
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-const HELLO_CODE = `const { defineCommand } = require('@openpok/core');
+const HELLO_CODE = `const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Say hello',
@@ -303,7 +303,7 @@ exports.command = defineCommand({
 `;
 
 const GREET_CODE = `const { z } = require('zod');
-const { defineCommand } = require('@openpok/core');
+const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Greet someone',
@@ -319,7 +319,7 @@ exports.command = defineCommand({
 });
 `;
 
-const DEV_CODE = `const { defineCommand } = require('@openpok/core');
+const DEV_CODE = `const { defineCommand } = require('@pokjs/core');
 
 exports.command = defineCommand({
   label: 'Development servers',

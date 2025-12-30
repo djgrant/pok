@@ -1,5 +1,5 @@
 import { Box, Text, useInput, useStdout } from 'ink';
-import type { TabProcess } from '@openpok/tabs-core';
+import type { TabProcess } from '@pokjs/tabs-core';
 import {
   useTabsState,
   useKeyboardCallbackRefs,
@@ -7,7 +7,7 @@ import {
   executeKeyboardAction,
   type NormalizedKeyEvent,
   type KeyboardCallbacks,
-} from '@openpok/tabs-core';
+} from '@pokjs/tabs-core';
 import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {

@@ -1,4 +1,4 @@
-import { defineTask } from '@openpok/core';
+import { defineTask } from '@pokjs/core';
 
 export const runSimple = defineTask({
   label: 'Simple run task',
