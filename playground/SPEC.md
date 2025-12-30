@@ -16,42 +16,125 @@ The entire tutorial is a single pok command (`pok learn`) running in a WebContai
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│ pok                          [↻ Reset]  │  ← Minimal header
-├─────────────────────────────────────────┤
-│                                         │
-│  $ pok learn                            │
-│                                         │
-│  Welcome to pok!                        │
-│                                         │
-│  What would you like to learn?          │
-│  ● Your first command                   │
-│  ○ Arguments and flags                  │
-│  ○ Tabs (multi-process)                 │
-│  ○ How was this made?                   │
-│  ○ Free exploration                     │
-│                                         │
-└─────────────────────────────────────────┘
++---------------------------------------------+
+| pok                          [Menu] [Reset] |  <- Header (40px)
++--------+------------------------------------+
+|        |  [pok learn] [shell] [file.ts]     |  <- Tab bar
+| FILES  |------------------------------------+
+|        |                                    |
+| > src/ |  $ pok learn                       |  <- Terminal/Content
+|   ...  |                                    |
+|        |  Welcome to pok!                   |
+|        |                                    |
++--------+------------------------------------+
+| Cmd+1-9 Switch | Cmd+B Sidebar | Cmd+K Clear |  <- Footer (desktop only)
++---------------------------------------------+
 ```
 
-### Components
+### Component Structure
 
-1. **Header** (40px)
-   - Left: "pok" wordmark in accent blue (#7aa2f7)
-   - Right: Reset button (reloads page)
+```
+playground/
++-- src/
+    +-- App.tsx                 # Main app, keyboard shortcuts, layout
+    +-- index.css               # All styles (~1000 lines)
+    +-- main.tsx                # Entry point
+    +-- components/
+    |   +-- FileTree.tsx        # Recursive file tree from WebContainer
+    |   +-- FileViewer.tsx      # Syntax-highlighted code viewer
+    |   +-- Icons.tsx           # SVG icon components
+    |   +-- LoadingScreen.tsx   # Boot loading state
+    |   +-- Sidebar.tsx         # Explorer panel (tabs + files)
+    |   +-- TabBar.tsx          # Horizontal tab bar
+    |   +-- TabContent.tsx      # Tab content wrapper (terminal/file)
+    |   +-- Terminal.tsx        # xterm.js wrapper, shell integration
+    |   +-- UnsupportedBrowser.tsx
+    +-- hooks/
+    |   +-- useBrowserSupport.ts  # WebContainer browser check
+    |   +-- useEventBus.ts        # Pub/sub for file events
+    |   +-- useWebContainer.ts    # WebContainer init + file mounting
+    |   +-- useWorkspace.ts       # Tab/sidebar state management
+    +-- reporter/
+        +-- reporter-web.ts       # Custom reporter for web environment
+```
 
-2. **Terminal** (fills remaining viewport)
-   - xterm.js terminal
-   - Connected to WebContainer shell
-   - Auto-runs `pok learn` on boot
+### State Management
 
-3. **Loading State**
-   - Simple spinner
-   - Status text: "Starting pok..." or "Installing..."
+#### useWorkspace
 
-4. **Error State**
-   - Error icon and message
-   - Retry button
+Manages the workspace UI state:
+
+```typescript
+type WorkspaceState = {
+  tabs: Tab[];              // Open tabs (terminals + files)
+  activeTabId: string;      // Currently active tab
+  splitTabId: string | null; // Split view secondary tab (desktop only)
+  sidebarCollapsed: boolean; // Sidebar visibility
+  expandedFolders: Set<string>; // Expanded folders in file tree
+};
+```
+
+Actions:
+- `setActiveTab(id)` - Switch to a tab
+- `setSplitTab(id | null)` - Toggle split view
+- `toggleSidebar()` - Show/hide sidebar
+- `openFileTab(path)` - Open file in new tab (or focus existing)
+- `closeTab(id)` - Close a closeable tab
+- `toggleFolder(path)` - Expand/collapse folder
+
+#### useEventBus
+
+Simple pub/sub for cross-component communication:
+
+```typescript
+type PlaygroundEvent =
+  | { type: 'file:created'; path: string }
+  | { type: 'file:updated'; path: string }
+  | { type: 'file:deleted'; path: string }
+  | { type: 'clipboard:copy'; content: string }
+  | { type: 'tab:open'; filePath: string }
+  | { type: 'tree:refresh' };
+```
+
+The Terminal component intercepts special OSC escape sequences from pok commands
+to emit file events, which the FileTree subscribes to for live updates.
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+1, Cmd+2, ... | Switch to tab N |
+| Cmd+B | Toggle sidebar |
+| Cmd+W | Close active tab (file tabs only) |
+| Cmd+K | Clear active terminal |
+| Cmd+\ | Toggle split view (desktop only) |
+
+Note: On Windows/Linux, use Ctrl instead of Cmd.
+
+## Responsive Behavior
+
+### Desktop (>=1024px)
+
+- Sidebar visible by default (200px width)
+- Tab bar above content
+- Split view available
+- Keyboard shortcuts shown in footer
+- Full header with subtitle
+
+### Mobile (<1024px)
+
+- Sidebar hidden by default
+- Hamburger menu button in header
+- Clicking hamburger slides sidebar in as overlay
+- Sidebar has backdrop that closes it when clicked
+- No split view on mobile (too narrow)
+- Footer hidden (shortcuts not shown)
+- Condensed header (no subtitle)
+
+### Very Small (<480px)
+
+- Sidebar takes most of screen width (100vw - 48px, max 280px)
+- Further condensed header elements
 
 ## Boot Sequence
 
@@ -73,94 +156,20 @@ Located at: `commands/learn.ts` (embedded in WebContainer filesystem)
 
 ```
 What would you like to learn?
-├── Your first command
-├── Arguments and flags  
-├── Tabs (multi-process)
-├── How was this made?
-└── Free exploration
++-- Your first command
++-- Arguments and flags  
++-- Tabs (multi-process)
++-- How was this made?
++-- Free exploration
 ```
 
-### Lesson: Your First Command
+### Lessons
 
-**Goal:** Create and run a simple pok command
-
-**Flow:**
-1. Explain that commands are TypeScript files in `commands/`
-2. Show the structure: `defineCommand({ label, run })`
-3. Offer to create `commands/hello.ts`
-4. If yes, write the file using `fs.writeFileSync`
-5. Prompt user to exit and run `pok hello`
-6. Celebrate success
-
-**Expected output:**
-```
-=== Your First Command ===
-
-Commands in pok are TypeScript files in the commands/ directory.
-Each command exports using defineCommand().
-
-Here's a simple command:
-
-  import { defineCommand } from '@openpok/core';
-
-  export const command = defineCommand({
-    label: 'Say hello',
-    run: async (r) => {
-      r.reporter.info('Hello, pok!');
-    },
-  });
-
-? Create this command? (commands/hello.ts)
-● Yes, create it
-○ No, skip
-
-✓ Created commands/hello.ts
-
-Now exit to the shell and run: pok hello
-
-? Ready to continue?
-```
-
-### Lesson: Arguments and Flags
-
-**Goal:** Add arguments to a command
-
-**Flow:**
-1. Build on lesson 1
-2. Explain the `args` property
-3. Show a `greet` command with `--name` and `--shout` args
-4. Offer to create `commands/greet.ts`
-5. Show usage: `pok greet --name=Alice --shout`
-
-### Lesson: Tabs (multi-process)
-
-**Goal:** Explain pok's tabs feature
-
-**Flow:**
-1. Explain what tabs are (multiple processes, switch between them)
-2. Show use cases (dev server + watcher, tests + linter)
-3. Show the API: `r.tabs([r.exec('...'), r.exec('...')])`
-4. Note: Cannot demo in browser (TUI requires real terminal)
-5. Point to local setup for trying it
-
-### Lesson: How was this made?
-
-**Goal:** Show the tutorial's own source code
-
-**Flow:**
-1. Explain this tutorial IS a pok command
-2. List what it uses: defineCommand, prompter, reporter, fs
-3. Read and display `commands/learn.ts` source
-4. Link to pok repo for more
-
-### Free Exploration
-
-**Goal:** Let users experiment
-
-**Flow:**
-1. Print helpful message
-2. Exit to shell prompt
-3. User can run `pok --help`, create commands, etc.
+1. **Your First Command** - Create and run a simple pok command
+2. **Arguments and Flags** - Add arguments to a command
+3. **Tabs** - Multi-process workflows
+4. **How was this made?** - View the tutorial's source code
+5. **Free Exploration** - Shell access for experimentation
 
 ## Technical Details
 
@@ -168,19 +177,15 @@ Now exit to the shell and run: pok hello
 
 ```
 /
-├── package.json
-├── pok.config.ts
-├── commands/
-│   └── learn.ts
-└── node_modules/  (pre-bundled)
-    ├── @openpok/core
-    ├── @openpok/prompter-clack
-    └── @openpok/reporter-clack
++-- package.json
++-- pok.config.ts
++-- commands/
+|   +-- learn.ts
++-- node_modules/  (pre-bundled)
+    +-- @openpok/core
+    +-- @openpok/prompter-clack
+    +-- @openpok/reporter-clack
 ```
-
-### Pre-bundled Packages
-
-To avoid slow npm install, packages are bundled at build time using a Vite plugin. The WebContainer mounts them directly.
 
 ### Terminal Configuration
 
@@ -194,12 +199,22 @@ To avoid slow npm install, packages are bundled at build time using a Vite plugi
 | Name | Hex | Usage |
 |------|-----|-------|
 | bg-primary | #1a1b26 | Terminal background |
-| bg-secondary | #24283b | Header background |
+| bg-secondary | #24283b | Header/sidebar background |
 | text-primary | #c0caf5 | Main text |
 | text-muted | #565f89 | Secondary text |
-| accent | #7aa2f7 | Branding, links |
+| accent | #7aa2f7 | Branding, links, active states |
 | success | #9ece6a | Success states |
 | error | #f7768e | Error states |
+| warning | #e0af68 | Warning states, folders |
+
+### Animation Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| duration-fast | 100ms | Hover states |
+| duration-normal | 200ms | Sidebar, tabs |
+| duration-slow | 300ms | Complex transitions |
+| ease-out | cubic-bezier(0.16, 1, 0.3, 1) | Smooth easing |
 
 ## User Flows
 
@@ -249,41 +264,10 @@ To avoid slow npm install, packages are bundled at build time using a Vite plugi
 | Terminal responsiveness | < 50ms input lag |
 | Memory usage | < 500MB |
 
-## Files
+## Accessibility
 
-```
-playground/
-├── src/
-│   ├── App.tsx              # Main app, renders header + terminal
-│   ├── index.css            # Minimal styles (~200 lines)
-│   ├── main.tsx             # Entry point
-│   ├── components/
-│   │   ├── Terminal.tsx     # xterm.js wrapper, auto-runs pok learn
-│   │   ├── LoadingScreen.tsx
-│   │   └── UnsupportedBrowser.tsx
-│   └── hooks/
-│       ├── useWebContainer.ts  # WebContainer init, mounts files
-│       └── useBrowserSupport.ts
-├── index.html
-├── vite.config.ts           # Includes pok-bundle plugin
-└── SPEC.md                  # This file
-```
-
-## What We Removed
-
-The previous implementation had:
-- Sidebar with lesson navigation
-- Lesson content panel with markdown rendering
-- "Run" buttons on code blocks
-- "Mark Complete" checkboxes
-- Progress tracking in localStorage
-- 700+ lines of CSS
-
-All removed. Terminal is the only UI now.
-
-## Future Considerations
-
-1. **Tabs demo in browser** - If xterm.js adds TUI support, enable live tabs demo
-2. **More lessons** - Tasks, checks, environments, composition
-3. **Shareable state** - URL params to jump to specific lessons
-4. **Analytics** - Track which lessons users complete (privacy-respecting)
+- All interactive elements have visible focus indicators
+- Keyboard shortcuts work with both Cmd (Mac) and Ctrl (Windows/Linux)
+- ARIA labels on buttons and interactive elements
+- Semantic HTML structure
+- Color contrast meets WCAG AA standards
