@@ -11,6 +11,7 @@
     { "path": "packages/op" },
     { "path": "packages/prompter-clack" },
     { "path": "packages/reporter-clack" },
+    { "path": "packages/reporter-web" },
     { "path": "packages/tabs-core" },
     { "path": "packages/tabs-ink" },
     { "path": "packages/tabs-opentui" },
