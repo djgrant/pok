@@ -79,6 +79,20 @@ function emitFileEvent(type, path) {
   console.log(`\x1b]pok:file:${type}:${path}\x07`);
 }
 
+/**
+ * Set the terminal title using OSC escape sequence.
+ * Format: \x1b]0;title\x07
+ * 
+ * Note: We use console.log instead of process.stdout.write because
+ * WebContainer captures console.log more reliably. The newline is
+ * stripped by the Terminal component's title extraction.
+ */
+function setTitle(title) {
+  // Use console.log to ensure the escape sequence reaches the terminal output stream
+  // The Terminal component will extract and strip this from the visible output
+  console.log(`\x1b]0;${title}\x07`);
+}
+
 // ============================================================================
 // Reporter Utilities (inlined for WebContainer)
 // ============================================================================
@@ -330,6 +344,9 @@ exports.command = defineCommand({
 exports.command = defineCommand({
   label: "Learn pok interactively",
   run: async (r) => {
+    // Set initial title
+    setTitle("pok learn");
+    
     // Ensure commands directory exists
     if (!existsSync("commands")) {
       mkdirSync("commands");
@@ -361,6 +378,7 @@ exports.command = defineCommand({
       console.log("");
 
       if (choice === "exit") {
+        setTitle("pok learn - Complete");
         stepIndicator(5, 5, "Explore freely");
         console.log("");
 
@@ -374,10 +392,14 @@ exports.command = defineCommand({
           "Edit files in the sidebar and watch them update. The shell tab is a full terminal."
         );
         console.log("");
-        break;
+        
+        // Exit the process so the Terminal component can detect completion
+        // and disable input. The shell tab remains available for exploration.
+        process.exit(0);
       }
 
       if (choice === "create") {
+        setTitle("pok learn - Commands");
         stepIndicator(1, 5, "Create your first command");
         console.log("");
 
@@ -423,6 +445,7 @@ exports.command = defineCommand({
       }
 
       if (choice === "args") {
+        setTitle("pok learn - Context");
         stepIndicator(2, 5, "Add flags and validation");
         console.log("");
 
@@ -465,6 +488,7 @@ exports.command = defineCommand({
       }
 
       if (choice === "tabs") {
+        setTitle("pok learn - Tabs");
         stepIndicator(3, 5, "Learn about tabs");
         console.log("");
 
@@ -489,6 +513,7 @@ exports.command = defineCommand({
       }
 
       if (choice === "tasks") {
+        setTitle("pok learn - Tasks");
         stepIndicator(4, 5, "Understand tasks");
         console.log("");
 
