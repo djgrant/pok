@@ -6,7 +6,8 @@ export type PlaygroundEvent =
   | { type: 'file:deleted'; path: string }
   | { type: 'clipboard:copy'; content: string }
   | { type: 'tab:open'; filePath: string }
-  | { type: 'tree:refresh' };
+  | { type: 'tree:refresh' }
+  | { type: 'terminal:run'; command: string };
 
 export type EventType = PlaygroundEvent['type'];
 

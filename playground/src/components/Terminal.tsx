@@ -134,6 +134,8 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
   const isCompletedRef = useRef(false);
   // Synchronous flag to prevent race conditions in StrictMode double-mount
   const processStartingRef = useRef(false);
+  // Store process writer for event bus commands
+  const processWriterRef = useRef<WritableStreamDefaultWriter<string> | null>(null);
 
   // Suppress unused variable warning - tabId is used for memoization identity
   void tabId;
@@ -289,6 +291,7 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
 
       // Get input writer
       processWriter = process.input.getWriter();
+      processWriterRef.current = processWriter;
 
       // Handle terminal input - but not if task is completed
       terminal.onData((data) => {
@@ -348,6 +351,19 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
     // The process will be cleaned up when the page unloads.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webContainer]);
+
+  // Listen for terminal:run events (only for non-task terminals)
+  useEffect(() => {
+    if (!eventBus || isTask) return;
+
+    const unsubscribe = eventBus.subscribe('terminal:run', (event) => {
+      if (event.type === 'terminal:run' && processWriterRef.current) {
+        processWriterRef.current.write(`${event.command}\n`);
+      }
+    });
+
+    return unsubscribe;
+  }, [eventBus, isTask]);
 
   return (
     <div
