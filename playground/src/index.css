@@ -179,11 +179,26 @@ body {
   outline-offset: 2px;
 }
 
-/* App Body - contains sidebar and content */
+/* App Body - contains sidebar, tutorial panel, and editor */
 .app-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 380px 1fr;
+  grid-template-rows: 1fr;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* Collapsed sidebar state */
+.app-body:has(.sidebar-collapsed) {
+  grid-template-columns: var(--sidebar-collapsed-width) 380px 1fr;
+}
+
+/* Editor area wrapper */
+.editor-area {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -845,6 +860,19 @@ body {
   color: var(--text-muted);
 }
 
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ============================================
    File Tree
    ============================================ */
@@ -899,6 +927,22 @@ body {
 .file-tree-item:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
+}
+
+/* File highlight animation for newly created files */
+.file-tree-item[data-highlighted="true"] {
+  animation: fileHighlight 1.5s ease-out;
+}
+
+@keyframes fileHighlight {
+  0% { 
+    background: var(--success-muted);
+    transform: scale(1.02);
+  }
+  100% { 
+    background: transparent;
+    transform: scale(1);
+  }
 }
 
 .file-tree-item-active {

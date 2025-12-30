@@ -30,6 +30,7 @@ export function FileTree({
   const [tree, setTree] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [highlightedFiles, setHighlightedFiles] = useState<Set<string>>(new Set());
 
   // Read directory recursively
   const readDirectory = useCallback(
@@ -113,6 +114,19 @@ export function FileTree({
       ) {
         loadTree();
       }
+      
+      // Highlight newly created files
+      if (event.type === 'file:created') {
+        setHighlightedFiles((prev) => new Set(prev).add(event.path));
+        // Remove highlight after animation completes
+        setTimeout(() => {
+          setHighlightedFiles((prev) => {
+            const next = new Set(prev);
+            next.delete(event.path);
+            return next;
+          });
+        }, 1500); // Match animation duration
+      }
     };
 
     const unsubRefresh = eventBus.subscribe('tree:refresh', handleEvent);
@@ -158,6 +172,7 @@ export function FileTree({
         expandedFolders={expandedFolders}
         onToggleFolder={onToggleFolder}
         onFileClick={onFileClick}
+        highlightedFiles={highlightedFiles}
       />
     </div>
   );
@@ -169,6 +184,7 @@ interface FileTreeNodesProps {
   expandedFolders: Set<string>;
   onToggleFolder: (path: string) => void;
   onFileClick: (filePath: string) => void;
+  highlightedFiles: Set<string>;
 }
 
 function FileTreeNodes({
@@ -177,6 +193,7 @@ function FileTreeNodes({
   expandedFolders,
   onToggleFolder,
   onFileClick,
+  highlightedFiles,
 }: FileTreeNodesProps) {
   return (
     <>
@@ -188,6 +205,7 @@ function FileTreeNodes({
           expandedFolders={expandedFolders}
           onToggleFolder={onToggleFolder}
           onFileClick={onFileClick}
+          highlightedFiles={highlightedFiles}
         />
       ))}
     </>
@@ -200,6 +218,7 @@ interface FileTreeItemProps {
   expandedFolders: Set<string>;
   onToggleFolder: (path: string) => void;
   onFileClick: (filePath: string) => void;
+  highlightedFiles: Set<string>;
 }
 
 function FileTreeItem({
@@ -208,8 +227,10 @@ function FileTreeItem({
   expandedFolders,
   onToggleFolder,
   onFileClick,
+  highlightedFiles,
 }: FileTreeItemProps) {
   const isExpanded = expandedFolders.has(node.path);
+  const isHighlighted = highlightedFiles.has(node.path);
   const indent = depth * 12;
 
   const handleClick = useCallback(() => {
@@ -234,6 +255,7 @@ function FileTreeItem({
         onClick={handleClick}
         style={{ paddingLeft: `${8 + indent}px` }}
         title={node.path}
+        data-highlighted={isHighlighted ? 'true' : undefined}
       >
         {node.isDirectory && (
           <span className="file-tree-chevron">{isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}</span>
@@ -248,6 +270,7 @@ function FileTreeItem({
           expandedFolders={expandedFolders}
           onToggleFolder={onToggleFolder}
           onFileClick={onFileClick}
+          highlightedFiles={highlightedFiles}
         />
       )}
     </>

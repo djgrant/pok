@@ -1,0 +1,59 @@
+{
+  "name": "@openpok/reporter-web",
+  "version": "0.0.1",
+  "description": "Web/React event reporter for pok CLI applications",
+  "keywords": [
+    "cli",
+    "command-line",
+    "typescript",
+    "bun",
+    "terminal",
+    "pok",
+    "openpok",
+    "reporter",
+    "react",
+    "web"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notation-dev/openpok.git",
+    "directory": "packages/reporter-web"
+  },
+  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "bugs": {
+    "url": "https://github.com/notation-dev/openpok/issues"
+  },
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^18.2.0",
+    "@openpok/test-utils": "workspace:*",
+    "@openpok/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@openpok/core": "workspace:*",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

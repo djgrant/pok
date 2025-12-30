@@ -1,0 +1,628 @@
+/**
+ * TutorialPanel.css - Styles for the tutorial panel component
+ *
+ * Uses CSS variables from playground/src/index.css for consistency.
+ * Provides tutorial-specific CSS variables for the headless components.
+ */
+
+/* ============================================
+   CSS Variable Bridge
+   Map playground variables to tutorial component variables
+   ============================================ */
+
+.tutorial-panel {
+  /* Tutorial component variables */
+  --tutorial-bg: var(--bg-secondary);
+  --tutorial-step-active: var(--accent-muted);
+  --tutorial-step-complete: var(--success-muted);
+  --tutorial-step-pending: var(--bg-elevated);
+  --tutorial-code-bg: var(--bg-primary);
+  --tutorial-action-bg: var(--accent);
+  --tutorial-action-hover: var(--accent-hover);
+  --tutorial-border: var(--border-color);
+  --tutorial-text: var(--text-primary);
+  --tutorial-text-muted: var(--text-muted);
+}
+
+/* ============================================
+   Panel Container
+   ============================================ */
+
+.tutorial-panel {
+  width: 380px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Panel Header
+   ============================================ */
+
+.tutorial-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.tutorial-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tutorial-panel-brand {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tutorial-panel-section {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   Progress Indicator Styles
+   ============================================ */
+
+.tutorial-panel .progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tutorial-panel .progress-indicator-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tutorial-panel .progress-indicator-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tutorial-panel .progress-indicator-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
+/* ============================================
+   Error Banner
+   ============================================ */
+
+.tutorial-panel-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--error-muted);
+  border-bottom: 1px solid var(--error);
+  flex-shrink: 0;
+}
+
+.tutorial-panel-error-message {
+  font-size: var(--text-sm);
+  color: var(--error);
+  flex: 1;
+}
+
+.tutorial-panel-error-dismiss {
+  font-size: var(--text-xs);
+  color: var(--error);
+  background: transparent;
+  border: 1px solid var(--error);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.tutorial-panel-error-dismiss:hover {
+  background: var(--error);
+  color: var(--bg-primary);
+}
+
+/* ============================================
+   Loading Overlay
+   ============================================ */
+
+.tutorial-panel-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-muted);
+  border-bottom: 1px solid var(--accent);
+  flex-shrink: 0;
+}
+
+.tutorial-panel-loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent-muted);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: tutorial-spinner 0.8s linear infinite;
+}
+
+@keyframes tutorial-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tutorial-panel-loading-text {
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+
+/* ============================================
+   Scrollable Content Area
+   ============================================ */
+
+.tutorial-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Custom scrollbar */
+.tutorial-panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tutorial-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tutorial-panel-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.tutorial-panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================
+   Tutorial Step Styles
+   ============================================ */
+
+.tutorial-panel-step {
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.tutorial-panel .tutorial-step {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  scroll-margin-top: 80px;
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.tutorial-panel .tutorial-step[data-status="active"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-muted);
+  animation: stepFadeIn var(--duration-slow) var(--ease-out);
+}
+
+.tutorial-panel .tutorial-step[data-status="complete"] {
+  opacity: 0.7;
+  border-color: var(--success);
+  animation: stepComplete var(--duration-slow) var(--ease-out);
+}
+
+/* Step completion animation */
+@keyframes stepComplete {
+  0% { 
+    transform: scale(1); 
+    opacity: 1; 
+  }
+  50% { 
+    transform: scale(1.01); 
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 0.7; 
+  }
+}
+
+/* Fade in new/active steps */
+@keyframes stepFadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.tutorial-panel .tutorial-step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tutorial-panel .tutorial-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border-radius: 50%;
+}
+
+.tutorial-panel .tutorial-step[data-status="active"] .tutorial-step-number {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+.tutorial-panel .tutorial-step[data-status="complete"] .tutorial-step-number {
+  background: var(--success);
+  color: var(--bg-primary);
+}
+
+.tutorial-panel .tutorial-step-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.tutorial-panel .tutorial-step[data-status="active"] .tutorial-step-title {
+  color: var(--text-primary);
+}
+
+.tutorial-panel .tutorial-step-content {
+  padding: var(--space-3);
+}
+
+/* ============================================
+   Content Box Styles
+   ============================================ */
+
+.tutorial-panel .content-box {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.tutorial-panel .content-box[data-variant="info"] {
+  color: var(--text-primary);
+}
+
+.tutorial-panel .content-box[data-variant="tip"] {
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-muted);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+}
+
+.tutorial-panel .content-box[data-variant="warning"] {
+  padding: var(--space-2) var(--space-3);
+  background: var(--error-muted);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--warning);
+}
+
+.tutorial-panel .content-box-title {
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.tutorial-panel .content-box-content {
+  white-space: pre-wrap;
+}
+
+/* ============================================
+   File Preview Styles
+   ============================================ */
+
+.tutorial-panel .file-preview {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tutorial-panel .file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tutorial-panel .file-preview-path {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.tutorial-panel .file-preview-language {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.tutorial-panel .file-preview-content {
+  background: var(--bg-primary);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tutorial-panel .file-preview-code {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.tutorial-panel .file-preview-code code {
+  display: block;
+}
+
+.tutorial-panel .file-preview-actions {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.tutorial-panel .file-preview-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--bg-primary);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.tutorial-panel .file-preview-action-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.tutorial-panel .file-preview-action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tutorial-panel .file-preview-action-button[data-status="created"] {
+  background: var(--success);
+}
+
+/* Loading spinner in action buttons */
+.tutorial-panel .file-preview-action-button[data-loading="true"] {
+  position: relative;
+  color: transparent;
+}
+
+.tutorial-panel .file-preview-action-button[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--bg-primary);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: buttonSpinner 0.6s linear infinite;
+}
+
+@keyframes buttonSpinner {
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* ============================================
+   Command Block Styles
+   ============================================ */
+
+.tutorial-panel .command-block {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tutorial-panel .command-block-command {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-primary);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-sm);
+}
+
+.tutorial-panel .command-block-prompt {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tutorial-panel .command-block-text {
+  color: var(--text-primary);
+}
+
+.tutorial-panel .command-block-output {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.tutorial-panel .command-block-output-line {
+  line-height: 1.5;
+}
+
+.tutorial-panel .command-block-actions {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.tutorial-panel .command-block-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--bg-primary);
+  background: var(--success);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+}
+
+.tutorial-panel .command-block-action-button:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.tutorial-panel .command-block-action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tutorial-panel .command-block-action-button[data-status="complete"] {
+  background: var(--text-muted);
+}
+
+/* Loading spinner in command buttons */
+.tutorial-panel .command-block-action-button[data-loading="true"] {
+  position: relative;
+  color: transparent;
+}
+
+.tutorial-panel .command-block-action-button[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--bg-primary);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: buttonSpinner 0.6s linear infinite;
+}
+
+/* ============================================
+   Choice Step Styles
+   ============================================ */
+
+.tutorial-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tutorial-choice-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) ease;
+  text-align: left;
+}
+
+.tutorial-choice-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.tutorial-choice-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.tutorial-choice-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tutorial-choice-description {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ============================================
+   Transition Timing Consistency
+   ============================================ */
+
+.tutorial-panel .file-preview,
+.tutorial-panel .command-block {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 1023px) {
+  .tutorial-panel {
+    width: 100%;
+    max-width: 380px;
+    position: fixed;
+    left: 0;
+    top: var(--header-height);
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-out);
+  }
+
+  .tutorial-panel.open {
+    transform: translateX(0);
+  }
+}

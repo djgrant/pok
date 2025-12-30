@@ -29,11 +29,10 @@ export type WorkspaceState = {
 
 const initialState: WorkspaceState = {
   tabs: [
-    { id: 'learn', type: 'terminal', label: 'pok learn', closeable: false, command: 'pok learn' },
     { id: 'shell', type: 'terminal', label: 'shell', closeable: false },
   ],
-  activeTabId: 'learn',
-  splitTabId: 'shell',
+  activeTabId: 'shell',
+  splitTabId: null,
   sidebarCollapsed: false,
   expandedFolders: new Set(),
 };

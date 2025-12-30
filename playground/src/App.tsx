@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TabBar } from './components/TabBar';
 import { TabContent } from './components/TabContent';
+import { TutorialPanel } from './components/TutorialPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { RefreshIcon, AlertIcon, MenuIcon } from './components/Icons';
@@ -9,7 +10,9 @@ import { useWebContainer } from './hooks/useWebContainer';
 import { useBrowserSupport } from './hooks/useBrowserSupport';
 import { useWorkspace } from './hooks/useWorkspace';
 import { useEventBus } from './hooks/useEventBus';
+import { useTutorialActions } from './hooks/useTutorialActions';
 import { TerminalHandle } from './components/Terminal';
+import './components/TutorialPanel.css';
 
 export function App() {
   const { isSupported, message } = useBrowserSupport();
@@ -38,6 +41,23 @@ export function App() {
       terminalHandle?.clear();
     }
   }, [workspace.tabs, workspace.activeTabId]);
+
+  // Switch to the shell terminal tab
+  const setActiveTerminal = useCallback(() => {
+    // Find the shell tab (the main terminal)
+    const shellTab = workspace.tabs.find((t) => t.id === 'shell');
+    if (shellTab) {
+      workspace.setActiveTab(shellTab.id);
+    }
+  }, [workspace]);
+
+  // Tutorial actions for WebContainer integration
+  const tutorialActions = useTutorialActions(
+    webContainer,
+    eventBus,
+    workspace.openFileTab,
+    setActiveTerminal
+  );
 
   // Toggle split view
   const toggleSplitView = useCallback(() => {
@@ -196,16 +216,10 @@ export function App() {
         )}
 
         <Sidebar
-          tabs={workspace.tabs}
-          activeTabId={workspace.activeTabId}
           collapsed={workspace.sidebarCollapsed}
           expandedFolders={workspace.expandedFolders}
           webcontainer={webContainer}
           eventBus={eventBus}
-          onTabClick={(id) => {
-            workspace.setActiveTab(id);
-            setMobileMenuOpen(false);
-          }}
           onToggle={workspace.toggleSidebar}
           onToggleFolder={workspace.toggleFolder}
           onFileClick={(filePath) => {
@@ -215,7 +229,18 @@ export function App() {
           mobileOpen={mobileMenuOpen}
         />
 
-        <div className="content-area">
+        <TutorialPanel
+          onCreateFile={tutorialActions.createFile}
+          onRunCommand={async (cmd) => {
+            await tutorialActions.runCommand(cmd);
+          }}
+          onOpenFile={tutorialActions.openFile}
+          isLoading={tutorialActions.isLoading}
+          error={tutorialActions.error}
+          onClearError={tutorialActions.clearError}
+        />
+
+        <div className="editor-area">
           <TabBar
             tabs={workspace.tabs}
             activeTabId={workspace.activeTabId}
