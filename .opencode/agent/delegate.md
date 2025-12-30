@@ -5,9 +5,6 @@ temperature: 0.8
 tools:
   write: false
   edit: false
-permission:
-  skill:
-    "spawn-subagent": "allow"
 ---
 
 ## Required Skills
