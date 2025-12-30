@@ -69,15 +69,6 @@ export function App() {
     (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
 
-      // Cmd+1-9 to switch tabs
-      if (isMod && e.key >= '1' && e.key <= '9') {
-        e.preventDefault();
-        const tabIndex = parseInt(e.key, 10) - 1;
-        if (tabIndex < workspace.tabs.length) {
-          workspace.setActiveTab(workspace.tabs[tabIndex].id);
-        }
-      }
-
       // Cmd+B to toggle sidebar
       if (isMod && e.key === 'b') {
         e.preventDefault();
@@ -232,25 +223,30 @@ export function App() {
             onTabClose={workspace.closeTab}
           />
 
-          <div className="content-main">
-            {workspace.tabs.map((tab) => (
-              <TabContent
-                key={tab.id}
-                tab={tab}
-                webContainer={webContainer}
-                isActive={tab.id === workspace.activeTabId}
-                eventBus={eventBus}
-                onTerminalRef={(handle) => registerTerminalRef(tab.id, handle)}
-              />
-            ))}
+          <div className={`content-main ${workspace.splitTabId ? 'content-main-split' : ''}`}>
+            {workspace.tabs.map((tab) => {
+              const isActive = tab.id === workspace.activeTabId;
+              const isSplit = tab.id === workspace.splitTabId;
+              const isVisible = isActive || isSplit;
+              
+              return (
+                <TabContent
+                  key={tab.id}
+                  tab={tab}
+                  webContainer={webContainer}
+                  isActive={isVisible}
+                  eventBus={eventBus}
+                  onTerminalRef={(handle) => registerTerminalRef(tab.id, handle)}
+                  onTitleChange={workspace.updateTabTitle}
+                  onTaskComplete={workspace.setTaskComplete}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
 
       <footer className="shortcuts-bar">
-        <span className="shortcut-hint">
-          <kbd>Cmd</kbd>+<kbd>1-9</kbd> Switch tabs
-        </span>
         <span className="shortcut-hint">
           <kbd>Cmd</kbd>+<kbd>B</kbd> Toggle sidebar
         </span>

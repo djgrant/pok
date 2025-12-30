@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo } from 'react';
 
 export type TabType = 'terminal' | 'file';
 
+export type TaskStatus = 'running' | 'completed' | 'failed';
+
 export type Tab = {
   id: string;
   type: TabType;
@@ -9,6 +11,12 @@ export type Tab = {
   closeable: boolean;
   command?: string; // for terminal tabs
   filePath?: string; // for file tabs
+  /** Dynamic title from terminal escape sequence */
+  dynamicTitle?: string;
+  /** Task status for terminal tabs with commands */
+  taskStatus?: TaskStatus;
+  /** Exit code when task completed */
+  exitCode?: number;
 };
 
 export type WorkspaceState = {
@@ -25,7 +33,7 @@ const initialState: WorkspaceState = {
     { id: 'shell', type: 'terminal', label: 'shell', closeable: false },
   ],
   activeTabId: 'learn',
-  splitTabId: null,
+  splitTabId: 'shell',
   sidebarCollapsed: false,
   expandedFolders: new Set(),
 };
@@ -37,6 +45,8 @@ export type WorkspaceActions = {
   openFileTab: (filePath: string) => void;
   closeTab: (id: string) => void;
   toggleFolder: (path: string) => void;
+  updateTabTitle: (id: string, title: string) => void;
+  setTaskComplete: (id: string, exitCode: number) => void;
 };
 
 export type UseWorkspaceResult = WorkspaceState & WorkspaceActions;
@@ -139,6 +149,26 @@ export function useWorkspace(): UseWorkspaceResult {
     });
   }, []);
 
+  const updateTabTitle = useCallback((id: string, title: string) => {
+    setState((prev) => ({
+      ...prev,
+      tabs: prev.tabs.map((tab) =>
+        tab.id === id ? { ...tab, dynamicTitle: title } : tab
+      ),
+    }));
+  }, []);
+
+  const setTaskComplete = useCallback((id: string, exitCode: number) => {
+    setState((prev) => ({
+      ...prev,
+      tabs: prev.tabs.map((tab) =>
+        tab.id === id
+          ? { ...tab, taskStatus: (exitCode === 0 ? 'completed' : 'failed') as TaskStatus, exitCode }
+          : tab
+      ),
+    }));
+  }, []);
+
   return useMemo(
     () => ({
       ...state,
@@ -148,7 +178,9 @@ export function useWorkspace(): UseWorkspaceResult {
       openFileTab,
       closeTab,
       toggleFolder,
+      updateTabTitle,
+      setTaskComplete,
     }),
-    [state, setActiveTab, setSplitTab, toggleSidebar, openFileTab, closeTab, toggleFolder]
+    [state, setActiveTab, setSplitTab, toggleSidebar, openFileTab, closeTab, toggleFolder, updateTabTitle, setTaskComplete]
   );
 }
