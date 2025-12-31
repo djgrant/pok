@@ -1,15 +1,6 @@
-/**
- * Publish command
- *
- * Publishes packages to npm.
- * Usage: pok publish [--dry-run]
- *
- * By default, publishes scoped @pokit/* packages together.
- * Use --unscoped-only to publish unscoped packages (pokit, create-pokit) independently.
- */
-
 import { z } from 'zod';
-import { defineCommand } from '@pokit/core';
+import { defineCommand, defineCheck } from '@pokit/core';
+import { $ } from 'bun';
 
 // Scoped @pokit/* packages - published together
 const SCOPED_PACKAGES = [
@@ -26,8 +17,20 @@ const SCOPED_PACKAGES = [
 // Unscoped packages - published independently
 const UNSCOPED_PACKAGES = ['pokit', 'create-pokit'];
 
+const npmLoggedIn = defineCheck({
+  label: 'npm login',
+  check: async () => {
+    const result = await $`npm whoami`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      throw new Error('Not logged in to npm');
+    }
+  },
+  remediation: ['Run: npm login'],
+});
+
 export const command = defineCommand({
   label: 'Publish packages to npm',
+  pre: [npmLoggedIn],
   context: {
     unscopedOnly: {
       from: 'flag',
@@ -42,16 +45,24 @@ export const command = defineCommand({
     },
   },
   run: async (r, ctx) => {
+    const packages = ctx.context.unscopedOnly ? UNSCOPED_PACKAGES : SCOPED_PACKAGES;
+    const filterArgs = packages.map((pkg) => `--filter "${pkg}"`).join(' ');
     const dryRunFlag = ctx.context.dryRun ? ' --dry-run' : '';
 
-    if (ctx.context.unscopedOnly) {
-      // Publish unscoped packages only
-      const filterArgs = UNSCOPED_PACKAGES.map((pkg) => `--filter "${pkg}"`).join(' ');
-      await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}`);
+    await r.group('Publish to npm', { layout: 'sequence' }, async (g) => {
+      await g.activity('Build packages', async () => {
+        await r.exec('pok build');
+      });
+
+      await g.activity(`Publish ${packages.length} packages`, async () => {
+        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}`);
+      });
+    });
+
+    if (ctx.context.dryRun) {
+      r.reporter.info('Dry run complete. No packages were published.');
     } else {
-      // Publish scoped @pokit/* packages
-      const filterArgs = SCOPED_PACKAGES.map((pkg) => `--filter "${pkg}"`).join(' ');
-      await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}`);
+      r.reporter.success(`Published ${packages.length} packages to npm`);
     }
   },
 });
