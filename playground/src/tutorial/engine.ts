@@ -18,6 +18,9 @@ import { stepId } from './types';
 /** Default delay before auto-progression to next step (in ms) */
 export const AUTO_PROGRESS_DELAY = 600;
 
+/** Longer delay for content-heavy steps like info/tip (in ms) */
+export const AUTO_PROGRESS_DELAY_LONG = 2500;
+
 /**
  * Create the initial state for a tutorial
  */
