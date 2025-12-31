@@ -12,7 +12,7 @@
 The fastest way to get started is with the scaffolding CLI:
 
 ```bash
-bun create @pokit/create my-cli
+bun create pokit my-cli
 cd my-cli
 bun install
 ```

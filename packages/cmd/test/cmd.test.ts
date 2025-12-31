@@ -1,5 +1,5 @@
 /**
- * Integration tests for @pokit/cmd
+ * Integration tests for pokit (global CLI launcher)
  *
  * Tests the global CLI launcher behavior.
  */
@@ -12,7 +12,7 @@ import * as os from 'os';
 
 const CMD_BIN = path.resolve(import.meta.dir, '../bin/pok.ts');
 
-describe('@pokit/cmd', () => {
+describe('pokit', () => {
   describe('when used in a project with commands', () => {
     let tempDir: string;
 

@@ -32,7 +32,7 @@ features:
 
 ```bash
 # Create a new project
-pnpm create @pokit/create my-cli
+pnpm create pokit my-cli
 
 # Or add to existing project
 pnpm add @pokit/core

@@ -1,11 +1,11 @@
-# @pokit/cmd
+# pokit
 
 Global CLI launcher for pok. Install once, run anywhere.
 
 ## Installation
 
 ```bash
-bun add -g @pokit/cmd
+bun add -g pokit
 ```
 
 ## Usage

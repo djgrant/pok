@@ -92,8 +92,8 @@ pok is built on a modular, event-driven architecture that separates concerns int
 ├── Process manager
 └── Framework-agnostic types
 
-@pokit/create               # Scaffolding
-└── bun create @pokit/create
+create-pokit                # Scaffolding
+└── bun create pokit
 ```
 
 ## Event-Driven Output

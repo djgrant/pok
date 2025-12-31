@@ -1,5 +1,5 @@
 {
-  "name": "@pokit/cmd",
+  "name": "pokit",
   "version": "0.0.1",
   "description": "Global CLI launcher for pok - install once, run anywhere",
   "type": "module",
@@ -34,6 +34,6 @@
   "keywords": [
     "cli",
     "pok",
-    "pokjs"
+    "pokit"
   ]
 }
