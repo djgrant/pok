@@ -396,7 +396,7 @@
 .tutorial-panel .file-preview-content {
   background: var(--bg-primary);
   max-height: 200px;
-  overflow-y: auto;
+  overflow: auto;
 }
 
 .tutorial-panel .file-preview-code {

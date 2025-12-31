@@ -5,7 +5,7 @@
  * the full interactive tutorial experience.
  */
 
-import { useRef, useEffect, type ReactNode } from 'react';
+import { useRef, useEffect, useCallback, type ReactNode } from 'react';
 import type { TutorialStep as TutorialStepType } from '../tutorial';
 import { useTutorialEngine } from '../hooks/useTutorialEngine';
 import type { StepStatus } from '../hooks/useTutorialEngine';
@@ -279,6 +279,14 @@ export function TutorialPanel({
     isStepCompleted,
   } = useTutorialEngine();
 
+  // Go to welcome section and show the choice menu (step 1)
+  const goToMenu = useCallback(() => {
+    goToSection('welcome');
+    // Advance past the info step (step 0) to the choice step (step 1)
+    // We need a small delay to ensure state has updated
+    setTimeout(() => nextStep(), 0);
+  }, [goToSection, nextStep]);
+
   // Check if current step is complete (for enabling Next button)
   const isCurrentStepComplete = isStepCompleted(currentSectionIndex, currentStepIndex);
   
@@ -520,7 +528,7 @@ export function TutorialPanel({
               </button>
               <button
                 className="tutorial-completion-button tutorial-completion-button-secondary"
-                onClick={() => goToSection('welcome')}
+                onClick={goToMenu}
               >
                 Back to Menu
               </button>
@@ -545,7 +553,7 @@ export function TutorialPanel({
               )}
               <button
                 className="tutorial-completion-button tutorial-completion-button-secondary"
-                onClick={() => goToSection('welcome')}
+                onClick={goToMenu}
               >
                 Back to Menu
               </button>
