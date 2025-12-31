@@ -93,28 +93,86 @@ body {
   flex-direction: column;
 }
 
-/* App Header */
+/* App Header - Unified 3-column layout */
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 380px 1fr;
   align-items: center;
-  justify-content: space-between;
   height: var(--header-height);
-  padding: 0 var(--space-3);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+}
+
+/* Collapsed sidebar state - adjust header grid */
+.app:has(.sidebar-collapsed) .app-header {
+  grid-template-columns: var(--sidebar-collapsed-width) 380px 1fr;
 }
 
 .app-header-left {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: 0 var(--space-3);
+  height: 100%;
+  border-right: 1px solid var(--border-color);
 }
 
 .app-header-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.app-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  height: 100%;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-elevated);
+}
+
+.app-header-tutorial {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.app-header-tutorial-brand {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.app-header-tutorial-section {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.app-header-right .tab-bar {
+  flex: 1;
+  border-bottom: none;
+  height: 100%;
+}
+
+.app-header-right .app-header-reset {
+  flex-shrink: 0;
+  margin-right: var(--space-3);
 }
 
 /* Mobile menu button - hidden on desktop */
@@ -179,6 +237,35 @@ body {
   outline-offset: 2px;
 }
 
+/* Progress indicator in header */
+.app-header-center .progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.app-header-center .progress-indicator-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.app-header-center .progress-indicator-bar {
+  width: 60px;
+  height: 4px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.app-header-center .progress-indicator-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
 /* App Body - contains sidebar, tutorial panel, and editor */
 .app-body {
   display: grid;
@@ -200,6 +287,11 @@ body {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Mobile-only tab bar in editor area - hidden on desktop */
+.editor-tab-bar-mobile {
+  display: none;
 }
 
 /* ============================================
@@ -1178,6 +1270,31 @@ a:focus {
     display: block;
   }
 
+  /* Switch header to flex layout on mobile */
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 var(--space-2);
+  }
+
+  .app-header-left {
+    border-right: none;
+  }
+
+  /* Hide tutorial info in header on mobile */
+  .app-header-center {
+    display: none;
+  }
+
+  /* Simplify right section on mobile */
+  .app-header-right {
+    gap: var(--space-2);
+  }
+
+  .app-header-right .tab-bar {
+    display: none;
+  }
+
   /* Sidebar becomes overlay on mobile */
   .sidebar {
     position: fixed;
@@ -1207,7 +1324,24 @@ a:focus {
 
   /* Make footer height 0 when hidden */
   .app-body {
+    display: flex;
+    flex-direction: column;
     height: calc(100% - var(--header-height));
+  }
+
+  /* Tutorial panel full width on mobile */
+  .tutorial-panel {
+    width: 100%;
+  }
+
+  /* Editor area takes remaining space */
+  .editor-area {
+    flex: 1;
+  }
+
+  /* Show mobile tab bar in editor area */
+  .editor-tab-bar-mobile {
+    display: block;
   }
 
   /* Adjust tab bar for mobile */
@@ -1219,11 +1353,6 @@ a:focus {
   .tab-bar-tab {
     padding: 0 var(--space-2);
     font-size: var(--text-xs);
-  }
-
-  /* Adjust header spacing */
-  .app-header {
-    padding: 0 var(--space-2);
   }
 
   .app-header-subtitle {
