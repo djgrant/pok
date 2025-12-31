@@ -1,11 +1,11 @@
-# @pokjs/core
+# @pokit/core
 
 The core pok framework. Zero TTY dependencies—all terminal features come from adapters.
 
 ## Installation
 
 ```bash
-bun add @pokjs/core zod
+bun add @pokit/core zod
 ```
 
 ## What's Included
@@ -13,7 +13,7 @@ bun add @pokjs/core zod
 ### Command System
 
 ```typescript
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 ```
 
 Define CLI commands with file-based routing, typed context, and pre-flight checks.
@@ -21,7 +21,7 @@ Define CLI commands with file-based routing, typed context, and pre-flight check
 ### Task System
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 ```
 
 Create reusable units of work with environment requirements.
@@ -29,7 +29,7 @@ Create reusable units of work with environment requirements.
 ### Environment System
 
 ```typescript
-import { defineEnv, defineEnvResolver, defineCompositeResolver } from '@pokjs/core';
+import { defineEnv, defineEnvResolver, defineCompositeResolver } from '@pokit/core';
 ```
 
 Type-safe secret management with context-aware resolution.
@@ -37,7 +37,7 @@ Type-safe secret management with context-aware resolution.
 ### Pre-flight Checks
 
 ```typescript
-import { defineCheck } from '@pokjs/core';
+import { defineCheck } from '@pokit/core';
 ```
 
 Validate preconditions before command execution.
@@ -45,7 +45,7 @@ Validate preconditions before command execution.
 ### Router
 
 ```typescript
-import { run, buildCommandTree } from '@pokjs/core';
+import { run, buildCommandTree } from '@pokit/core';
 ```
 
 File-based command discovery and routing.
@@ -53,7 +53,7 @@ File-based command discovery and routing.
 ### Runner
 
 ```typescript
-import { createRunner } from '@pokjs/core';
+import { createRunner } from '@pokit/core';
 ```
 
 Command execution engine with shell, parallel, and tabs support.
@@ -61,7 +61,7 @@ Command execution engine with shell, parallel, and tabs support.
 ### Event System
 
 ```typescript
-import { createEventBus, ScopedReporter, createRawReporterAdapter } from '@pokjs/core';
+import { createEventBus, ScopedReporter, createRawReporterAdapter } from '@pokit/core';
 ```
 
 Event-driven architecture for decoupled output.
@@ -69,7 +69,7 @@ Event-driven architecture for decoupled output.
 ### Shell Utilities
 
 ```typescript
-import { commandExists, getVersion, getNodeMajorVersion, getPackageManager } from '@pokjs/core';
+import { commandExists, getVersion, getNodeMajorVersion, getPackageManager } from '@pokit/core';
 ```
 
 Helpers for shell operations and environment checks.
@@ -77,7 +77,7 @@ Helpers for shell operations and environment checks.
 ### Raw Adapters (Testing)
 
 ```typescript
-import { createRawPrompter, createRawReporterAdapter } from '@pokjs/core';
+import { createRawPrompter, createRawReporterAdapter } from '@pokit/core';
 ```
 
 Test-friendly implementations with no TTY dependencies.
@@ -128,7 +128,7 @@ import type {
   // Tabs
   TabsAdapter,
   TabSpec,
-} from '@pokjs/core';
+} from '@pokit/core';
 ```
 
 ## Usage with Adapters
@@ -136,10 +136,10 @@ import type {
 The core package requires adapters for terminal features:
 
 ```typescript
-import { run } from '@pokjs/core';
-import { createPrompter } from '@pokjs/prompter-clack';
-import { createReporterAdapter } from '@pokjs/reporter-clack';
-import { createTabsAdapter } from '@pokjs/tabs-ink';
+import { run } from '@pokit/core';
+import { createPrompter } from '@pokit/prompter-clack';
+import { createReporterAdapter } from '@pokit/reporter-clack';
+import { createTabsAdapter } from '@pokit/tabs-ink';
 
 await run(process.argv.slice(2), {
   commandsDir: './commands',
@@ -154,11 +154,11 @@ await run(process.argv.slice(2), {
 
 | Package                   | Purpose             |
 | ------------------------- | ------------------- |
-| `@pokjs/prompter-clack` | Interactive prompts |
-| `@pokjs/reporter-clack` | Terminal output     |
-| `@pokjs/tabs-ink`       | Tabbed terminal UI  |
-| `@pokjs/tabs-core`      | Shared tabs logic   |
-| `@pokjs/create`         | Project scaffolding |
+| `@pokit/prompter-clack` | Interactive prompts |
+| `@pokit/reporter-clack` | Terminal output     |
+| `@pokit/tabs-ink`       | Tabbed terminal UI  |
+| `@pokit/tabs-core`      | Shared tabs logic   |
+| `@pokit/create`         | Project scaffolding |
 
 ## API Reference
 

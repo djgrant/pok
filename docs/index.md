@@ -32,10 +32,10 @@ features:
 
 ```bash
 # Create a new project
-pnpm create @pokjs/create my-cli
+pnpm create @pokit/create my-cli
 
 # Or add to existing project
-pnpm add @pokjs/core
+pnpm add @pokit/core
 ```
 
 ## Example Command
@@ -43,7 +43,7 @@ pnpm add @pokjs/core
 ```typescript
 // commands/deploy.ts
 import { z } from 'zod';
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Deploy to environment',

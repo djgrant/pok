@@ -1,5 +1,5 @@
 import { Box, Text } from 'ink';
-import { HELP_CONTENT } from '@pokjs/tabs-core';
+import { HELP_CONTENT } from '@pokit/tabs-core';
 
 export type HelpOverlayProps = {
   onClose: () => void;

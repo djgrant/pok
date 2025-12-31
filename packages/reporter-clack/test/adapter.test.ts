@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test';
-import { createEventBus, type CLIEvent } from '@pokjs/core';
+import { createEventBus, type CLIEvent } from '@pokit/core';
 import { createReporterAdapter } from '../src';
 import { createVirtualTerminal, type VirtualTerminal } from './utils';
 import * as fixtures from './fixtures';

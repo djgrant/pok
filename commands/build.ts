@@ -4,7 +4,7 @@
  * Builds all packages using TypeScript's project references
  */
 
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Build packages',

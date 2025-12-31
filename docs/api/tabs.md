@@ -30,12 +30,12 @@ type TabsOptions = {
 };
 ```
 
-## Using @pokjs/tabs-ink
+## Using @pokit/tabs-ink
 
 The recommended implementation uses [Ink](https://github.com/vadimdemedes/ink) (React for CLI):
 
 ```typescript
-import { createTabsAdapter } from '@pokjs/tabs-ink';
+import { createTabsAdapter } from '@pokit/tabs-ink';
 
 const tabsAdapter = createTabsAdapter();
 
@@ -174,7 +174,7 @@ This shows a "Loading Secrets" group before the tabbed UI.
 Implement your own adapter:
 
 ```typescript
-import type { TabsAdapter, TabSpec, TabsOptions } from '@pokjs/core';
+import type { TabsAdapter, TabSpec, TabsOptions } from '@pokit/core';
 
 const myAdapter: TabsAdapter = {
   async run(items: TabSpec[], options: TabsOptions) {
@@ -190,5 +190,5 @@ const myAdapter: TabsAdapter = {
 
 - [Runner](./runner.md) - Using `r.tabs()`
 - [defineTask](./define-task.md) - Tasks with shortLabel
-- [@pokjs/tabs-ink](../packages/tabs-ink.md) - Ink implementation
-- [@pokjs/tabs-core](../packages/tabs-core.md) - Shared logic
+- [@pokit/tabs-ink](../packages/tabs-ink.md) - Ink implementation
+- [@pokit/tabs-core](../packages/tabs-core.md) - Shared logic

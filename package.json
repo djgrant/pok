@@ -22,10 +22,11 @@
     "publish": "pok publish"
   },
   "devDependencies": {
-    "@pokjs/core": "workspace:*",
-    "@pokjs/prompter-clack": "workspace:*",
-    "@pokjs/reporter-clack": "workspace:*",
+    "@pokit/core": "workspace:*",
+    "@pokit/prompter-clack": "workspace:*",
+    "@pokit/reporter-clack": "workspace:*",
     "@types/bun": "latest",
+    "bumpp": "^10.3.2",
     "typescript": "^5.8.3",
     "zod": "^4.0.0"
   },

@@ -1,11 +1,11 @@
-# @pokjs/create
+# @pokit/create
 
 Project scaffolding CLI for pok.
 
 ## Usage
 
 ```bash
-bun create @pokjs/create my-project
+bun create @pokit/create my-project
 cd my-project
 bun install
 bun pok

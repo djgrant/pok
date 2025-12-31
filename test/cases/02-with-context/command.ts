@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Command with context',

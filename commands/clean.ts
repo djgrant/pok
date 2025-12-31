@@ -4,7 +4,7 @@
  * Removes build artifacts and cached files
  */
 
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Clean build artifacts',

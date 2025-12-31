@@ -5,8 +5,8 @@
  * Adapters consume events from the EventBus and render them to the terminal.
  *
  * Implementations:
- * - @pokjs/reporter-clack (Clack-based, sequential output)
- * - @pokjs/core-reporter-ink (Ink/React-based, for complex layouts like tabs)
+ * - @pokit/reporter-clack (Clack-based, sequential output)
+ * - @pokit/core-reporter-ink (Ink/React-based, for complex layouts like tabs)
  */
 
 import type { EventBus } from './bus';

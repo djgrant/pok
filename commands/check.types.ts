@@ -4,7 +4,7 @@
  * Runs TypeScript type checking across all packages without emitting files
  */
 
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Check TypeScript types',

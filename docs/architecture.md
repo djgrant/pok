@@ -4,7 +4,7 @@ pok is built on a modular, event-driven architecture that separates concerns int
 
 ## Design Principles
 
-1. **Core is UI-agnostic** - The `@pokjs/core` package has zero TTY dependencies
+1. **Core is UI-agnostic** - The `@pokit/core` package has zero TTY dependencies
 2. **Plugin-based adapters** - Consumers choose which terminal features they need
 3. **Event-driven architecture** - Commands emit events; adapters decide how to render
 4. **Type-safe** - Full TypeScript with inferred types throughout
@@ -58,14 +58,14 @@ pok is built on a modular, event-driven architecture that separates concerns int
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Reporter Adapter                             │
 │  Subscribes to events → renders terminal UI                      │
-│  (e.g., @pokjs/reporter-clack)                                │
+│  (e.g., @pokit/reporter-clack)                                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Package Architecture
 
 ```
-@pokjs/core                 # Zero TTY dependencies
+@pokit/core                 # Zero TTY dependencies
 ├── Command definitions
 ├── Task definitions
 ├── Environment/Resolver system
@@ -77,23 +77,23 @@ pok is built on a modular, event-driven architecture that separates concerns int
 ├── Reporter interface (abstract)
 └── Tabs interface (abstract)
 
-@pokjs/prompter-clack       # Interactive input
+@pokit/prompter-clack       # Interactive input
 └── Clack-based Prompter implementation
 
-@pokjs/reporter-clack       # Terminal output
+@pokit/reporter-clack       # Terminal output
 └── Clack-based Reporter adapter
 
-@pokjs/tabs-ink             # Tabbed UI
+@pokit/tabs-ink             # Tabbed UI
 ├── Ink (React) based tabs adapter
 └── Full-screen alternate buffer
 
-@pokjs/tabs-core            # Shared tabs logic
+@pokit/tabs-core            # Shared tabs logic
 ├── State management
 ├── Process manager
 └── Framework-agnostic types
 
-@pokjs/create               # Scaffolding
-└── bun create @pokjs/create
+@pokit/create               # Scaffolding
+└── bun create @pokit/create
 ```
 
 ## Event-Driven Output

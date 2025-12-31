@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/reporter-clack",
+  "name": "@pokit/reporter-clack",
   "version": "0.0.1",
   "description": "Clack-based event reporter for pok CLI applications",
   "keywords": [
@@ -50,11 +50,11 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@pokjs/test-utils": "workspace:*",
-    "@pokjs/core": "workspace:*"
+    "@pokit/test-utils": "workspace:*",
+    "@pokit/core": "workspace:*"
   },
   "peerDependencies": {
-    "@pokjs/core": "workspace:*"
+    "@pokit/core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

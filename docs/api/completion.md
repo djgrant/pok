@@ -156,7 +156,7 @@ context: {
 pok can detect your shell from the `$SHELL` environment variable:
 
 ```typescript
-import { detectShell } from '@pokjs/core';
+import { detectShell } from '@pokit/core';
 
 const shell = detectShell(); // 'bash' | 'zsh' | 'fish'
 ```
@@ -166,7 +166,7 @@ const shell = detectShell(); // 'bash' | 'zsh' | 'fish'
 You can generate completion scripts programmatically:
 
 ```typescript
-import { generateCompletionScript } from '@pokjs/core';
+import { generateCompletionScript } from '@pokit/core';
 
 const bashScript = generateCompletionScript('mycli', 'bash');
 const zshScript = generateCompletionScript('mycli', 'zsh');

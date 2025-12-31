@@ -2,14 +2,14 @@
  * Initialize/scaffold a new pok project
  *
  * This is the default command when running:
- *   bun create @pokjs/create my-project
+ *   bun create @pokit/create my-project
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'bun';
 import { z } from 'zod';
-import { defineCommand, type SelectOption } from '@pokjs/core';
+import { defineCommand, type SelectOption } from '@pokit/core';
 import {
   generatePackageJson,
   generateTsConfig,
@@ -30,7 +30,7 @@ const INSTALL_OPTIONS: SelectOption<'install' | 'skip'>[] = [
   {
     value: 'install',
     label: 'Yes, install globally',
-    hint: 'bun add -g @pokjs/cmd',
+    hint: 'bun add -g @pokit/cmd',
   },
   {
     value: 'skip',
@@ -74,7 +74,7 @@ export const command = defineCommand({
         selectedPlugins = await r.prompter.multiselect({
           message: 'Select plugins to install:',
           options: AVAILABLE_PLUGINS,
-          initialValues: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+          initialValues: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
           required: false,
         });
       } else {
@@ -97,7 +97,7 @@ export const command = defineCommand({
         selectedPlugins = await r.prompter.multiselect({
           message: 'Select plugins to install:',
           options: AVAILABLE_PLUGINS,
-          initialValues: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+          initialValues: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
           required: false,
         });
       } else {
@@ -170,8 +170,8 @@ export const command = defineCommand({
 
       if (installChoice === 'install') {
         await r.group('Installing global CLI', { layout: 'sequence' }, async (grp) => {
-          await grp.activity('Install @pokjs/cmd globally', async () => {
-            const proc = spawn(['bun', 'add', '-g', '@pokjs/cmd'], {
+          await grp.activity('Install @pokit/cmd globally', async () => {
+            const proc = spawn(['bun', 'add', '-g', '@pokit/cmd'], {
               stdio: ['inherit', 'pipe', 'pipe'],
             });
             const exitCode = await proc.exited;
@@ -195,7 +195,7 @@ export const command = defineCommand({
       r.reporter.step('  bun pok');
       r.reporter.info('');
       r.reporter.info('To install the global pok command later:');
-      r.reporter.step('  bun add -g @pokjs/cmd');
+      r.reporter.step('  bun add -g @pokit/cmd');
     }
   },
 });

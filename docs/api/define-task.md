@@ -5,7 +5,7 @@ Defines a reusable unit of work with environment requirements and parameters.
 ## Import
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 ```
 
 ## Signature
@@ -84,7 +84,7 @@ type TaskContext<TEnvs, TParams, TWriteEnvs, TContext> = {
 ### Simple Exec Task
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 export const build = defineTask({
   label: 'Build project',
@@ -96,7 +96,7 @@ export const build = defineTask({
 
 ```typescript
 import { z } from 'zod';
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 export const migrate = defineTask({
   label: 'Run migrations',
@@ -113,7 +113,7 @@ await r.run(migrate, { dryRun: true });
 ### Task with Environment
 
 ```typescript
-import { defineTask, defineEnv, defineEnvResolver } from '@pokjs/core';
+import { defineTask, defineEnv, defineEnvResolver } from '@pokit/core';
 import { z } from 'zod';
 
 // Define resolver
@@ -146,7 +146,7 @@ export const migrate = defineTask({
 ### Run Task with Custom Logic
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 export const setup = defineTask({
   label: 'Setup development',
@@ -164,7 +164,7 @@ export const setup = defineTask({
 ### Task with Retry
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 // Retry with exponential backoff
 export const flakyApiCall = defineTask({
@@ -201,7 +201,7 @@ await r.parallel([r.run(flakyApiCall), r.run(stableTask)], { mode: 'fail-fast' }
 ### Task with Return Value
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 import { z } from 'zod';
 
 export const getVersion = defineTask({

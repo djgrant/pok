@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/prompter-clack",
+  "name": "@pokit/prompter-clack",
   "version": "0.0.1",
   "description": "Clack-based prompter adapter for pok CLI applications",
   "keywords": [
@@ -51,7 +51,7 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "@pokjs/core": "workspace:*"
+    "@pokit/core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

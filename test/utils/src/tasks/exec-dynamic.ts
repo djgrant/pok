@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 export const execWithParams = defineTask({
   label: 'Exec task with params',

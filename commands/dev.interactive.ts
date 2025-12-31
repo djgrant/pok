@@ -4,7 +4,7 @@
  * Launches the interactive tutorial website
  */
 
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Interactive Tutorial',

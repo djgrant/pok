@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/op",
+  "name": "@pokit/op",
   "version": "0.0.1",
   "description": "Operation utilities for pok CLI applications",
   "keywords": [
@@ -44,7 +44,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@pokjs/core": "workspace:*"
+    "@pokit/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

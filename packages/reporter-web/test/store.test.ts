@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import type { CLIEvent } from '@pokjs/core';
+import type { CLIEvent } from '@pokit/core';
 import { createReporterStore, type ReporterStoreWithHandler } from '../src/store';
 
 describe('createReporterStore', () => {

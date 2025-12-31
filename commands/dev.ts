@@ -4,7 +4,7 @@
  * Opens a sub menu to select which site to run
  */
 
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Start dev servers',

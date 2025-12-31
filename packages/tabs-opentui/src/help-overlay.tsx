@@ -4,7 +4,7 @@
  * Displays keyboard shortcuts in a modal overlay.
  */
 
-import { HELP_CONTENT } from '@pokjs/tabs-core';
+import { HELP_CONTENT } from '@pokit/tabs-core';
 
 export type HelpOverlayProps = {
   onClose: () => void;

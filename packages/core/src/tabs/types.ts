@@ -4,7 +4,7 @@
  * Defines the contract for tabbed terminal UI implementations.
  * Used by r.tabs() to run multiple commands in a tabbed interface.
  *
- * Implementations: @pokjs/core-reporter-ink (provides both reporter and tabs)
+ * Implementations: @pokit/core-reporter-ink (provides both reporter and tabs)
  *
  * ## Overview
  *

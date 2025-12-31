@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { defineCommand } from '@pokjs/core';
-import { mocks } from '@pokjs/test-utils';
+import { defineCommand } from '@pokit/core';
+import { mocks } from '@pokit/test-utils';
 
 const { alwaysPass, secondCheck, conditionalCheck } = mocks;
 

@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/test-utils",
+  "name": "@pokit/test-utils",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -11,7 +11,7 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "@pokjs/core": "workspace:*",
+    "@pokit/core": "workspace:*",
     "zod": "^4.0.0"
   }
 }

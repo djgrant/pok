@@ -5,7 +5,7 @@
  * dynamic values like timestamps and auto-generated IDs.
  */
 
-import type { CLIEvent } from '@pokjs/core';
+import type { CLIEvent } from '@pokit/core';
 
 /**
  * Normalize events for snapshot stability.

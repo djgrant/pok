@@ -5,7 +5,7 @@
  * Also provides an event-driven adapter that renders based on EventBus events.
  */
 import { render, type RenderOptions } from 'ink';
-import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@pokjs/core';
+import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@pokit/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';
