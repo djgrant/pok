@@ -34,7 +34,7 @@ const initialState: WorkspaceState = {
   activeTabId: 'shell',
   splitTabId: null,
   sidebarCollapsed: false,
-  expandedFolders: new Set(),
+  expandedFolders: new Set(['commands']),
 };
 
 export type WorkspaceActions = {

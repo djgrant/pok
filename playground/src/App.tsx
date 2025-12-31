@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TabBar } from './components/TabBar';
 import { TabContent } from './components/TabContent';
-import { TutorialPanel } from './components/TutorialPanel';
+import { TutorialPanel, useTutorialHeaderInfo, ProgressIndicator } from './components/TutorialPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { RefreshIcon, AlertIcon, MenuIcon } from './components/Icons';
@@ -20,6 +20,7 @@ export function App() {
   const workspace = useWorkspace();
   const eventBus = useEventBus();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const tutorialHeader = useTutorialHeaderInfo();
 
   // Track terminal refs for clearing
   const terminalRefs = useRef<Map<string, TerminalHandle>>(new Map());
@@ -195,14 +196,35 @@ export function App() {
             <span className="app-header-subtitle">playground</span>
           </div>
         </div>
-        <button
-          className="app-header-reset"
-          onClick={() => window.location.reload()}
-          aria-label="Reset playground"
-        >
-          <RefreshIcon size={14} />
-          Reset
-        </button>
+
+        <div className="app-header-center">
+          <div className="app-header-tutorial">
+            <span className="app-header-tutorial-brand">pok learn</span>
+            <span className="app-header-tutorial-section">{tutorialHeader.sectionTitle}</span>
+          </div>
+          <ProgressIndicator
+            current={tutorialHeader.progress.completed}
+            total={tutorialHeader.progress.total}
+            label={`${tutorialHeader.progress.percentage}%`}
+          />
+        </div>
+
+        <div className="app-header-right">
+          <TabBar
+            tabs={workspace.tabs}
+            activeTabId={workspace.activeTabId}
+            onTabClick={workspace.setActiveTab}
+            onTabClose={workspace.closeTab}
+          />
+          <button
+            className="app-header-reset"
+            onClick={() => window.location.reload()}
+            aria-label="Reset playground"
+          >
+            <RefreshIcon size={14} />
+            Reset
+          </button>
+        </div>
       </header>
 
       <div className="app-body">
@@ -238,15 +260,19 @@ export function App() {
           isLoading={tutorialActions.isLoading}
           error={tutorialActions.error}
           onClearError={tutorialActions.clearError}
+          externalHeader
         />
 
         <div className="editor-area">
-          <TabBar
-            tabs={workspace.tabs}
-            activeTabId={workspace.activeTabId}
-            onTabClick={workspace.setActiveTab}
-            onTabClose={workspace.closeTab}
-          />
+          {/* Mobile-only tab bar (hidden on desktop via CSS) */}
+          <div className="editor-tab-bar-mobile">
+            <TabBar
+              tabs={workspace.tabs}
+              activeTabId={workspace.activeTabId}
+              onTabClick={workspace.setActiveTab}
+              onTabClose={workspace.closeTab}
+            />
+          </div>
 
           <div className={`content-main ${workspace.splitTabId ? 'content-main-split' : ''}`}>
             {workspace.tabs.map((tab) => {

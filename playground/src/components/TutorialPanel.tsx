@@ -218,11 +218,35 @@ export type TutorialPanelProps = {
   error?: string | null;
   /** Callback to clear error */
   onClearError?: () => void;
+  /** Whether to render header externally (header info passed via renderHeader) */
+  externalHeader?: boolean;
+};
+
+/** Tutorial header info for external rendering */
+export type TutorialHeaderInfo = {
+  sectionTitle: string;
+  progress: {
+    completed: number;
+    total: number;
+    percentage: number;
+  };
 };
 
 // Track file creation status
 type FileStatus = 'pending' | 'creating' | 'created';
 type CommandStatus = 'idle' | 'running' | 'complete' | 'failed';
+
+/** Hook to get tutorial header info for external rendering */
+export function useTutorialHeaderInfo(): TutorialHeaderInfo {
+  const { currentSection, progress } = useTutorialEngine();
+  return {
+    sectionTitle: currentSection.title,
+    progress,
+  };
+}
+
+/** Reusable progress indicator for header */
+export { ProgressIndicator };
 
 export function TutorialPanel({
   onCreateFile,
@@ -231,6 +255,7 @@ export function TutorialPanel({
   isLoading = false,
   error = null,
   onClearError,
+  externalHeader = false,
 }: TutorialPanelProps) {
   const {
     currentSection,
@@ -410,18 +435,20 @@ export function TutorialPanel({
   };
 
   return (
-    <div className="tutorial-panel">
-      <div className="tutorial-panel-header">
-        <div className="tutorial-panel-title">
-          <span className="tutorial-panel-brand">pok learn</span>
-          <span className="tutorial-panel-section">{currentSection.title}</span>
+    <div className={`tutorial-panel ${externalHeader ? 'tutorial-panel-no-header' : ''}`}>
+      {!externalHeader && (
+        <div className="tutorial-panel-header">
+          <div className="tutorial-panel-title">
+            <span className="tutorial-panel-brand">pok learn</span>
+            <span className="tutorial-panel-section">{currentSection.title}</span>
+          </div>
+          <ProgressIndicator
+            current={progress.completed}
+            total={progress.total}
+            label={`${progress.percentage}% complete`}
+          />
         </div>
-        <ProgressIndicator
-          current={progress.completed}
-          total={progress.total}
-          label={`${progress.percentage}% complete`}
-        />
-      </div>
+      )}
 
       {/* Error banner */}
       {error && (

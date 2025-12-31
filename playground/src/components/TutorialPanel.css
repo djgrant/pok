@@ -38,6 +38,24 @@
   flex-shrink: 0;
 }
 
+/* When header is rendered externally, add top border to align with sidebar header */
+.tutorial-panel-no-header {
+  /* Add a header-like area that aligns with sidebar header (36px) */
+  padding-top: var(--tab-bar-height);
+  position: relative;
+}
+
+.tutorial-panel-no-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--tab-bar-height);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-color);
+}
+
 /* ============================================
    Panel Header
    ============================================ */

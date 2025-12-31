@@ -1,0 +1,100 @@
+# Playground UI Fixes
+
+## Problem
+
+The playground has four issues that need to be addressed:
+
+### 1. Layout - Header Space Utilization
+The app header ("pok playground") has unused space on the right side. The tutorial panel title ("pok learn Create your first command") and the shell tabs should be pushed up into this header row to create a unified header bar.
+
+Currently:
+- Row 1: "pok playground" header with empty space
+- Row 2: "pok learn..." title in tutorial panel | "shell" tab in editor area
+
+Should be:
+- Row 1: "pok playground" | "pok learn..." | "shell" tab (all in one header row)
+
+The tutorial section's bottom border should align exactly with the border below "EXPLORER" in the sidebar.
+
+### 2. Commands Folder Expanded by Default
+The `commands/` folder in the file explorer should be expanded by default when the playground loads. Currently it starts collapsed.
+
+### 3. Tutorial Steps Revealed Prematurely
+When the user selects an option in the tutorial choice step, ALL following steps are immediately displayed. Steps should only be revealed one at a time as each previous step is completed.
+
+The issue is that the TutorialPanel renders ALL steps in the section, showing them regardless of whether prior steps are complete. It should only render steps up to and including the current active step.
+
+### 4. Tutorial Doesn't Progress After Command Runs
+When the user clicks "Run" on the `pok hello` command block, the tutorial does not automatically progress to the next step after the command completes. The `completeStepAndProgress()` function is called but something prevents advancement.
+
+## Scope
+
+- `playground/src/App.tsx`
+- `playground/src/index.css`
+- `playground/src/components/TutorialPanel.tsx`
+- `playground/src/components/TutorialPanel.css`
+- `playground/src/components/TabBar.tsx` (may need to move into header)
+- `playground/src/hooks/useWorkspace.ts`
+- `playground/src/hooks/useTutorialEngine.ts`
+
+## Approach
+
+Split into two phases:
+
+### Phase 1: Layout Fixes
+1. Restructure header using CSS Grid to place tutorial title and tab bar in the same row as the app header
+2. Align tutorial section's bottom border with the "EXPLORER" border in the sidebar
+3. Set commands folder to be expanded by default
+
+### Phase 2: Tutorial Logic Fixes
+1. Filter rendered steps to only show completed steps and the current active step
+2. Debug and fix the command completion progression issue
+
+## Hypothesis
+
+1. The header can be restructured using CSS Grid to place tutorial title and tab bar in the same row as the app header
+2. Setting `expandedFolders: new Set(['commands'])` in initial state will expand commands folder by default
+3. Filtering rendered steps to only show `stepIndex <= currentStepIndex` will fix premature reveal
+4. The command completion may not be triggering properly because the async flow doesn't wait for terminal output or there's a state update timing issue
+
+## Results
+
+### Phase 1: Layout Fixes - Completed
+
+**Files Modified:**
+1. `playground/src/hooks/useWorkspace.ts` - Changed `expandedFolders: new Set()` to `new Set(['commands'])` to expand commands folder by default
+2. `playground/src/App.tsx` - Restructured header layout with 3 sections:
+   - Left: "pok playground" wordmark (aligned with sidebar)
+   - Center: Tutorial title + progress (aligned with tutorial panel)
+   - Right: TabBar + Reset button (aligned with editor area)
+3. `playground/src/index.css` - Updated CSS with:
+   - 3-column grid layout for `.app-header` matching `.app-body` columns
+   - New styles for `.app-header-center`, `.app-header-right`
+   - Progress indicator styles for header context
+   - Responsive adjustments for mobile (hiding center section, showing tab bar in editor)
+4. `playground/src/components/TutorialPanel.tsx` - Added:
+   - `externalHeader` prop to conditionally hide internal header
+   - `useTutorialHeaderInfo()` hook to share header data
+   - Exported `ProgressIndicator` component for reuse
+5. `playground/src/components/TutorialPanel.css` - Added `.tutorial-panel-no-header` class that creates a 36px pseudo-element header to align with sidebar header
+
+**Changes Summary:**
+- Header now uses CSS Grid with 3 columns matching sidebar/tutorial/editor widths
+- Tutorial title and progress moved from TutorialPanel internal header to app header center
+- TabBar moved from editor area to app header right section
+- Tutorial panel has a blank header row (36px) to align borders with sidebar "EXPLORER" header
+- Commands folder is now expanded by default
+- Mobile layout adjusted to hide center section and show tab bar in editor area
+
+**Build Status:** TypeScript compilation and Vite build both succeed
+
+## Evaluation
+
+Phase 1 hypothesis confirmed:
+1. CSS Grid with matching column widths creates aligned header sections
+2. `expandedFolders: new Set(['commands'])` correctly expands commands folder on load
+3. Border alignment achieved via pseudo-element matching `--tab-bar-height` (36px)
+
+**Remaining for Phase 2:**
+- Tutorial steps premature reveal (issues #3)
+- Tutorial command completion progression (issue #4)
