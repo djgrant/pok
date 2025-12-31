@@ -770,6 +770,49 @@
 }
 
 /* ============================================
+   Section Complete State
+   ============================================ */
+
+.tutorial-section-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  animation: completionFadeIn var(--duration-slow) var(--ease-out);
+}
+
+.tutorial-section-complete-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  animation: celebrateBounce 0.6s ease-out;
+}
+
+.tutorial-section-complete-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.tutorial-section-complete-message {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4) 0;
+  max-width: 280px;
+}
+
+.tutorial-section-complete-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 200px;
+}
+
+/* ============================================
    Responsive Adjustments
    ============================================ */
 

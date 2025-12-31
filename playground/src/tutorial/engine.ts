@@ -15,12 +15,6 @@ import type {
 } from './types';
 import { stepId } from './types';
 
-/** Default delay before auto-progression to next step (in ms) */
-export const AUTO_PROGRESS_DELAY = 600;
-
-/** Longer delay for content-heavy steps like info/tip (in ms) */
-export const AUTO_PROGRESS_DELAY_LONG = 2500;
-
 /**
  * Create the initial state for a tutorial
  */
@@ -84,6 +78,12 @@ export type TutorialEngine = {
 
   /** Check if we're at the last step of the last section */
   isAtEnd: () => boolean;
+
+  /** Check if we're at the last step of the current section */
+  isAtSectionEnd: () => boolean;
+
+  /** Move to the next section (first step of next section) */
+  nextSection: () => boolean;
 
   /** Reset the tutorial to the beginning */
   reset: () => void;
@@ -163,7 +163,7 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
     nextStep: () => {
       const section = tutorial.sections[state.currentSectionIndex];
 
-      // Try to move within current section
+      // Try to move within current section only
       if (state.currentStepIndex < section.steps.length - 1) {
         setState({
           currentStepIndex: state.currentStepIndex + 1,
@@ -172,7 +172,12 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
         return true;
       }
 
-      // Try to move to next section
+      // At end of section - do NOT auto-advance to next section
+      return false;
+    },
+
+    nextSection: () => {
+      // Move to next section if available
       if (state.currentSectionIndex < tutorial.sections.length - 1) {
         setState({
           currentSectionIndex: state.currentSectionIndex + 1,
@@ -182,7 +187,7 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
         return true;
       }
 
-      // Already at end
+      // Already at last section
       return false;
     },
 
@@ -275,6 +280,11 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
       );
     },
 
+    isAtSectionEnd: () => {
+      const section = tutorial.sections[state.currentSectionIndex];
+      return state.currentStepIndex === section.steps.length - 1;
+    },
+
     reset: () => {
       state = createInitialState();
       notify();
@@ -287,21 +297,4 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
   };
 
   return engine;
-}
-
-/**
- * Helper to auto-progress after completing a step
- * Returns a cleanup function to cancel the timeout
- */
-export function scheduleAutoProgress(
-  engine: TutorialEngine,
-  delay: number = AUTO_PROGRESS_DELAY
-): () => void {
-  const timeoutId = setTimeout(() => {
-    if (engine.canProgress()) {
-      engine.nextStep();
-    }
-  }, delay);
-
-  return () => clearTimeout(timeoutId);
 }
