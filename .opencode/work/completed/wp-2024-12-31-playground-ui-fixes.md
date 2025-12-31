@@ -95,6 +95,52 @@ Phase 1 hypothesis confirmed:
 2. `expandedFolders: new Set(['commands'])` correctly expands commands folder on load
 3. Border alignment achieved via pseudo-element matching `--tab-bar-height` (36px)
 
+Phase 2 hypothesis partially confirmed:
+3. Filtering steps to `stepIndex <= currentStepIndex` fixes premature reveal - **confirmed**
+4. The progression issue was NOT a state timing issue but rather a fundamental design gap - non-interactive steps (info, tip, warning, code-display) were never being completed, causing `currentStepIndex` to remain at 0 while action steps at higher indices were visible. The fix required auto-completing non-interactive steps when they become active.
+
+**All four issues addressed:**
+- [x] Header space utilization (Phase 1)
+- [x] Commands folder expanded by default (Phase 1)
+- [x] Tutorial steps revealed prematurely (Phase 2)
+- [x] Tutorial doesn't progress after command runs (Phase 2)
+
 **Remaining for Phase 2:**
 - Tutorial steps premature reveal (issues #3)
 - Tutorial command completion progression (issue #4)
+
+### Phase 2: Tutorial Logic Fixes - Completed
+
+**Root Cause Analysis:**
+
+The two issues were related:
+
+1. **Premature step reveal**: `TutorialPanel.tsx` rendered ALL steps in a section with `.map()`, regardless of whether prior steps were completed. The step status was calculated but not used to filter which steps to show.
+
+2. **Tutorial not progressing**: This was caused by non-interactive steps (info, tip, warning, code-display) never being completed. The tutorial flow is:
+   - User selects "Create your first command" choice
+   - `goToSection('create')` sets `currentStepIndex: 0`
+   - Step 0 is an `info` step with no action button
+   - Step 1 is a `file-create` step with a "Create" button
+   - Due to the premature reveal bug, step 1 was visible
+   - User clicks "Create" on step 1
+   - `handleCreateFile` checks `stepIndex === currentStepIndex` → `1 === 0` is FALSE
+   - `completeStepAndProgress()` was never called because the indices didn't match
+   - The same pattern affected `command-run` steps
+
+**Files Modified:**
+
+1. `playground/src/components/TutorialPanel.tsx` (lines 478-497):
+   - Changed `.map()` to `.filter().map()`
+   - Filter: `stepIndex <= currentStepIndex` ensures only completed and current steps are rendered
+   - Pending steps (stepIndex > currentStepIndex) are not rendered at all
+
+2. `playground/src/hooks/useTutorialEngine.ts` (new useEffect after line 87):
+   - Added auto-completion for non-interactive steps
+   - When current step is `info`, `tip`, `warning`, or `code-display`:
+     - After 100ms delay (to allow rendering), mark step as complete
+     - After `AUTO_PROGRESS_DELAY` (600ms), call `nextStep()` if `canProgress()` returns true
+   - This ensures the tutorial automatically advances through informational steps
+   - Only `file-create`, `command-run`, and `choice` steps require user action
+
+**Build Status:** TypeScript compilation and Vite build both succeed
