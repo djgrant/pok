@@ -158,7 +158,7 @@ await run(process.argv.slice(2), {
 | `@pokit/reporter-clack` | Terminal output     |
 | `@pokit/tabs-ink`       | Tabbed terminal UI  |
 | `@pokit/tabs-core`      | Shared tabs logic   |
-| `@pokit/create`         | Project scaffolding |
+| `create-pokit`          | Project scaffolding |
 
 ## API Reference
 

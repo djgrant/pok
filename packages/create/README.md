@@ -1,14 +1,16 @@
-# @pokit/create
+# create-pokit
 
 Project scaffolding CLI for pok.
 
 ## Usage
 
 ```bash
-bun create @pokit/create my-project
+bun create pokit my-project
+# or
+npx create-pokit my-project
+
 cd my-project
-bun install
-bun pok
+pok
 ```
 
 ## What's Created

@@ -1,5 +1,5 @@
 /**
- * End-to-end integration tests for @pokit/create
+ * End-to-end integration tests for create-pokit
  *
  * These tests verify that scaffolded projects work correctly by:
  * 1. Manually scaffolding projects (simulating what init.ts does)
@@ -97,7 +97,7 @@ function cleanupDir(dir: string): void {
   }
 }
 
-describe('@pokit/create end-to-end', () => {
+describe('create-pokit end-to-end', () => {
   // Ensure test directory exists before each test and cleanup after all
   beforeAll(() => {
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
@@ -231,7 +231,7 @@ describe('@pokit/create end-to-end', () => {
   });
 });
 
-describe('@pokit/create workspace integration', () => {
+describe('create-pokit workspace integration', () => {
   beforeAll(() => {
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
   });

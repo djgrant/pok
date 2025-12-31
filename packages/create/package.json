@@ -1,5 +1,5 @@
 {
-  "name": "@pokit/create",
+  "name": "create-pokit",
   "version": "0.0.1",
   "description": "Scaffold a new pok project",
   "type": "module",
@@ -14,7 +14,7 @@
     "url": "https://github.com/notation-dev/openpok/issues"
   },
   "bin": {
-    "create-openpok": "./bin/create.ts"
+    "create-pokit": "./bin/create.ts"
   },
   "files": [
     "bin",
@@ -43,6 +43,6 @@
     "create",
     "scaffold",
     "pok",
-    "pokjs"
+    "pokit"
   ]
 }

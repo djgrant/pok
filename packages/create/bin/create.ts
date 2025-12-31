@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 /**
- * @pokit/create - Scaffold a new pok project
+ * create-pokit - Scaffold a new pok project
  *
  * Usage:
- *   bun create @pokit/create my-project
- *   bunx @pokit/create my-project
+ *   bun create pokit my-project
+ *   npx create-pokit my-project
+ *   bunx create-pokit my-project
  *
  * This is a pok app itself, using @pokit/core for the CLI framework.
  */
@@ -19,7 +20,7 @@ const commandsDir = path.join(packageRoot, 'commands');
 runCli(process.argv.slice(2), {
   projectRoot: packageRoot,
   commandsDir,
-  appName: 'create-openpok',
+  appName: 'create-pokit',
 }).catch((err) => {
   console.error(err);
   process.exit(1);

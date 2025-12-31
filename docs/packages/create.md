@@ -1,17 +1,17 @@
-# @pokit/create
+# create-pokit
 
 Project scaffolding CLI for pok projects.
 
 ## Usage
 
 ```bash
-bun create @pokit/create my-project
+bun create pokit my-project
 ```
 
 Or with a specific directory:
 
 ```bash
-bun create @pokit/create ./path/to/project
+bun create pokit ./path/to/project
 ```
 
 ## What It Creates
@@ -85,7 +85,7 @@ bun pok hello  # Runs hello command
 ## Programmatic Usage
 
 ```typescript
-import { generatePackageJson, generateTsConfig, generateExampleCommand } from '@pokit/create';
+import { generatePackageJson, generateTsConfig, generateExampleCommand } from 'create-pokit';
 
 const pkg = generatePackageJson({
   name: 'my-cli',

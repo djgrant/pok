@@ -2,7 +2,7 @@
  * Initialize/scaffold a new pok project
  *
  * This is the default command when running:
- *   bun create @pokit/create my-project
+ *   bun create pokit my-project
  */
 
 import * as fs from 'fs';
@@ -30,7 +30,7 @@ const INSTALL_OPTIONS: SelectOption<'install' | 'skip'>[] = [
   {
     value: 'install',
     label: 'Yes, install globally',
-    hint: 'bun add -g @pokit/cmd',
+    hint: 'bun add -g pokit',
   },
   {
     value: 'skip',
@@ -170,8 +170,8 @@ export const command = defineCommand({
 
       if (installChoice === 'install') {
         await r.group('Installing global CLI', { layout: 'sequence' }, async (grp) => {
-          await grp.activity('Install @pokit/cmd globally', async () => {
-            const proc = spawn(['bun', 'add', '-g', '@pokit/cmd'], {
+          await grp.activity('Install pokit globally', async () => {
+            const proc = spawn(['bun', 'add', '-g', 'pokit'], {
               stdio: ['inherit', 'pipe', 'pipe'],
             });
             const exitCode = await proc.exited;
@@ -195,7 +195,7 @@ export const command = defineCommand({
       r.reporter.step('  bun pok');
       r.reporter.info('');
       r.reporter.info('To install the global pok command later:');
-      r.reporter.step('  bun add -g @pokit/cmd');
+      r.reporter.step('  bun add -g pokit');
     }
   },
 });

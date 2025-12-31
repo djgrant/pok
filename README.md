@@ -87,7 +87,7 @@ await r.run(migrate);
 
 ```bash
 # Create a new project
-bun create @pokit/create my-cli
+bun create pokit my-cli
 
 # Or add to existing project
 bun add @pokit/core zod
@@ -95,11 +95,11 @@ bun add @pokit/core zod
 
 ## Packages
 
-| Package                   | Description                                                  |
-| ------------------------- | ------------------------------------------------------------ |
+| Package                 | Description                                                  |
+| ----------------------- | ------------------------------------------------------------ |
 | `@pokit/core`           | Core framework—command routing, task execution, event system |
-| `@pokit/cmd`            | Global CLI launcher—install once, run anywhere               |
-| `@pokit/create`         | Project scaffolding CLI                                      |
+| `pokit`                 | Global CLI launcher—install once, run anywhere               |
+| `create-pokit`          | Project scaffolding CLI                                      |
 | `@pokit/op`             | Operation utilities for common CLI patterns                  |
 | `@pokit/prompter-clack` | Interactive prompts adapter (Clack)                          |
 | `@pokit/reporter-clack` | Terminal output adapter (Clack)                              |

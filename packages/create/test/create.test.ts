@@ -1,5 +1,5 @@
 /**
- * Integration tests for @pokit/create
+ * Integration tests for create-pokit
  *
  * Tests the project scaffolding functionality.
  * Note: These tests verify file generation but skip dependency installation
@@ -21,7 +21,7 @@ import {
   AVAILABLE_PLUGINS,
 } from '../src/templates';
 
-describe('@pokit/create templates', () => {
+describe('create-pokit templates', () => {
   describe('generatePackageJson', () => {
     it('generates valid package.json with project name', () => {
       const config = {
@@ -118,7 +118,7 @@ describe('@pokit/create templates', () => {
   });
 });
 
-describe('@pokit/create init command', () => {
+describe('create-pokit init command', () => {
   let tempDir: string;
 
   beforeAll(() => {
@@ -177,7 +177,7 @@ describe('@pokit/create init command', () => {
   });
 });
 
-describe('@pokit/create template presets', () => {
+describe('create-pokit template presets', () => {
   describe('TEMPLATES constant', () => {
     it('has all four template types', () => {
       expect(TEMPLATES).toHaveLength(4);

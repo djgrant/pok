@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 /**
- * @pokit/cmd - Global CLI launcher for pok
+ * pokit - Global CLI launcher for pok
  *
  * This is a thin wrapper that:
  * 1. Tries to import @pokit/core from the current project
  * 2. Calls runCli() to handle the actual CLI logic
  * 3. Shows helpful error messages if requirements are not met
  *
- * Install globally with: bun add -g @pokit/cmd
+ * Install globally with: bun add -g pokit
  * Then run `pok` from any project with @pokit/core installed.
  */
 
