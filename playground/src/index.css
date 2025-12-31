@@ -170,6 +170,10 @@ body {
   height: 100%;
 }
 
+.app-header-right .tab-bar .tab-bar-tab-active {
+  margin-bottom: 0;
+}
+
 .app-header-right .app-header-reset {
   flex-shrink: 0;
   margin-right: var(--space-3);

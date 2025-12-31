@@ -54,6 +54,7 @@
   height: var(--tab-bar-height);
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 /* ============================================

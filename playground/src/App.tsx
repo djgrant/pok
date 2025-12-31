@@ -200,7 +200,9 @@ export function App() {
         <div className="app-header-center">
           <div className="app-header-tutorial">
             <span className="app-header-tutorial-brand">pok learn</span>
-            <span className="app-header-tutorial-section">{tutorialHeader.sectionTitle}</span>
+            {tutorialHeader.sectionTitle && tutorialHeader.sectionTitle !== 'Welcome to pok' && (
+              <span className="app-header-tutorial-section">{tutorialHeader.sectionTitle}</span>
+            )}
           </div>
           <ProgressIndicator
             current={tutorialHeader.progress.completed}

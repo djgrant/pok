@@ -81,7 +81,7 @@ const welcomeSection: TutorialSection = {
   id: 'welcome',
   title: 'Welcome to pok',
   stepNumber: 0,
-  totalSteps: 5,
+  totalSteps: 4,
   steps: [
     {
       type: 'info',
@@ -95,7 +95,6 @@ const welcomeSection: TutorialSection = {
       options: [
         { value: 'create', label: 'Create your first command' },
         { value: 'args', label: 'Add flags and validation' },
-        { value: 'tabs', label: 'Learn about tabs' },
         { value: 'tasks', label: 'Understand tasks' },
         { value: 'exit', label: 'Explore on your own' },
       ],
@@ -107,7 +106,7 @@ const createCommandSection: TutorialSection = {
   id: 'create',
   title: 'Create your first command',
   stepNumber: 1,
-  totalSteps: 5,
+  totalSteps: 4,
   steps: [
     {
       type: 'info',
@@ -138,7 +137,7 @@ const flagsValidationSection: TutorialSection = {
   id: 'args',
   title: 'Add flags and validation',
   stepNumber: 2,
-  totalSteps: 5,
+  totalSteps: 4,
   steps: [
     {
       type: 'info',
@@ -165,41 +164,11 @@ const flagsValidationSection: TutorialSection = {
   ],
 };
 
-const tabsSection: TutorialSection = {
-  id: 'tabs',
-  title: 'Learn about tabs',
-  stepNumber: 3,
-  totalSteps: 5,
-  steps: [
-    {
-      type: 'info',
-      title: 'Tabs',
-      content:
-        'Tabs let you run multiple processes side by side. Perfect for dev servers, watchers, or any concurrent workflows.',
-    },
-    {
-      type: 'code-display',
-      filename: 'commands/dev.ts',
-      code: DEV_CODE,
-      description: 'Example tabs command',
-    },
-    {
-      type: 'warning',
-      content:
-        "Tabs require a real terminal with PTY support. They won't work in this browser-based playground, but they're powerful in a real environment!",
-    },
-    {
-      type: 'tip',
-      content: "In a real terminal, use arrow keys to switch tabs and 'q' to quit.",
-    },
-  ],
-};
-
 const tasksSection: TutorialSection = {
   id: 'tasks',
   title: 'Understand tasks',
-  stepNumber: 4,
-  totalSteps: 5,
+  stepNumber: 3,
+  totalSteps: 4,
   steps: [
     {
       type: 'info',
@@ -223,8 +192,8 @@ const tasksSection: TutorialSection = {
 const exitSection: TutorialSection = {
   id: 'exit',
   title: 'Explore freely',
-  stepNumber: 5,
-  totalSteps: 5,
+  stepNumber: 4,
+  totalSteps: 4,
   steps: [
     {
       type: 'info',
@@ -234,7 +203,7 @@ const exitSection: TutorialSection = {
     },
     {
       type: 'tip',
-      content: 'Edit files in the sidebar and watch them update. The shell tab is a full terminal.',
+      content: 'Create new files using the tutorial or explore commands in the shell.',
     },
   ],
 };
@@ -251,7 +220,6 @@ export const pokTutorial: Tutorial = {
     welcomeSection,
     createCommandSection,
     flagsValidationSection,
-    tabsSection,
     tasksSection,
     exitSection,
   ],
