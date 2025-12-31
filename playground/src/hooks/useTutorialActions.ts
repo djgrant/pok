@@ -39,7 +39,7 @@ export function useTutorialActions(
    * - Ensures parent directories exist
    * - Writes the file content
    * - Emits file:created event for tree refresh
-   * - Opens the file in the editor
+   * - Does NOT auto-open the file (let user click in explorer to view)
    */
   const createFile = useCallback(
     async (path: string, content: string): Promise<void> => {
@@ -70,8 +70,8 @@ export function useTutorialActions(
         // Emit event for file tree refresh
         eventBus.emit({ type: 'file:created', path });
 
-        // Open the file in the editor
-        openFileTab(path);
+        // Note: We intentionally don't auto-open the file here.
+        // The tutorial instructs users to click the file in the explorer to view it.
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setError(`Failed to create file: ${message}`);
@@ -80,7 +80,7 @@ export function useTutorialActions(
         setIsLoading(false);
       }
     },
-    [webContainer, eventBus, openFileTab]
+    [webContainer, eventBus]
   );
 
   /**

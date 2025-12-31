@@ -251,7 +251,8 @@ export { ProgressIndicator };
 export function TutorialPanel({
   onCreateFile,
   onRunCommand,
-  onOpenFile,
+  // onOpenFile is available but not used - users click files in explorer to view them
+  onOpenFile: _onOpenFile,
   isLoading = false,
   error = null,
   onClearError,
@@ -267,7 +268,19 @@ export function TutorialPanel({
     selectChoice,
     goToSection,
     selectedChoice,
+    isAtStart,
+    isAtEnd,
+    previousStep,
+    nextStep,
+    reset,
+    isStepCompleted,
   } = useTutorialEngine();
+
+  // Check if current step is complete (for enabling Next button)
+  const isCurrentStepComplete = isStepCompleted(currentSectionIndex, currentStepIndex);
+  
+  // Tutorial is complete when we're at the end AND the last step is complete
+  const isTutorialComplete = isAtEnd && isCurrentStepComplete;
 
   // Ref for auto-scroll
   const activeStepRef = useRef<HTMLDivElement>(null);
@@ -308,6 +321,7 @@ export function TutorialPanel({
   };
 
   // Handle file creation action
+  // Note: We don't auto-open the file - the tutorial instructs users to click in the explorer
   const handleCreateFile = async (path: string, content: string, stepIndex: number) => {
     if (onCreateFile) {
       await onCreateFile(path, content);
@@ -315,10 +329,6 @@ export function TutorialPanel({
     // Mark step as complete
     if (stepIndex === currentStepIndex) {
       completeStepAndProgress();
-    }
-    // Open the file
-    if (onOpenFile) {
-      onOpenFile(path);
     }
   };
 
@@ -475,31 +485,79 @@ export function TutorialPanel({
       )}
 
       <div className="tutorial-panel-content">
-        {currentSection.steps
-          .filter((_, stepIndex) => stepIndex <= currentStepIndex)
-          .map((step, filteredIndex) => {
-            // filteredIndex matches stepIndex since we filter from start
-            const stepIndex = filteredIndex;
-            const status = getStepStatus(currentSectionIndex, stepIndex);
-            const isActive = status === 'active';
-
-            return (
-              <div
-                key={stepIndex}
-                ref={isActive ? activeStepRef : null}
-                className="tutorial-panel-step"
+        {/* Completion state */}
+        {isTutorialComplete ? (
+          <div className="tutorial-completion">
+            <div className="tutorial-completion-icon">🎉</div>
+            <h2 className="tutorial-completion-title">Tutorial Complete!</h2>
+            <p className="tutorial-completion-message">
+              You've learned the basics of pok: creating commands, adding flags with validation, and working with tasks.
+            </p>
+            <div className="tutorial-completion-actions">
+              <button
+                className="tutorial-completion-button tutorial-completion-button-primary"
+                onClick={() => reset()}
               >
-                <TutorialStep
-                  number={stepIndex + 1}
-                  title={getStepTitle(step)}
-                  status={toTutorialStepStatus(status)}
+                Start Over
+              </button>
+              <button
+                className="tutorial-completion-button tutorial-completion-button-secondary"
+                onClick={() => goToSection('welcome')}
+              >
+                Back to Menu
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Step list */
+          currentSection.steps
+            .filter((_, stepIndex) => stepIndex <= currentStepIndex)
+            .map((step, filteredIndex) => {
+              // filteredIndex matches stepIndex since we filter from start
+              const stepIndex = filteredIndex;
+              const status = getStepStatus(currentSectionIndex, stepIndex);
+              const isActive = status === 'active';
+
+              return (
+                <div
+                  key={stepIndex}
+                  ref={isActive ? activeStepRef : null}
+                  className="tutorial-panel-step"
                 >
-                  {renderStepContent(step, stepIndex, status)}
-                </TutorialStep>
-              </div>
-            );
-          })}
+                  <TutorialStep
+                    number={stepIndex + 1}
+                    title={getStepTitle(step)}
+                    status={toTutorialStepStatus(status)}
+                  >
+                    {renderStepContent(step, stepIndex, status)}
+                  </TutorialStep>
+                </div>
+              );
+            })
+        )}
       </div>
+
+      {/* Navigation buttons - only show when not complete */}
+      {!isTutorialComplete && (
+        <div className="tutorial-panel-nav">
+          <button
+            className="tutorial-nav-button tutorial-nav-button-back"
+            onClick={() => previousStep()}
+            disabled={isAtStart}
+            aria-label="Go to previous step"
+          >
+            ← Back
+          </button>
+          <button
+            className="tutorial-nav-button tutorial-nav-button-next"
+            onClick={() => nextStep()}
+            disabled={!isCurrentStepComplete}
+            aria-label="Go to next step"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

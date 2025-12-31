@@ -89,3 +89,33 @@ All changes type-check successfully.
 Phase 1 hypothesis confirmed:
 1. **Progress bar fix** - The original implementation counted ALL steps (20+) but only completed steps in the current section (2-4). New implementation correctly tracks per-section progress.
 2. **Border alignment** - Added explicit box-sizing and removed conflicting margin on header tabs.
+
+### Phase 2 Complete
+
+**1. Increased auto-progress delay for info/tip steps** (`playground/src/tutorial/engine.ts`, `playground/src/hooks/useTutorialEngine.ts`)
+- Added `AUTO_PROGRESS_DELAY_LONG = 2500` constant for content-heavy steps
+- Updated auto-progress logic to use longer delay (2.5s) for `info` and `tip` steps
+- Regular steps still use `AUTO_PROGRESS_DELAY = 600` for quick transitions
+
+**2. Don't auto-focus file tab after creation** (`playground/src/hooks/useTutorialActions.ts`, `playground/src/components/TutorialPanel.tsx`)
+- Removed `openFileTab(path)` call from `createFile` function
+- Removed dependency on `openFileTab` in `createFile` useCallback
+- Removed `onOpenFile(path)` call from `handleCreateFile` in TutorialPanel
+- Users now click files in the explorer to view them, matching the tutorial instruction
+
+**3. Added navigation buttons to tutorial panel** (`playground/src/components/TutorialPanel.tsx`, `playground/src/components/TutorialPanel.css`)
+- Added "← Back" and "Next →" buttons at bottom of tutorial panel
+- Back button: disabled on first step, calls `previousStep()`
+- Next button: only enabled when current step is complete, calls `nextStep()`
+- Navigation buttons hidden when tutorial is complete
+- Styled consistently with tutorial theme using CSS variables
+
+**4. Added completion state with CTA** (`playground/src/components/TutorialPanel.tsx`, `playground/src/components/TutorialPanel.css`)
+- Shows completion UI when `isAtEnd && isCurrentStepComplete`
+- Includes party emoji icon with bounce animation
+- "Tutorial Complete!" title and summary message
+- "Start Over" button that calls `reset()`
+- "Back to Menu" button that goes to welcome section via `goToSection('welcome')`
+- Fade-in animation for smooth appearance
+
+All changes type-check successfully.

@@ -39,4 +39,5 @@ export {
   createInitialState,
   scheduleAutoProgress,
   AUTO_PROGRESS_DELAY,
+  AUTO_PROGRESS_DELAY_LONG,
 } from './engine';

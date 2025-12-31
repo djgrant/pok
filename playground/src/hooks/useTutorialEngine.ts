@@ -17,6 +17,7 @@ import {
   createTutorialEngine,
   pokTutorial,
   AUTO_PROGRESS_DELAY,
+  AUTO_PROGRESS_DELAY_LONG,
   stepId,
 } from '../tutorial';
 
@@ -96,16 +97,21 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       currentStep.type === 'warning' ||
       currentStep.type === 'code-display';
 
+    // Use longer delay for content-heavy steps that users need to read
+    const isContentHeavy = currentStep.type === 'info' || currentStep.type === 'tip';
+    const progressDelay = isContentHeavy ? AUTO_PROGRESS_DELAY_LONG : AUTO_PROGRESS_DELAY;
+
     if (isNonInteractiveStep && !engine.isCurrentStepCompleted()) {
       // Complete and progress after a short delay to allow rendering
       const timeoutId = setTimeout(() => {
         engine.completeStep();
         // Schedule progression after the step is marked complete
+        // Use longer delay for info/tip steps so users can read the content
         setTimeout(() => {
           if (engine.canProgress()) {
             engine.nextStep();
           }
-        }, AUTO_PROGRESS_DELAY);
+        }, progressDelay);
       }, 100);
 
       return () => clearTimeout(timeoutId);
