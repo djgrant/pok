@@ -184,6 +184,7 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       engine,
       state.currentSectionIndex,
       state.currentStepIndex,
+      state.completedSteps,
       state.selectedChoice,
       getStepStatus,
       completeStepAndProgress,
