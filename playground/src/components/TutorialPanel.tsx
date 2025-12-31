@@ -475,26 +475,30 @@ export function TutorialPanel({
       )}
 
       <div className="tutorial-panel-content">
-        {currentSection.steps.map((step, stepIndex) => {
-          const status = getStepStatus(currentSectionIndex, stepIndex);
-          const isActive = status === 'active';
+        {currentSection.steps
+          .filter((_, stepIndex) => stepIndex <= currentStepIndex)
+          .map((step, filteredIndex) => {
+            // filteredIndex matches stepIndex since we filter from start
+            const stepIndex = filteredIndex;
+            const status = getStepStatus(currentSectionIndex, stepIndex);
+            const isActive = status === 'active';
 
-          return (
-            <div
-              key={stepIndex}
-              ref={isActive ? activeStepRef : null}
-              className="tutorial-panel-step"
-            >
-              <TutorialStep
-                number={stepIndex + 1}
-                title={getStepTitle(step)}
-                status={toTutorialStepStatus(status)}
+            return (
+              <div
+                key={stepIndex}
+                ref={isActive ? activeStepRef : null}
+                className="tutorial-panel-step"
               >
-                {renderStepContent(step, stepIndex, status)}
-              </TutorialStep>
-            </div>
-          );
-        })}
+                <TutorialStep
+                  number={stepIndex + 1}
+                  title={getStepTitle(step)}
+                  status={toTutorialStepStatus(status)}
+                >
+                  {renderStepContent(step, stepIndex, status)}
+                </TutorialStep>
+              </div>
+            );
+          })}
       </div>
     </div>
   );
