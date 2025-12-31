@@ -11,7 +11,7 @@ import type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
-} from '@pokjs/core';
+} from '@pokit/core';
 
 /**
  * Create a Prompter using @clack/prompts

@@ -11,7 +11,7 @@ import type { Tutorial, TutorialSection } from './types';
 // Code Templates
 // ============================================================================
 
-export const HELLO_CODE = `const { defineCommand } = require('@pokjs/core');
+export const HELLO_CODE = `const { defineCommand } = require('@pokit/core');
 
 exports.command = defineCommand({
   label: 'Say hello',
@@ -22,7 +22,7 @@ exports.command = defineCommand({
 `;
 
 export const GREET_CODE = `const { z } = require('zod');
-const { defineCommand } = require('@pokjs/core');
+const { defineCommand } = require('@pokit/core');
 
 exports.command = defineCommand({
   label: 'Greet someone',
@@ -38,7 +38,7 @@ exports.command = defineCommand({
 });
 `;
 
-export const DEV_CODE = `const { defineCommand } = require('@pokjs/core');
+export const DEV_CODE = `const { defineCommand } = require('@pokit/core');
 
 exports.command = defineCommand({
   label: 'Development servers',
@@ -52,7 +52,7 @@ exports.command = defineCommand({
 });
 `;
 
-export const TASK_CODE = `const { defineCommand, defineTask } = require('@pokjs/core');
+export const TASK_CODE = `const { defineCommand, defineTask } = require('@pokit/core');
 
 // Define a reusable task
 const greetTask = defineTask({

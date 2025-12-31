@@ -6,7 +6,7 @@
 
 import { useKeyboard, useTerminalDimensions } from '@opentui/react';
 import type { KeyEvent, ScrollBoxRenderable } from '@opentui/core';
-import type { TabProcess } from '@pokjs/tabs-core';
+import type { TabProcess } from '@pokit/tabs-core';
 import {
   useTabsState,
   useKeyboardCallbackRefs,
@@ -14,7 +14,7 @@ import {
   executeKeyboardAction,
   type NormalizedKeyEvent,
   type KeyboardCallbacks,
-} from '@pokjs/tabs-core';
+} from '@pokit/tabs-core';
 import { HelpOverlay } from './help-overlay.js';
 
 type TabbedViewProps = {

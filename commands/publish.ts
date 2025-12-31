@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Publish packages to npm',
@@ -14,7 +14,7 @@ export const command = defineCommand({
     filter: {
       from: 'flag',
       schema: z.string().optional(),
-      description: 'Package name to publish (e.g., @pokjs/core)',
+      description: 'Package name to publish (e.g., @pokit/core)',
     },
     dryRun: {
       from: 'flag',

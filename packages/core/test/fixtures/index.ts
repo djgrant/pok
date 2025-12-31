@@ -1,5 +1,5 @@
 /**
- * Test fixtures for @pokjs/core tests
+ * Test fixtures for @pokit/core tests
  *
  * These fixtures re-export event sequences from integration test cases.
  */

@@ -12,7 +12,7 @@ pok's environment system has two parts:
 ## Import
 
 ```typescript
-import { defineEnv, defineEnvResolver } from '@pokjs/core';
+import { defineEnv, defineEnvResolver } from '@pokit/core';
 ```
 
 ## defineEnvResolver
@@ -43,7 +43,7 @@ function defineEnvResolver<TContext, TAvailableVars extends string>(config: {
 
 ```typescript
 import { z } from 'zod';
-import { defineEnvResolver } from '@pokjs/core';
+import { defineEnvResolver } from '@pokit/core';
 
 const opResolver = defineEnvResolver({
   // This resolver needs an 'env' field in the command context
@@ -92,7 +92,7 @@ function defineEnv<TResolver, TVars extends TResolver['availableVars'][number]>(
 ### Example
 
 ```typescript
-import { defineEnv } from '@pokjs/core';
+import { defineEnv } from '@pokit/core';
 
 // Select only database variables
 const dbEnv = defineEnv({
@@ -110,7 +110,7 @@ const apiEnv = defineEnv({
 ## Using in Tasks
 
 ```typescript
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 // Task with single env
 const migrateTask = defineTask({
@@ -142,7 +142,7 @@ const deployTask = defineTask({
 ### Infer Resolver Context
 
 ```typescript
-import type { InferResolverContext } from '@pokjs/core';
+import type { InferResolverContext } from '@pokit/core';
 
 type Ctx = InferResolverContext<typeof opResolver>;
 // { env: 'dev' | 'staging' | 'prod' }
@@ -151,7 +151,7 @@ type Ctx = InferResolverContext<typeof opResolver>;
 ### Infer Env Vars
 
 ```typescript
-import type { InferEnvVars } from '@pokjs/core';
+import type { InferEnvVars } from '@pokit/core';
 
 type Vars = InferEnvVars<typeof dbEnv>;
 // { DATABASE_URL: string; REDIS_URL: string }
@@ -160,7 +160,7 @@ type Vars = InferEnvVars<typeof dbEnv>;
 ### Infer Env Context
 
 ```typescript
-import type { InferEnvContext } from '@pokjs/core';
+import type { InferEnvContext } from '@pokit/core';
 
 type Ctx = InferEnvContext<typeof dbEnv>;
 // { env: 'dev' | 'staging' | 'prod' }
@@ -171,7 +171,7 @@ type Ctx = InferEnvContext<typeof dbEnv>;
 Combine multiple resolvers into one:
 
 ```typescript
-import { defineCompositeResolver } from '@pokjs/core';
+import { defineCompositeResolver } from '@pokit/core';
 
 const compositeResolver = defineCompositeResolver({
   requiredContext: z.object({
@@ -258,7 +258,7 @@ const command = defineCommand({
 Get the list of variable keys from an env:
 
 ```typescript
-import { getEnvKeys } from '@pokjs/core';
+import { getEnvKeys } from '@pokit/core';
 
 const keys = getEnvKeys(dbEnv);
 // ['DATABASE_URL', 'REDIS_URL']

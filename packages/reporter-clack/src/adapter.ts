@@ -38,8 +38,8 @@ import type {
   GroupLayout,
   LogLevel,
   OutputConfig,
-} from '@pokjs/core';
-import { detectOutputConfig } from '@pokjs/core';
+} from '@pokit/core';
+import { detectOutputConfig } from '@pokit/core';
 import { getSymbols, type SymbolSet } from './symbols';
 
 /**

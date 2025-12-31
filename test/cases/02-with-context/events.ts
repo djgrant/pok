@@ -1,3 +1,3 @@
-import type { CLIEvent } from '@pokjs/core';
+import type { CLIEvent } from '@pokit/core';
 
 export const events: CLIEvent[] = [];

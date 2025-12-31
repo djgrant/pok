@@ -1,13 +1,13 @@
 {
-  "name": "@pokjs/integration-tests",
+  "name": "@pokit/integration-tests",
   "private": true,
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@pokjs/core": "workspace:*",
-    "@pokjs/test-utils": "workspace:*",
+    "@pokit/core": "workspace:*",
+    "@pokit/test-utils": "workspace:*",
     "zod": "^4.0.0"
   }
 }

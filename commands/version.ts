@@ -1,46 +1,39 @@
 /**
  * Version command
  *
- * Bumps version for packages using npm version.
- * Usage: pok version [patch|minor|major] [--filter package-name]
+ * Bumps version using bumpp with interactive prompts, git integration, and monorepo support.
+ * Usage: pok version [release-type]
+ *
+ * Bumpp handles everything interactively - this is a minimal wrapper.
  */
 
 import { z } from 'zod';
-import { defineCommand } from '@pokjs/core';
+import { defineCommand } from '@pokit/core';
+import { versionBump } from 'bumpp';
 
 export const command = defineCommand({
   label: 'Bump package versions',
   context: {
-    filter: {
+    recursive: {
       from: 'flag',
-      schema: z.string().optional(),
-      description: 'Package name to version (e.g., @pokjs/core)',
+      flag: 'r',
+      schema: z.boolean().optional(),
+      description: 'Bump all packages in the monorepo',
+    },
+    noPush: {
+      from: 'flag',
+      flag: 'no-push',
+      schema: z.boolean().optional(),
+      description: 'Skip pushing to remote',
     },
   },
-  run: async (r, ctx) => {
-    const bump = ctx.extraArgs[0] || 'patch';
-    const validBumps = [
-      'patch',
-      'minor',
-      'major',
-      'prepatch',
-      'preminor',
-      'premajor',
-      'prerelease',
-    ];
+  run: async (_r, ctx) => {
+    const release = ctx.extraArgs[0] || 'prompt';
 
-    if (!validBumps.includes(bump)) {
-      throw new Error(`Invalid version bump: ${bump}. Use one of: ${validBumps.join(', ')}`);
-    }
-
-    if (ctx.context.filter) {
-      // Version a specific package
-      await r.exec(
-        `pnpm --filter ${ctx.context.filter} exec npm version ${bump} --no-git-tag-version`
-      );
-    } else {
-      // Version all packages
-      await r.exec(`pnpm -r exec npm version ${bump} --no-git-tag-version`);
-    }
+    await versionBump({
+      release,
+      recursive: ctx.context.recursive,
+      push: !ctx.context.noPush,
+    });
   },
 });

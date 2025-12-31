@@ -1,5 +1,5 @@
 /**
- * End-to-end integration tests for @pokjs/create
+ * End-to-end integration tests for @pokit/create
  *
  * These tests verify that scaffolded projects work correctly by:
  * 1. Manually scaffolding projects (simulating what init.ts does)
@@ -54,7 +54,7 @@ function patchPackageJsonForWorkspace(projectPath: string): void {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
   // Replace 'latest' with workspace:* for local packages
-  const localPackages = ['@pokjs/core', '@pokjs/prompter-clack', '@pokjs/reporter-clack'];
+  const localPackages = ['@pokit/core', '@pokit/prompter-clack', '@pokit/reporter-clack'];
 
   for (const pkgName of localPackages) {
     if (pkg.dependencies?.[pkgName]) {
@@ -97,7 +97,7 @@ function cleanupDir(dir: string): void {
   }
 }
 
-describe('@pokjs/create end-to-end', () => {
+describe('@pokit/create end-to-end', () => {
   // Ensure test directory exists before each test and cleanup after all
   beforeAll(() => {
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
@@ -116,7 +116,7 @@ describe('@pokjs/create end-to-end', () => {
       try {
         scaffoldProject(projectPath, {
           name: projectName,
-          plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+          plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
         });
 
         expect(fs.existsSync(projectPath)).toBe(true);
@@ -129,9 +129,9 @@ describe('@pokjs/create end-to-end', () => {
         // Verify package.json has plugins
         const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.name).toBe(projectName);
-        expect(pkg.dependencies['@pokjs/core']).toBeDefined();
-        expect(pkg.dependencies['@pokjs/prompter-clack']).toBeDefined();
-        expect(pkg.dependencies['@pokjs/reporter-clack']).toBeDefined();
+        expect(pkg.dependencies['@pokit/core']).toBeDefined();
+        expect(pkg.dependencies['@pokit/prompter-clack']).toBeDefined();
+        expect(pkg.dependencies['@pokit/reporter-clack']).toBeDefined();
       } finally {
         // Clean up - important to avoid polluting workspace for other tests
         cleanupDir(projectPath);
@@ -149,9 +149,9 @@ describe('@pokjs/create end-to-end', () => {
         });
 
         const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
-        expect(pkg.dependencies['@pokjs/core']).toBeDefined();
-        expect(pkg.dependencies['@pokjs/prompter-clack']).toBeUndefined();
-        expect(pkg.dependencies['@pokjs/reporter-clack']).toBeUndefined();
+        expect(pkg.dependencies['@pokit/core']).toBeDefined();
+        expect(pkg.dependencies['@pokit/prompter-clack']).toBeUndefined();
+        expect(pkg.dependencies['@pokit/reporter-clack']).toBeUndefined();
       } finally {
         cleanupDir(projectPath);
       }
@@ -164,19 +164,19 @@ describe('@pokjs/create end-to-end', () => {
       try {
         scaffoldProject(projectPath, {
           name: projectName,
-          plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+          plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
         });
 
         // Before patching
         let pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
-        expect(pkg.dependencies['@pokjs/core']).toBe('latest');
+        expect(pkg.dependencies['@pokit/core']).toBe('latest');
 
         // After patching
         patchPackageJsonForWorkspace(projectPath);
         pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
-        expect(pkg.dependencies['@pokjs/core']).toBe('workspace:*');
-        expect(pkg.dependencies['@pokjs/prompter-clack']).toBe('workspace:*');
-        expect(pkg.dependencies['@pokjs/reporter-clack']).toBe('workspace:*');
+        expect(pkg.dependencies['@pokit/core']).toBe('workspace:*');
+        expect(pkg.dependencies['@pokit/prompter-clack']).toBe('workspace:*');
+        expect(pkg.dependencies['@pokit/reporter-clack']).toBe('workspace:*');
       } finally {
         cleanupDir(projectPath);
       }
@@ -192,7 +192,7 @@ describe('@pokjs/create end-to-end', () => {
         // Scaffold project with both plugins
         scaffoldProject(projectPath, {
           name: projectName,
-          plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+          plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
         });
 
         // Patch for workspace linking and install
@@ -202,7 +202,7 @@ describe('@pokjs/create end-to-end', () => {
         expect(installResult.success).toBe(true);
 
         // Verify node_modules was created with linked packages
-        expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokjs/core'))).toBe(true);
+        expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/core'))).toBe(true);
       } finally {
         cleanupDir(projectPath);
       }
@@ -231,7 +231,7 @@ describe('@pokjs/create end-to-end', () => {
   });
 });
 
-describe('@pokjs/create workspace integration', () => {
+describe('@pokit/create workspace integration', () => {
   beforeAll(() => {
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
   });
@@ -246,7 +246,7 @@ describe('@pokjs/create workspace integration', () => {
     try {
       scaffoldProject(projectPath, {
         name: 'workspace-test',
-        plugins: ['@pokjs/prompter-clack', '@pokjs/reporter-clack'],
+        plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
       });
 
       patchPackageJsonForWorkspace(projectPath);
@@ -255,11 +255,11 @@ describe('@pokjs/create workspace integration', () => {
       expect(installResult.success).toBe(true);
 
       // Verify all workspace packages are installed
-      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokjs/core'))).toBe(true);
-      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokjs/prompter-clack'))).toBe(
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/core'))).toBe(true);
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/prompter-clack'))).toBe(
         true
       );
-      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokjs/reporter-clack'))).toBe(
+      expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/reporter-clack'))).toBe(
         true
       );
     } finally {

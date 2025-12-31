@@ -1,4 +1,4 @@
-import { defineTask } from '@pokjs/core';
+import { defineTask } from '@pokit/core';
 
 export const runWithReporter = defineTask({
   label: 'Run task with reporter',

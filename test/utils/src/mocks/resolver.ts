@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineEnvResolver } from '@pokjs/core';
+import { defineEnvResolver } from '@pokit/core';
 
 export const mockResolver = defineEnvResolver({
   requiredContext: z.object({

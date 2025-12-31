@@ -1,5 +1,5 @@
 /**
- * @pokjs/core - File-based CLI framework
+ * @pokit/core - File-based CLI framework
  *
  * A framework for building CLIs with file-based command routing,
  * declarative command definitions, and type-safe task execution.

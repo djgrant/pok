@@ -1,5 +1,5 @@
 /**
- * @pokjs/test-utils
+ * @pokit/test-utils
  *
  * Test utilities for pokjs packages.
  */

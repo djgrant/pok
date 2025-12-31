@@ -5,7 +5,7 @@
  * Handles all CLIEvent types and maintains normalized state.
  */
 
-import type { CLIEvent, ActivityId, GroupId } from '@pokjs/core';
+import type { CLIEvent, ActivityId, GroupId } from '@pokit/core';
 import type {
   ReporterState,
   ReporterStore,

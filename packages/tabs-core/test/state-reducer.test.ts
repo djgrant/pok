@@ -5,7 +5,7 @@ import {
   getTabsGroupActivities,
   findTabsGroup,
 } from '../src';
-import type { CLIEvent, ActivityId, GroupId } from '@pokjs/core';
+import type { CLIEvent, ActivityId, GroupId } from '@pokit/core';
 
 // =============================================================================
 // Helper to create test IDs

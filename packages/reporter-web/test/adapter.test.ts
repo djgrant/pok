@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { createEventBus, type EventBus, type CLIEvent } from '@pokjs/core';
+import { createEventBus, type EventBus, type CLIEvent } from '@pokit/core';
 import { createReporterStore, createWebReporterAdapter } from '../src';
 import type { ReporterStoreWithHandler } from '../src/store';
 

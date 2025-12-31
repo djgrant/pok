@@ -32,7 +32,7 @@ const myCheck = defineCheck({
 ### Command Existence
 
 ```typescript
-import { commandExists } from '@pokjs/core';
+import { commandExists } from '@pokit/core';
 
 export const dockerInstalled = defineCheck({
   label: 'Docker installed',
@@ -70,7 +70,7 @@ export const dockerRunning = defineCheck({
 ### Version Requirements
 
 ```typescript
-import { getNodeMajorVersion } from '@pokjs/core';
+import { getNodeMajorVersion } from '@pokit/core';
 
 export const nodeVersion = defineCheck({
   label: 'Node.js >= 20',

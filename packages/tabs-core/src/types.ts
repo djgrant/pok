@@ -4,7 +4,7 @@
  * Framework-agnostic types used by both Ink and OpenTUI adapters.
  */
 
-import type { ActivityId, GroupId, GroupLayout } from '@pokjs/core';
+import type { ActivityId, GroupId, GroupLayout } from '@pokit/core';
 
 // =============================================================================
 // Tab Process Types

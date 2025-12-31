@@ -1,5 +1,5 @@
 /**
- * CLI entry point for @pokjs/core
+ * CLI entry point for @pokit/core
  *
  * This module provides the runCli() function that handles the full CLI lifecycle:
  * - Finding the project root and commands directory
@@ -7,7 +7,7 @@
  * - Running the router
  *
  * Usage:
- *   import { runCli } from '@pokjs/core';
+ *   import { runCli } from '@pokit/core';
  *   await runCli(process.argv.slice(2));
  */
 
@@ -83,23 +83,23 @@ export async function runCli(
   let createPrompter: () => any;
 
   try {
-    const reporterModule = await import('@pokjs/reporter-clack');
+    const reporterModule = await import('@pokit/reporter-clack');
     createReporterAdapter = reporterModule.createReporterAdapter;
   } catch {
     console.error(
-      'Error: @pokjs/reporter-clack is required.\n' +
-        'Install it with: bun add @pokjs/reporter-clack'
+      'Error: @pokit/reporter-clack is required.\n' +
+        'Install it with: bun add @pokit/reporter-clack'
     );
     process.exit(1);
   }
 
   try {
-    const prompterModule = await import('@pokjs/prompter-clack');
+    const prompterModule = await import('@pokit/prompter-clack');
     createPrompter = prompterModule.createPrompter;
   } catch {
     console.error(
-      'Error: @pokjs/prompter-clack is required.\n' +
-        'Install it with: bun add @pokjs/prompter-clack'
+      'Error: @pokit/prompter-clack is required.\n' +
+        'Install it with: bun add @pokit/prompter-clack'
     );
     process.exit(1);
   }

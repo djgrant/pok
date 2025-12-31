@@ -13,9 +13,9 @@ import {
   MAX_OUTPUT_LINES,
   MAX_LINE_LENGTH,
   BUFFER_WARNING_THRESHOLD,
-} from '@pokjs/tabs-core';
-import type { TabSpec, TabProcess } from '@pokjs/tabs-core';
-import type { TabsOptions } from '@pokjs/core';
+} from '@pokit/tabs-core';
+import type { TabSpec, TabProcess } from '@pokit/tabs-core';
+import type { TabsOptions } from '@pokit/core';
 import type { ScrollBoxRenderable } from '@opentui/core';
 
 const OUTPUT_BATCH_MS = 16;

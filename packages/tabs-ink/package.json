@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/tabs-ink",
+  "name": "@pokit/tabs-ink",
   "version": "0.0.1",
   "description": "Ink-based tab renderer for pok CLI applications",
   "keywords": [
@@ -51,12 +51,12 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.2.0",
-    "@pokjs/core": "workspace:*",
-    "@pokjs/tabs-core": "workspace:*"
+    "@pokit/core": "workspace:*",
+    "@pokit/tabs-core": "workspace:*"
   },
   "peerDependencies": {
-    "@pokjs/core": "workspace:*",
-    "@pokjs/tabs-core": "workspace:*"
+    "@pokit/core": "workspace:*",
+    "@pokit/tabs-core": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

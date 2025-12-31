@@ -1,4 +1,4 @@
-# @pokjs/playground
+# @pokit/playground
 
 Interactive learning website for pok CLI framework. Features a real terminal running in the browser via WebContainers.
 
@@ -16,7 +16,7 @@ Interactive learning website for pok CLI framework. Features a real terminal run
 pnpm install
 
 # Start dev server
-pnpm --filter @pokjs/playground dev
+pnpm --filter @pokit/playground dev
 ```
 
 The dev server runs at `http://localhost:5173`.
@@ -24,7 +24,7 @@ The dev server runs at `http://localhost:5173`.
 ## Build
 
 ```bash
-pnpm --filter @pokjs/playground build
+pnpm --filter @pokit/playground build
 ```
 
 Output is generated in the `dist/` directory.

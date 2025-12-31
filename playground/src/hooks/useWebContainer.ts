@@ -48,10 +48,10 @@ async function getWebContainer(signal?: AbortSignal): Promise<WebContainer> {
  * Convert flat file paths to WebContainer's nested FileSystemTree format.
  *
  * Takes an object like:
- *   { 'node_modules/@pokjs/core/dist/index.js': '...' }
+ *   { 'node_modules/@pokit/core/dist/index.js': '...' }
  *
  * And converts to:
- *   { 'node_modules': { directory: { '@pokjs': { directory: { ... } } } } }
+ *   { 'node_modules': { directory: { '@pokit': { directory: { ... } } } } }
  */
 function createFileSystemTree(files: Record<string, string>): FileSystemTree {
   const tree: FileSystemTree = {};
@@ -128,9 +128,9 @@ export function useWebContainer(): UseWebContainerResult {
                   name: 'pok-tutorial',
                   type: 'module',
                   dependencies: {
-                    '@pokjs/core': '0.0.1',
-                    '@pokjs/reporter-clack': '0.0.1',
-                    '@pokjs/prompter-clack': '0.0.1',
+                    '@pokit/core': '0.0.1',
+                    '@pokit/reporter-clack': '0.0.1',
+                    '@pokit/prompter-clack': '0.0.1',
                     zod: '3.24.0',
                     'fast-glob': '3.3.2',
                   },

@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/cmd",
+  "name": "@pokit/cmd",
   "version": "0.0.1",
   "description": "Global CLI launcher for pok - install once, run anywhere",
   "type": "module",
@@ -24,9 +24,9 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@pokjs/core": "workspace:*",
-    "@pokjs/reporter-clack": "workspace:*",
-    "@pokjs/prompter-clack": "workspace:*"
+    "@pokit/core": "workspace:*",
+    "@pokit/reporter-clack": "workspace:*",
+    "@pokit/prompter-clack": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

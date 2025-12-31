@@ -989,8 +989,8 @@ export function createRunner<TContext extends Record<string, unknown>>(
     if (!tabsAdapter) {
       throw new Error(
         'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
-          'Install @pokjs/tabs-ink and pass the adapter:\n' +
-          '  import { createTabsAdapter } from "@pokjs/tabs-ink";\n' +
+          'Install @pokit/tabs-ink and pass the adapter:\n' +
+          '  import { createTabsAdapter } from "@pokit/tabs-ink";\n' +
           '  // In your router config:\n' +
           '  tabs: createTabsAdapter()'
       );

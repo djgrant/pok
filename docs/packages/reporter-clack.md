@@ -1,18 +1,18 @@
-# @pokjs/reporter-clack
+# @pokit/reporter-clack
 
 Terminal output adapter using [@clack/prompts](https://github.com/natemoo-re/clack).
 
 ## Installation
 
 ```bash
-bun add @pokjs/reporter-clack
+bun add @pokit/reporter-clack
 ```
 
 ## Usage
 
 ```typescript
-import { run } from '@pokjs/core';
-import { createReporterAdapter } from '@pokjs/reporter-clack';
+import { run } from '@pokit/core';
+import { createReporterAdapter } from '@pokit/reporter-clack';
 
 await run(args, {
   reporterAdapter: createReporterAdapter(),
@@ -130,4 +130,4 @@ Returns a ReporterAdapter that renders events using Clack.
 ## Related
 
 - [API Reference: Events](../api/events.md)
-- [@pokjs/core](./core.md)
+- [@pokit/core](./core.md)

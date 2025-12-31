@@ -1,5 +1,5 @@
 {
-  "name": "@pokjs/website",
+  "name": "@pokit/website",
   "private": true,
   "type": "module",
   "scripts": {
