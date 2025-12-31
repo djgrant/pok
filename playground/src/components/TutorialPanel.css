@@ -407,7 +407,8 @@
   line-height: 1.6;
   color: var(--text-primary);
   white-space: pre;
-  overflow-x: auto;
+  width: fit-content;
+  min-width: 100%;
 }
 
 .tutorial-panel .file-preview-code code {

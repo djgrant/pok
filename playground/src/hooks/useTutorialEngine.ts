@@ -5,7 +5,7 @@
  * exposing current section, step, progress, and actions.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type {
   TutorialState,
   TutorialSection,
@@ -18,6 +18,9 @@ import {
   pokTutorial,
   stepId,
 } from '../tutorial';
+
+// Singleton engine instance shared across all hook consumers
+const sharedEngine = createTutorialEngine(pokTutorial);
 
 export type StepStatus = 'pending' | 'active' | 'complete';
 
@@ -65,9 +68,8 @@ export type UseTutorialEngineResult = {
 };
 
 export function useTutorialEngine(): UseTutorialEngineResult {
-  // Create engine once
-  const engineRef = useRef(createTutorialEngine(pokTutorial));
-  const engine = engineRef.current;
+  // Use shared singleton engine so all components see the same state
+  const engine = sharedEngine;
 
   // Track engine state reactively
   const [state, setState] = useState<TutorialState>(engine.getState);
@@ -106,6 +108,24 @@ export function useTutorialEngine(): UseTutorialEngineResult {
     // No auto-progress - user must click Next
   }, [engine]);
 
+  // Calculate progress from React state to ensure reactivity
+  const progress = useMemo(() => {
+    const section = engine.getTutorial().sections[state.currentSectionIndex];
+    const total = section.steps.length;
+    let completed = 0;
+    for (let i = 0; i < total; i++) {
+      const id = stepId(state.currentSectionIndex, i);
+      if (state.completedSteps.has(id)) {
+        completed++;
+      }
+    }
+    return {
+      completed,
+      total,
+      percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+    };
+  }, [engine, state.currentSectionIndex, state.completedSteps]);
+
   return useMemo(
     () => ({
       tutorial: engine.getTutorial(),
@@ -113,7 +133,7 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       currentStep: engine.getCurrentStep(),
       currentSectionIndex: state.currentSectionIndex,
       currentStepIndex: state.currentStepIndex,
-      progress: engine.getProgress(),
+      progress,
       isAtStart: engine.isAtStart(),
       isAtEnd: engine.isAtEnd(),
       isAtSectionEnd: engine.isAtSectionEnd(),
@@ -135,6 +155,7 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       state.currentStepIndex,
       state.completedSteps,
       state.selectedChoice,
+      progress,
       getStepStatus,
       completeStepAndProgress,
     ]
