@@ -259,19 +259,22 @@ export function TutorialPanel({
   externalHeader = false,
 }: TutorialPanelProps) {
   const {
+    tutorial,
     currentSection,
     currentSectionIndex,
     currentStepIndex,
     progress,
     getStepStatus,
     completeStepAndProgress,
+    completeStep,
     selectChoice,
     goToSection,
     selectedChoice,
     isAtStart,
-    isAtEnd,
+    isAtSectionEnd,
     previousStep,
     nextStep,
+    nextSection,
     reset,
     isStepCompleted,
   } = useTutorialEngine();
@@ -279,8 +282,23 @@ export function TutorialPanel({
   // Check if current step is complete (for enabling Next button)
   const isCurrentStepComplete = isStepCompleted(currentSectionIndex, currentStepIndex);
   
-  // Tutorial is complete when we're at the end AND the last step is complete
-  const isTutorialComplete = isAtEnd && isCurrentStepComplete;
+  // Get current step type
+  const currentStep = currentSection.steps[currentStepIndex];
+  const isInteractiveStep = currentStep?.type === 'file-create' || currentStep?.type === 'command-run';
+  const isChoiceStep = currentStep?.type === 'choice';
+  
+  // Determine if we're on the exit section (last section)
+  const exitSectionIndex = tutorial.sections.findIndex(s => s.id === 'exit');
+  const isOnExitSection = currentSectionIndex === exitSectionIndex;
+  
+  // Tutorial is complete when we're on exit section AND at section end AND last step is complete
+  const isTutorialComplete = isOnExitSection && isAtSectionEnd && isCurrentStepComplete;
+  
+  // Section is complete when at section end AND current step is complete (but not exit section)
+  const isSectionComplete = !isOnExitSection && isAtSectionEnd && isCurrentStepComplete;
+  
+  // Check if there are more sections after current one
+  const hasMoreSections = currentSectionIndex < tutorial.sections.length - 1;
 
   // Ref for auto-scroll
   const activeStepRef = useRef<HTMLDivElement>(null);
@@ -485,7 +503,7 @@ export function TutorialPanel({
       )}
 
       <div className="tutorial-panel-content">
-        {/* Completion state */}
+        {/* Tutorial completion state - shown when exit section is complete */}
         {isTutorialComplete ? (
           <div className="tutorial-completion">
             <div className="tutorial-completion-icon">🎉</div>
@@ -500,6 +518,31 @@ export function TutorialPanel({
               >
                 Start Over
               </button>
+              <button
+                className="tutorial-completion-button tutorial-completion-button-secondary"
+                onClick={() => goToSection('welcome')}
+              >
+                Back to Menu
+              </button>
+            </div>
+          </div>
+        ) : isSectionComplete ? (
+          /* Section completion state - shown when a non-exit section is complete */
+          <div className="tutorial-section-complete">
+            <div className="tutorial-section-complete-icon">🎉</div>
+            <h2 className="tutorial-section-complete-title">Nice work!</h2>
+            <p className="tutorial-section-complete-message">
+              You've completed "{currentSection.title}"
+            </p>
+            <div className="tutorial-section-complete-actions">
+              {hasMoreSections && (
+                <button
+                  className="tutorial-completion-button tutorial-completion-button-primary"
+                  onClick={() => nextSection()}
+                >
+                  Continue to next topic
+                </button>
+              )}
               <button
                 className="tutorial-completion-button tutorial-completion-button-secondary"
                 onClick={() => goToSection('welcome')}
@@ -537,8 +580,8 @@ export function TutorialPanel({
         )}
       </div>
 
-      {/* Navigation buttons - only show when not complete */}
-      {!isTutorialComplete && (
+      {/* Navigation buttons - only show when not complete and not showing section complete */}
+      {!isTutorialComplete && !isSectionComplete && !isChoiceStep && (
         <div className="tutorial-panel-nav">
           <button
             className="tutorial-nav-button tutorial-nav-button-back"
@@ -550,8 +593,14 @@ export function TutorialPanel({
           </button>
           <button
             className="tutorial-nav-button tutorial-nav-button-next"
-            onClick={() => nextStep()}
-            disabled={!isCurrentStepComplete}
+            onClick={() => {
+              // For non-interactive steps (info, tip, warning, code-display), complete and advance
+              if (!isInteractiveStep && !isCurrentStepComplete) {
+                completeStep();
+              }
+              nextStep();
+            }}
+            disabled={isInteractiveStep && !isCurrentStepComplete}
             aria-label="Go to next step"
           >
             Next →

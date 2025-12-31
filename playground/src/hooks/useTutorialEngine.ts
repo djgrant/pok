@@ -16,8 +16,6 @@ import type {
 import {
   createTutorialEngine,
   pokTutorial,
-  AUTO_PROGRESS_DELAY,
-  AUTO_PROGRESS_DELAY_LONG,
   stepId,
 } from '../tutorial';
 
@@ -38,8 +36,10 @@ export type UseTutorialEngineResult = {
   progress: TutorialProgress;
   /** Whether we're at the first step */
   isAtStart: boolean;
-  /** Whether we're at the last step */
+  /** Whether we're at the last step of the tutorial */
   isAtEnd: boolean;
+  /** Whether we're at the last step of the current section */
+  isAtSectionEnd: boolean;
   /** Current choice selection (for choice steps) */
   selectedChoice: string | null;
   /** Get the status of a step */
@@ -48,8 +48,10 @@ export type UseTutorialEngineResult = {
   isStepCompleted: (sectionIndex: number, stepIndex: number) => boolean;
   /** Mark the current step as completed */
   completeStep: () => void;
-  /** Move to the next step */
+  /** Move to the next step (within section only, returns false at section end) */
   nextStep: () => boolean;
+  /** Move to the next section */
+  nextSection: () => boolean;
   /** Move to the previous step */
   previousStep: () => boolean;
   /** Go to a specific section by ID */
@@ -58,7 +60,7 @@ export type UseTutorialEngineResult = {
   selectChoice: (value: string) => void;
   /** Reset the tutorial */
   reset: () => void;
-  /** Complete step and auto-progress after delay */
+  /** Complete step (for interactive steps like file-create, command-run) */
   completeStepAndProgress: () => void;
 };
 
@@ -74,49 +76,6 @@ export function useTutorialEngine(): UseTutorialEngineResult {
   useEffect(() => {
     return engine.subscribe(setState);
   }, [engine]);
-
-  // Auto-progress timeout ref
-  const autoProgressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (autoProgressTimeoutRef.current) {
-        clearTimeout(autoProgressTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Auto-complete non-interactive steps (info, tip, warning, code-display)
-  // These steps don't require user action, so we complete and progress automatically
-  useEffect(() => {
-    const currentStep = engine.getCurrentStep();
-    const isNonInteractiveStep =
-      currentStep.type === 'info' ||
-      currentStep.type === 'tip' ||
-      currentStep.type === 'warning' ||
-      currentStep.type === 'code-display';
-
-    // Use longer delay for content-heavy steps that users need to read
-    const isContentHeavy = currentStep.type === 'info' || currentStep.type === 'tip';
-    const progressDelay = isContentHeavy ? AUTO_PROGRESS_DELAY_LONG : AUTO_PROGRESS_DELAY;
-
-    if (isNonInteractiveStep && !engine.isCurrentStepCompleted()) {
-      // Complete and progress after a short delay to allow rendering
-      const timeoutId = setTimeout(() => {
-        engine.completeStep();
-        // Schedule progression after the step is marked complete
-        // Use longer delay for info/tip steps so users can read the content
-        setTimeout(() => {
-          if (engine.canProgress()) {
-            engine.nextStep();
-          }
-        }, progressDelay);
-      }, 100);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [engine, state.currentSectionIndex, state.currentStepIndex]);
 
   // Get step status
   const getStepStatus = useCallback(
@@ -141,22 +100,10 @@ export function useTutorialEngine(): UseTutorialEngineResult {
     [state.completedSteps, state.currentSectionIndex, state.currentStepIndex]
   );
 
-  // Complete step and auto-progress
+  // Complete step only (for interactive steps - no auto-progress)
   const completeStepAndProgress = useCallback(() => {
     engine.completeStep();
-
-    // Clear any existing timeout
-    if (autoProgressTimeoutRef.current) {
-      clearTimeout(autoProgressTimeoutRef.current);
-    }
-
-    // Schedule auto-progress
-    autoProgressTimeoutRef.current = setTimeout(() => {
-      if (engine.canProgress()) {
-        engine.nextStep();
-      }
-      autoProgressTimeoutRef.current = null;
-    }, AUTO_PROGRESS_DELAY);
+    // No auto-progress - user must click Next
   }, [engine]);
 
   return useMemo(
@@ -169,11 +116,13 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       progress: engine.getProgress(),
       isAtStart: engine.isAtStart(),
       isAtEnd: engine.isAtEnd(),
+      isAtSectionEnd: engine.isAtSectionEnd(),
       selectedChoice: state.selectedChoice,
       getStepStatus,
       isStepCompleted: engine.isStepCompleted,
       completeStep: engine.completeStep,
       nextStep: engine.nextStep,
+      nextSection: engine.nextSection,
       previousStep: engine.previousStep,
       goToSection: engine.goToSection,
       selectChoice: engine.selectChoice,
