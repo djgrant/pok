@@ -86,6 +86,32 @@ export function useTutorialEngine(): UseTutorialEngineResult {
     };
   }, []);
 
+  // Auto-complete non-interactive steps (info, tip, warning, code-display)
+  // These steps don't require user action, so we complete and progress automatically
+  useEffect(() => {
+    const currentStep = engine.getCurrentStep();
+    const isNonInteractiveStep =
+      currentStep.type === 'info' ||
+      currentStep.type === 'tip' ||
+      currentStep.type === 'warning' ||
+      currentStep.type === 'code-display';
+
+    if (isNonInteractiveStep && !engine.isCurrentStepCompleted()) {
+      // Complete and progress after a short delay to allow rendering
+      const timeoutId = setTimeout(() => {
+        engine.completeStep();
+        // Schedule progression after the step is marked complete
+        setTimeout(() => {
+          if (engine.canProgress()) {
+            engine.nextStep();
+          }
+        }, AUTO_PROGRESS_DELAY);
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [engine, state.currentSectionIndex, state.currentStepIndex]);
+
   // Get step status
   const getStepStatus = useCallback(
     (sectionIndex: number, stepIndex: number): StepStatus => {
