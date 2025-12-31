@@ -107,12 +107,21 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
     notify();
   };
 
-  const getTotalSteps = (): number => {
-    return tutorial.sections.reduce((sum, section) => sum + section.steps.length, 0);
+  const getCurrentSectionStepCount = (): number => {
+    return tutorial.sections[state.currentSectionIndex].steps.length;
   };
 
-  const getCompletedCount = (): number => {
-    return state.completedSteps.size;
+  const getCompletedInCurrentSection = (): number => {
+    const sectionIndex = state.currentSectionIndex;
+    const sectionSteps = tutorial.sections[sectionIndex].steps.length;
+    let count = 0;
+    for (let i = 0; i < sectionSteps; i++) {
+      const id = `${sectionIndex}-${i}`;
+      if (state.completedSteps.has(id)) {
+        count++;
+      }
+    }
+    return count;
   };
 
   const engine: TutorialEngine = {
@@ -227,8 +236,8 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
     },
 
     getProgress: () => {
-      const total = getTotalSteps();
-      const completed = getCompletedCount();
+      const total = getCurrentSectionStepCount();
+      const completed = getCompletedInCurrentSection();
       return {
         completed,
         total,
