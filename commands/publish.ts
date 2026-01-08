@@ -2,20 +2,27 @@ import { z } from 'zod';
 import { defineCommand, defineCheck } from '@pokit/core';
 import { $ } from 'bun';
 
-// Scoped @pokit/* packages - published together
-const SCOPED_PACKAGES = [
-  '@pokit/core',
-  '@pokit/op',
-  '@pokit/prompter-clack',
-  '@pokit/reporter-clack',
-  '@pokit/reporter-web',
-  '@pokit/tabs-core',
-  '@pokit/tabs-ink',
-  '@pokit/tabs-opentui',
-];
+const PACKAGE_GROUPS = {
+  scoped: {
+    label: '@pokit/* packages (core, op, reporter-clack, etc.)',
+    packages: [
+      '@pokit/core',
+      '@pokit/op',
+      '@pokit/prompter-clack',
+      '@pokit/reporter-clack',
+      '@pokit/reporter-web',
+      '@pokit/tabs-core',
+      '@pokit/tabs-ink',
+      '@pokit/tabs-opentui',
+    ],
+  },
+  cli: {
+    label: 'CLI packages (pokit, create-pokit)',
+    packages: ['pokit', 'create-pokit'],
+  },
+} as const;
 
-// Unscoped packages - published independently
-const UNSCOPED_PACKAGES = ['pokit', 'create-pokit'];
+type PackageGroup = keyof typeof PACKAGE_GROUPS;
 
 const npmLoggedIn = defineCheck({
   label: 'npm login',
@@ -32,11 +39,10 @@ export const command = defineCommand({
   label: 'Publish packages to npm',
   pre: [npmLoggedIn],
   context: {
-    unscopedOnly: {
+    packages: {
       from: 'flag',
-      flag: 'unscoped-only',
-      schema: z.boolean().optional(),
-      description: 'Publish unscoped packages only (pokit, create-pokit) - versioned independently',
+      schema: z.enum(['scoped', 'cli']),
+      description: 'Package group to publish: scoped (@pokit/*) or cli (pokit, create-pokit)',
     },
     dryRun: {
       from: 'flag',
@@ -45,8 +51,8 @@ export const command = defineCommand({
     },
   },
   run: async (r, ctx) => {
-    const packages = ctx.context.unscopedOnly ? UNSCOPED_PACKAGES : SCOPED_PACKAGES;
-    const filterArgs = packages.map((pkg) => `--filter "${pkg}"`).join(' ');
+    const group = PACKAGE_GROUPS[ctx.context.packages as PackageGroup];
+    const filterArgs = group.packages.map((pkg) => `--filter "${pkg}"`).join(' ');
     const dryRunFlag = ctx.context.dryRun ? ' --dry-run' : '';
 
     await r.group('Publish to npm', { layout: 'sequence' }, async (g) => {
@@ -54,7 +60,7 @@ export const command = defineCommand({
         await r.exec('pok build');
       });
 
-      await g.activity(`Publish ${packages.length} packages`, async () => {
+      await g.activity(`Publish ${group.packages.length} packages`, async () => {
         const gitCheckFlag = ctx.context.dryRun ? ' --no-git-checks' : '';
         await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}${gitCheckFlag}`);
       });
@@ -63,7 +69,7 @@ export const command = defineCommand({
     if (ctx.context.dryRun) {
       r.reporter.info('Dry run complete. No packages were published.');
     } else {
-      r.reporter.success(`Published ${packages.length} packages to npm`);
+      r.reporter.success(`Published ${group.packages.length} packages to npm`);
     }
   },
 });
