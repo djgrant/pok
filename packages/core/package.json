@@ -1,6 +1,6 @@
 {
   "name": "@pokit/core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Core framework for building CLI applications with pok",
   "keywords": [
     "cli",
@@ -25,9 +25,8 @@
   "bugs": {
     "url": "https://github.com/notation-dev/openpok/issues"
   },
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "bun": "./src/index.ts",
@@ -42,7 +41,8 @@
     "dist",
     "bin",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "src"
   ],
   "publishConfig": {
     "access": "public"
