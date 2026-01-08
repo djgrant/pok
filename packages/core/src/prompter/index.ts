@@ -8,11 +8,21 @@ export type {
   Prompter,
   SelectOption,
   SelectOptions,
+  // Dynamic options types
+  StaticSelectOptions,
+  DynamicSelectOptions,
+  OptionsPage,
+  OptionsRequest,
+  OptionsProvider,
+  ProviderCapabilities,
+  // Other prompt types
   MultiselectOption,
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
 } from './types';
+
+export { isDynamicOptions, withCapabilities } from './types';
 
 // Raw Prompter (for testing and non-TTY environments)
 export type { PromptCall, ResponseProvider, RawPrompterOptions, RawPrompter } from './prompter.raw';

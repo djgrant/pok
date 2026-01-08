@@ -62,12 +62,105 @@ export type SelectOption<T> = {
   hint?: string;
 };
 
+// =============================================================================
+// Dynamic Options Provider Types (Lazy Loading)
+// =============================================================================
+
 /**
- * Options for the select prompt.
+ * Result page from a dynamic options provider.
+ *
+ * @template T - The type of the option's value
+ */
+export type OptionsPage<T> = {
+  /** Options for this page */
+  options: SelectOption<T>[];
+  /**
+   * Cursor for fetching next page.
+   * Undefined/null means no more pages available.
+   */
+  nextCursor?: string | null;
+  /**
+   * Total count if known (for progress display).
+   * Optional - only set if the provider knows the total.
+   */
+  totalCount?: number;
+};
+
+/**
+ * Request context passed to option providers.
+ */
+export type OptionsRequest = {
+  /**
+   * Cursor from previous page's nextCursor.
+   * Undefined on first request.
+   */
+  cursor?: string;
+  /**
+   * Current filter/search text from typeahead.
+   * Only set if user has typed a filter.
+   */
+  filter?: string;
+  /**
+   * AbortSignal for cancellation.
+   * Provider should check signal.aborted and abort fetch if true.
+   */
+  signal: AbortSignal;
+};
+
+/**
+ * Provider capabilities declaration.
+ * Allows prompter to adapt UI based on provider features.
+ */
+export type ProviderCapabilities = {
+  /**
+   * When true, provider handles filtering server-side.
+   * When false/undefined, prompter filters loaded options client-side.
+   */
+  supportsFilter?: boolean;
+  /**
+   * Debounce time in ms for filter requests.
+   * Only used when supportsFilter is true.
+   * @default 150
+   */
+  filterDebounceMs?: number;
+};
+
+/**
+ * Dynamic options provider function.
+ *
+ * @template T - The type of the option's value
+ *
+ * @example Simple provider (no pagination)
+ * ```typescript
+ * const provider: OptionsProvider<string> = async () => {
+ *   const items = await fetchItems();
+ *   return { options: items.map(i => ({ value: i.id, label: i.name })) };
+ * };
+ * ```
+ *
+ * @example Paginated provider
+ * ```typescript
+ * const provider: OptionsProvider<string> = async ({ cursor }) => {
+ *   const page = await api.list({ after: cursor, limit: 20 });
+ *   return {
+ *     options: page.items.map(i => ({ value: i.id, label: i.name })),
+ *     nextCursor: page.nextCursor,
+ *   };
+ * };
+ * ```
+ */
+export type OptionsProvider<T> = {
+  (request: OptionsRequest): Promise<OptionsPage<T>>;
+  /** Optional capabilities declaration */
+  capabilities?: ProviderCapabilities;
+};
+
+/**
+ * Static options configuration (current behavior).
  *
  * @template T - The type of values in the options
  */
-export type SelectOptions<T> = {
+export type StaticSelectOptions<T> = {
   /** The prompt message displayed to the user */
   message: string;
   /**
@@ -82,6 +175,79 @@ export type SelectOptions<T> = {
    */
   initialValue?: T;
 };
+
+/**
+ * Dynamic options configuration (new).
+ *
+ * @template T - The type of values in the options
+ */
+export type DynamicSelectOptions<T> = {
+  /** The prompt message displayed to the user */
+  message: string;
+  /**
+   * Provider function for lazy-loading options.
+   * Called initially and again when loading more or filtering.
+   */
+  provider: OptionsProvider<T>;
+  /** Initial value to pre-select (if found in loaded options) */
+  initialValue?: T;
+  /**
+   * Placeholder text shown while loading initial options.
+   * @default "Loading..."
+   */
+  loadingMessage?: string;
+  /**
+   * Label for the "load more" option when pagination is available.
+   * @default "Load more..."
+   */
+  loadMoreLabel?: string;
+  /**
+   * Error message shown when provider fails.
+   * @default "Failed to load options"
+   */
+  errorMessage?: string;
+};
+
+/**
+ * Options for the select prompt.
+ * Supports both static options array and dynamic provider.
+ *
+ * @template T - The type of values in the options
+ */
+export type SelectOptions<T> = StaticSelectOptions<T> | DynamicSelectOptions<T>;
+
+/**
+ * Type guard for dynamic options
+ */
+export function isDynamicOptions<T>(
+  options: SelectOptions<T>
+): options is DynamicSelectOptions<T> {
+  return 'provider' in options;
+}
+
+/**
+ * Create a provider with declared capabilities.
+ * Utility for setting capabilities in a type-safe way.
+ *
+ * @example
+ * ```typescript
+ * const provider = withCapabilities(
+ *   async ({ filter }) => {
+ *     const results = await api.search(filter);
+ *     return { options: results };
+ *   },
+ *   { supportsFilter: true, filterDebounceMs: 200 }
+ * );
+ * ```
+ */
+export function withCapabilities<T>(
+  provider: (request: OptionsRequest) => Promise<OptionsPage<T>>,
+  capabilities: ProviderCapabilities
+): OptionsProvider<T> {
+  const fn = provider as OptionsProvider<T>;
+  fn.capabilities = capabilities;
+  return fn;
+}
 
 /**
  * Options for the confirm prompt.
