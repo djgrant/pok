@@ -83,6 +83,7 @@ export async function runCli(
   let createPrompter: () => any;
 
   try {
+    // @ts-expect-error - Dynamic import of peer dependency (avoids circular build dependency)
     const reporterModule = await import('@pokit/reporter-clack');
     createReporterAdapter = reporterModule.createReporterAdapter;
   } catch {
@@ -94,6 +95,7 @@ export async function runCli(
   }
 
   try {
+    // @ts-expect-error - Dynamic import of peer dependency (avoids circular build dependency)
     const prompterModule = await import('@pokit/prompter-clack');
     createPrompter = prompterModule.createPrompter;
   } catch {

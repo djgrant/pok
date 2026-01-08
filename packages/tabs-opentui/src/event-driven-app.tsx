@@ -136,7 +136,7 @@ function StatusBar({
   );
 }
 
-export function EventDrivenApp({ bus, onExit }: EventDrivenAppProps) {
+export function EventDrivenApp({ bus, onExit }: EventDrivenAppProps): React.ReactNode {
   const state = useEventBus(bus);
   const { height: rows } = useTerminalDimensions();
   const [activeIndex, setActiveIndex] = useState(0);

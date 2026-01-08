@@ -14,8 +14,6 @@
     { "path": "packages/reporter-web" },
     { "path": "packages/tabs-core" },
     { "path": "packages/tabs-ink" },
-    { "path": "packages/tabs-opentui" },
-    { "path": "test/utils" },
-    { "path": "test" }
+    { "path": "packages/tabs-opentui" }
   ]
 }

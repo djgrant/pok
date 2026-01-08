@@ -55,7 +55,8 @@ export const command = defineCommand({
       });
 
       await g.activity(`Publish ${packages.length} packages`, async () => {
-        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}`);
+        const gitCheckFlag = ctx.context.dryRun ? ' --no-git-checks' : '';
+        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}${gitCheckFlag}`);
       });
     });
 

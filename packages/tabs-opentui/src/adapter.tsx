@@ -110,12 +110,13 @@ export function createTabsAdapter(): TabsAdapter {
         };
 
         // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         root.render(
           React.createElement(
             TabsErrorBoundary,
             { onFatalError: handleFatalError },
             React.createElement(TabsApp, { items, options, onExit: handleExit })
-          )
+          ) as any
         );
       });
     },
@@ -222,12 +223,13 @@ export function createEventAdapter(
     };
 
     // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     root.render(
       React.createElement(
         TabsErrorBoundary,
         { onFatalError: handleFatalError },
         React.createElement(EventDrivenApp, { bus, onExit: handleExit })
-      )
+      ) as any
     );
   };
 

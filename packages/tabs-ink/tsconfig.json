@@ -4,8 +4,13 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "types": ["bun", "react"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@pokit/core": ["../core/src/index.ts"],
+      "@pokit/tabs-core": ["../tabs-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
-  "references": [{ "path": "../core" }]
+  "references": [{ "path": "../core" }, { "path": "../tabs-core" }]
 }

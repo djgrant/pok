@@ -35,7 +35,7 @@ type BatchBuffer = {
   lines: string[];
 };
 
-export function TabsApp({ items, options, onExit }: TabsAppProps) {
+export function TabsApp({ items, options, onExit }: TabsAppProps): React.ReactNode {
   // Ring buffers for storing all output per tab (with O(1) operations)
   const ringBuffersRef = useRef<Map<string, OutputBuffer>>(new Map());
 

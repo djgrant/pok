@@ -10,7 +10,7 @@ export type HelpOverlayProps = {
   onClose: () => void;
 };
 
-export function HelpOverlay(_props: HelpOverlayProps) {
+export function HelpOverlay(_props: HelpOverlayProps): React.ReactNode {
   return (
     <box
       flexDirection="column"
