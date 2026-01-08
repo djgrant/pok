@@ -219,6 +219,14 @@ export type {
   Prompter,
   SelectOption,
   SelectOptions,
+  // Dynamic options types
+  StaticSelectOptions,
+  DynamicSelectOptions,
+  OptionsPage,
+  OptionsRequest,
+  OptionsProvider,
+  ProviderCapabilities,
+  // Other prompt types
   MultiselectOption,
   MultiselectOptions,
   ConfirmOptions,
@@ -230,7 +238,7 @@ export type {
   RawPrompter,
 } from './prompter';
 
-export { createRawPrompter } from './prompter';
+export { createRawPrompter, isDynamicOptions, withCapabilities } from './prompter';
 
 // =============================================================================
 // Tabs (Tabbed terminal UI interface)

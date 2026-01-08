@@ -8,10 +8,12 @@
 import type {
   Prompter,
   SelectOptions,
+  SelectOption,
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
 } from './types';
+import { isDynamicOptions } from './types';
 
 /**
  * Recorded prompt call for assertions
@@ -157,8 +159,18 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
 
   return {
     async select<T>(selectOptions: SelectOptions<T>): Promise<T> {
+      // Handle dynamic options - resolve the provider first
+      let resolvedOptions: SelectOption<T>[];
+      if (isDynamicOptions(selectOptions)) {
+        const controller = new AbortController();
+        const result = await selectOptions.provider({ signal: controller.signal });
+        resolvedOptions = result.options;
+      } else {
+        resolvedOptions = selectOptions.options;
+      }
+
       // Default: return first option's value, or initialValue
-      const defaultValue = selectOptions.initialValue ?? selectOptions.options[0]?.value;
+      const defaultValue = selectOptions.initialValue ?? resolvedOptions[0]?.value;
 
       const response = getResponse(
         options.selectResponses,
