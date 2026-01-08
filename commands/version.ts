@@ -3,38 +3,45 @@
  *
  * Bumps version using bumpp with interactive prompts, git integration, and monorepo support.
  * Usage: pok version [release-type]
- *
- * By default, bumps scoped @pokit/* packages together.
- * Use --unscoped-only to bump unscoped packages (pokit, create-pokit) independently.
  */
 
 import { z } from 'zod';
 import { defineCommand } from '@pokit/core';
 import { versionBump } from 'bumpp';
 
-// Scoped @pokit/* packages - bumped together
-const SCOPED_PACKAGES = [
-  'packages/core/package.json',
-  'packages/op/package.json',
-  'packages/prompter-clack/package.json',
-  'packages/reporter-clack/package.json',
-  'packages/reporter-web/package.json',
-  'packages/tabs-core/package.json',
-  'packages/tabs-ink/package.json',
-  'packages/tabs-opentui/package.json',
-];
+const PACKAGE_GROUPS = {
+  scoped: {
+    label: '@pokit/* packages (core, op, reporter-clack, etc.)',
+    files: [
+      'packages/core/package.json',
+      'packages/op/package.json',
+      'packages/prompter-clack/package.json',
+      'packages/reporter-clack/package.json',
+      'packages/reporter-web/package.json',
+      'packages/tabs-core/package.json',
+      'packages/tabs-ink/package.json',
+      'packages/tabs-opentui/package.json',
+    ],
+    tag: 'v%s',
+    commit: 'release: v%s',
+  },
+  cli: {
+    label: 'CLI packages (pokit, create-pokit)',
+    files: ['packages/cmd/package.json', 'packages/create/package.json'],
+    tag: 'cli-v%s',
+    commit: 'release: cli v%s',
+  },
+} as const;
 
-// Unscoped packages (pokit, create-pokit) - bumped independently
-const UNSCOPED_PACKAGES = ['packages/cmd/package.json', 'packages/create/package.json'];
+type PackageGroup = keyof typeof PACKAGE_GROUPS;
 
 export const command = defineCommand({
   label: 'Bump package versions',
   context: {
-    unscopedOnly: {
+    packages: {
       from: 'flag',
-      flag: 'unscoped-only',
-      schema: z.boolean().optional(),
-      description: 'Bump unscoped packages only (pokit, create-pokit) - versioned independently',
+      schema: z.enum(['scoped', 'cli']),
+      description: 'Package group to version: scoped (@pokit/*) or cli (pokit, create-pokit)',
     },
     noPush: {
       from: 'flag',
@@ -46,27 +53,16 @@ export const command = defineCommand({
   run: async (_r, ctx) => {
     const release = ctx.extraArgs[0] || 'prompt';
     const skipConfirm = release !== 'prompt';
+    const group = PACKAGE_GROUPS[ctx.context.packages as PackageGroup];
 
-    if (ctx.context.unscopedOnly) {
-      // Bump unscoped packages independently
-      await versionBump({
-        release,
-        files: UNSCOPED_PACKAGES,
-        push: !ctx.context.noPush,
-        tag: 'unscoped-v%s',
-        commit: 'release: unscoped packages v%s',
-        preid: 'alpha',
-        confirm: !skipConfirm,
-      });
-    } else {
-      // Bump scoped @pokit/* packages
-      await versionBump({
-        release,
-        files: SCOPED_PACKAGES,
-        push: !ctx.context.noPush,
-        preid: 'alpha',
-        confirm: !skipConfirm,
-      });
-    }
+    await versionBump({
+      release,
+      files: [...group.files],
+      push: !ctx.context.noPush,
+      tag: group.tag,
+      commit: group.commit,
+      preid: 'alpha',
+      confirm: !skipConfirm,
+    });
   },
 });
