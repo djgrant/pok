@@ -62,7 +62,10 @@ export const command = defineCommand({
 
       await g.activity(`Publish ${group.packages.length} packages`, async () => {
         const gitCheckFlag = ctx.context.dryRun ? ' --no-git-checks' : '';
-        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}${gitCheckFlag}`);
+        // Use interactive mode to allow browser auth / OTP prompts
+        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}${gitCheckFlag}`, {
+          interactive: !ctx.context.dryRun,
+        });
       });
     });
 
