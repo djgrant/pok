@@ -1,6 +1,6 @@
 {
   "name": "pokit",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Global CLI launcher for pok - install once, run anywhere",
   "type": "module",
   "license": "MIT",
@@ -23,10 +23,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@pokit/core": "workspace:*",
-    "@pokit/reporter-clack": "workspace:*",
-    "@pokit/prompter-clack": "workspace:*"
+    "@types/bun": "latest"
   },
   "engines": {
     "bun": ">=1.0.0"
