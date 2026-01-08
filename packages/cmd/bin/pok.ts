@@ -3,40 +3,43 @@
  * pokit - Global CLI launcher for pok
  *
  * This is a thin wrapper that:
- * 1. Tries to import @pokit/core from the current project
- * 2. Calls runCli() to handle the actual CLI logic
- * 3. Shows helpful error messages if requirements are not met
+ * 1. Tries to resolve @pokit/core from the current working directory
+ * 2. Falls back to global @pokit/core if not found locally
+ * 3. Calls runCli() to handle the actual CLI logic
  *
  * Install globally with: bun add -g pokit
  * Then run `pok` from any project with @pokit/core installed.
+ *
+ * For use outside a project, also install: bun add -g @pokit/core
  */
 
+import { resolve } from 'bun';
+
 async function main() {
+  const cwd = process.cwd();
+  let corePath: string;
+
   try {
-    const { runCli } = await import('@pokit/core');
-    await runCli(process.argv.slice(2));
-  } catch (error) {
-    // Check if it's a module resolution error
-    if (
-      error instanceof Error &&
-      (error.message.includes('Cannot find') ||
-        error.message.includes('could not resolve') ||
-        error.message.includes('Module not found'))
-    ) {
+    // Try local first
+    corePath = await resolve('@pokit/core', cwd);
+  } catch {
+    // Fall back to global
+    try {
+      corePath = await resolve('@pokit/core', import.meta.dir);
+    } catch {
       console.error(
-        'Error: @pokit/core is not installed in this project.\n\n' +
-          'Requirements:\n' +
-          '  - Bun runtime: https://bun.sh\n' +
-          '  - @pokit/core installed in your project\n\n' +
-          'Install with:\n' +
-          '  bun add @pokit/core\n'
+        'Error: @pokit/core is not installed.\n\n' +
+          'Install locally in your project:\n' +
+          '  bun add @pokit/core\n\n' +
+          'Or install globally:\n' +
+          '  bun add -g @pokit/core\n'
       );
       process.exit(1);
     }
-
-    // Re-throw other errors
-    throw error;
   }
+
+  const { runCli } = await import(corePath);
+  await runCli(process.argv.slice(2));
 }
 
 main().catch((err) => {
