@@ -39,7 +39,21 @@ import type {
   LogLevel,
   OutputConfig,
 } from '@pokit/core';
-import { detectOutputConfig } from '@pokit/core';
+import { detectOutputConfig, CommandError } from '@pokit/core';
+
+/**
+ * Extract error message and optional output from an error.
+ * If the error is a CommandError with output, includes that in the message.
+ */
+function formatErrorMessage(error: Error | string): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error instanceof CommandError && error.output) {
+    return `${error.message}\n\n${error.output}`;
+  }
+  return error.message;
+}
 import { getSymbols, type SymbolSet } from './symbols';
 
 /**
@@ -598,8 +612,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
           }
 
           case 'activity:failure': {
-            const errorMessage =
-              event.error instanceof Error ? event.error.message : String(event.error);
+            const errorMessage = formatErrorMessage(event.error);
 
             // Check if this is a parallel activity
             const parallelActivity = state.parallelActivities.get(event.id);
