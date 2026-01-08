@@ -45,6 +45,7 @@ export const command = defineCommand({
   },
   run: async (_r, ctx) => {
     const release = ctx.extraArgs[0] || 'prompt';
+    const skipConfirm = release !== 'prompt';
 
     if (ctx.context.unscopedOnly) {
       // Bump unscoped packages independently
@@ -54,6 +55,8 @@ export const command = defineCommand({
         push: !ctx.context.noPush,
         tag: 'unscoped-v%s',
         commit: 'release: unscoped packages v%s',
+        preid: 'alpha',
+        confirm: !skipConfirm,
       });
     } else {
       // Bump scoped @pokit/* packages
@@ -61,6 +64,8 @@ export const command = defineCommand({
         release,
         files: SCOPED_PACKAGES,
         push: !ctx.context.noPush,
+        preid: 'alpha',
+        confirm: !skipConfirm,
       });
     }
   },

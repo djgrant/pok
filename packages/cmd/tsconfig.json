@@ -2,7 +2,12 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@pokit/core": ["../core/src/index.ts"]
+    }
   },
-  "include": ["bin/**/*"]
+  "include": ["bin/**/*"],
+  "references": [{ "path": "../core" }]
 }

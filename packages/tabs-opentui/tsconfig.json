@@ -5,7 +5,12 @@
     "outDir": "./dist",
     "types": ["bun", "react"],
     "jsx": "react-jsx",
-    "jsxImportSource": "@opentui/react"
+    "jsxImportSource": "@opentui/react",
+    "baseUrl": ".",
+    "paths": {
+      "@pokit/core": ["../core/src/index.ts"],
+      "@pokit/tabs-core": ["../tabs-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "references": [{ "path": "../core" }, { "path": "../tabs-core" }]

@@ -208,7 +208,7 @@ export function TabbedView({
   helpVisible,
   onToggleHelp,
   onCloseHelp,
-}: TabbedViewProps) {
+}: TabbedViewProps): React.ReactNode {
   const { height: rows } = useTerminalDimensions();
 
   const terminalHeight = rows ?? 24;
