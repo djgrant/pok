@@ -24,6 +24,12 @@ export type ExecOptions = {
    * When specified, failed executions will be retried according to this config.
    */
   retry?: RetryConfig;
+  /**
+   * Run command with full stdio inheritance for interactive prompts.
+   * Use this when the command needs user input (e.g., browser auth, OTP prompts).
+   * Output won't be captured - it goes directly to the terminal.
+   */
+  interactive?: boolean;
 };
 
 /**
@@ -578,9 +584,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
       env: Record<string, string>;
       quiet: boolean;
       signal?: AbortSignal;
+      interactive?: boolean;
     }
   ): Promise<void> => {
-    const { cwd: runCwd, env, quiet: runQuiet, signal: runSignal } = options;
+    const { cwd: runCwd, env, quiet: runQuiet, signal: runSignal, interactive } = options;
     const cmdLabel = execInputToString(cmd);
 
     // Check if already aborted
@@ -645,8 +652,27 @@ export function createRunner<TContext extends Record<string, unknown>>(
             const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
             throw new CommandError(`Command failed: ${finalCmd}`, output);
           }
+        } else if (interactive) {
+          // Interactive mode: use spawn with inherited stdio for browser auth, OTP prompts, etc.
+          const proc = runtime.spawn(['sh', '-c', finalCmd], {
+            cwd: runCwd,
+            stdio: 'inherit',
+            env,
+          });
+
+          runnerProcesses.add(proc);
+          const exitCode = await proc.exited;
+          runnerProcesses.delete(proc);
+
+          if (runSignal?.aborted) {
+            throw new AbortError();
+          }
+
+          if (exitCode !== 0 && exitCode !== null) {
+            throw new CommandError(`Command failed: ${finalCmd}`, '');
+          }
         } else {
-          // Non-quiet string form: use shell with inherited stdio
+          // Non-quiet string form: use shell (captures output for error messages)
           const result = await runtime.shell(finalCmd, { cwd: runCwd, env });
           if (result.exitCode !== 0) {
             throw new CommandError(`Command failed: ${finalCmd}`, result.stderr || result.stdout);
@@ -693,6 +719,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
                 env: mergeEnv(allEnv),
                 quiet,
                 signal,
+                interactive: opts?.interactive,
               }),
             opts?.retry,
             signal,
