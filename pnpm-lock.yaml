@@ -36,15 +36,6 @@ importers:
 
   packages/cmd:
     devDependencies:
-      '@pokit/core':
-        specifier: workspace:*
-        version: link:../core
-      '@pokit/prompter-clack':
-        specifier: workspace:*
-        version: link:../prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../reporter-clack
       '@types/bun':
         specifier: latest
         version: 1.3.5
