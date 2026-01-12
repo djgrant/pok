@@ -8,6 +8,6 @@
       "@pokit/core": ["../core/src/index.ts"]
     }
   },
-  "include": ["bin/**/*"],
+  "include": ["bin/**/*", "src/**/*"],
   "references": [{ "path": "../core" }]
 }

@@ -264,3 +264,4 @@ export { levenshtein, findClosestMatch } from './lib/string-distance';
 // =============================================================================
 
 export { runCli } from './cli';
+export type { RunCliConfig } from './cli';
