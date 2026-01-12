@@ -16,8 +16,15 @@
   "bin": {
     "pok": "./bin/pok.ts"
   },
+  "exports": {
+    ".": {
+      "types": "./src/config.ts",
+      "import": "./src/config.ts"
+    }
+  },
   "files": [
-    "bin"
+    "bin",
+    "src"
   ],
   "publishConfig": {
     "access": "public"

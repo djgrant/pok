@@ -2,44 +2,211 @@
 /**
  * pokit - Global CLI launcher for pok
  *
- * This is a thin wrapper that:
- * 1. Tries to resolve @pokit/core from the current working directory
- * 2. Falls back to global @pokit/core if not found locally
- * 3. Calls runCli() to handle the actual CLI logic
+ * This is the global CLI entry point that:
+ * 1. Searches for pok.config.ts (or .config/pok.config.ts) starting from cwd
+ * 2. Loads and validates the config
+ * 3. Resolves paths relative to config file location
+ * 4. Dynamically imports adapters
+ * 5. Calls runCli() with resolved configuration
  *
  * Install globally with: bun add -g pokit
- * Then run `pok` from any project with @pokit/core installed.
- *
- * For use outside a project, also install: bun add -g @pokit/core
+ * Then run `pok` from any project with a pok.config.ts file.
  */
 
 import { resolve } from 'bun';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { PokConfig } from '../src/config';
+
+// Handle init before config discovery - must work without a config file
+const args = process.argv.slice(2);
+if (args[0] === 'init') {
+  const { runInit } = await import('../src/init');
+  await runInit();
+  process.exit(0);
+}
+
+/**
+ * Search for a config file starting from the given directory,
+ * walking up the directory tree until found or reaching root.
+ *
+ * @returns Path to config file and the directory it was found in, or null if not found
+ */
+function findConfigFile(startDir: string): { configPath: string; configDir: string } | null {
+  let dir = startDir;
+
+  while (true) {
+    // Check for pok.config.ts in current directory
+    const configPath = path.join(dir, 'pok.config.ts');
+    if (fs.existsSync(configPath)) {
+      return { configPath, configDir: dir };
+    }
+
+    // Check for .config/pok.config.ts
+    const dotConfigPath = path.join(dir, '.config', 'pok.config.ts');
+    if (fs.existsSync(dotConfigPath)) {
+      return { configPath: dotConfigPath, configDir: dir };
+    }
+
+    // Move up to parent directory
+    const parentDir = path.dirname(dir);
+    if (parentDir === dir) {
+      // Reached filesystem root
+      return null;
+    }
+    dir = parentDir;
+  }
+}
+
+/**
+ * Validate required config fields and return clear error messages
+ */
+function validateConfig(config: unknown, configPath: string): PokConfig {
+  if (!config || typeof config !== 'object') {
+    console.error(`Error: Invalid configuration in ${configPath}\n`);
+    console.error('The config file must export a default object.');
+    process.exit(1);
+  }
+
+  const cfg = config as Record<string, unknown>;
+
+  // Check required fields
+  const requiredFields = ['commandsDir', 'reporterAdapter', 'prompter'] as const;
+  for (const field of requiredFields) {
+    if (!cfg[field]) {
+      console.error(`Error: ${field} is required in ${configPath}\n`);
+      console.error('Example configuration:');
+      console.error(`
+  import { defineConfig } from 'pokit'
+
+  export default defineConfig({
+    commandsDir: './commands',
+    reporterAdapter: '@pokit/reporter-clack',
+    prompter: '@pokit/prompter-clack',
+  })
+`);
+      process.exit(1);
+    }
+  }
+
+  return cfg as unknown as PokConfig;
+}
 
 async function main() {
   const cwd = process.cwd();
-  let corePath: string;
 
+  // Step 1: Find config file
+  const configResult = findConfigFile(cwd);
+
+  if (!configResult) {
+    console.error(`Error: No pok configuration found.
+
+Run \`pok init\` to create a pok.config.ts file.
+`);
+    process.exit(1);
+  }
+
+  const { configPath, configDir } = configResult;
+
+  // Step 2: Load and validate config
+  let config: PokConfig;
   try {
-    // Try local first
-    corePath = await resolve('@pokit/core', cwd);
+    const configModule = await import(configPath);
+    config = validateConfig(configModule.default, configPath);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Error: Failed to load config from ${configPath}\n`);
+    console.error(errorMessage);
+    process.exit(1);
+  }
+
+  // Step 3: Resolve paths relative to config file location
+  const commandsDir = path.resolve(configDir, config.commandsDir);
+  const projectRoot = config.projectRoot
+    ? path.resolve(configDir, config.projectRoot)
+    : configDir;
+
+  // Verify commands directory exists
+  if (!fs.existsSync(commandsDir)) {
+    console.error(`Error: Commands directory not found: ${commandsDir}\n`);
+    console.error(`The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`);
+    process.exit(1);
+  }
+
+  // Step 4: Resolve @pokit/core from the config directory
+  let corePath: string;
+  try {
+    corePath = await resolve('@pokit/core', configDir);
   } catch {
-    // Fall back to global
+    console.error(
+      `Error: @pokit/core is not installed in ${configDir}\n\n` +
+        'Install it with:\n' +
+        '  bun add @pokit/core\n'
+    );
+    process.exit(1);
+  }
+
+  // Step 5: Dynamically import adapters from the config directory
+  let createReporterAdapter: (options?: { output?: unknown }) => unknown;
+  let createPrompter: () => unknown;
+  let createTabs: (() => unknown) | undefined;
+
+  // Import reporter adapter
+  try {
+    const reporterPath = await resolve(config.reporterAdapter, configDir);
+    const reporterModule = await import(reporterPath);
+    createReporterAdapter = reporterModule.createReporterAdapter;
+  } catch {
+    console.error(
+      `Error: Reporter adapter "${config.reporterAdapter}" is not installed.\n\n` +
+        `Install it with:\n` +
+        `  bun add ${config.reporterAdapter}\n`
+    );
+    process.exit(1);
+  }
+
+  // Import prompter
+  try {
+    const prompterPath = await resolve(config.prompter, configDir);
+    const prompterModule = await import(prompterPath);
+    createPrompter = prompterModule.createPrompter;
+  } catch {
+    console.error(
+      `Error: Prompter "${config.prompter}" is not installed.\n\n` +
+        `Install it with:\n` +
+        `  bun add ${config.prompter}\n`
+    );
+    process.exit(1);
+  }
+
+  // Import tabs adapter if configured
+  if (config.tabs) {
     try {
-      corePath = await resolve('@pokit/core', import.meta.dir);
+      const tabsPath = await resolve(config.tabs, configDir);
+      const tabsModule = await import(tabsPath);
+      createTabs = tabsModule.createTabs;
     } catch {
       console.error(
-        'Error: @pokit/core is not installed.\n\n' +
-          'Install locally in your project:\n' +
-          '  bun add @pokit/core\n\n' +
-          'Or install globally:\n' +
-          '  bun add -g @pokit/core\n'
+        `Error: Tabs adapter "${config.tabs}" is not installed.\n\n` +
+          `Install it with:\n` +
+          `  bun add ${config.tabs}\n`
       );
       process.exit(1);
     }
   }
 
+  // Step 6: Import core and call runCli
   const { runCli } = await import(corePath);
-  await runCli(process.argv.slice(2));
+
+  await runCli(process.argv.slice(2), {
+    commandsDir,
+    projectRoot,
+    appName: config.appName,
+    version: config.version,
+    reporterAdapter: createReporterAdapter(),
+    prompter: createPrompter(),
+    tabs: createTabs?.(),
+  });
 }
 
 main().catch((err) => {
