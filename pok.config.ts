@@ -1,7 +1,7 @@
 /**
  * pok configuration for the pok monorepo itself
  */
-import { defineConfig } from './packages/cmd/src/config';
+import { defineConfig } from '@pokit/config';
 
 export default defineConfig({
   commandsDir: './commands',
