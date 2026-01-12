@@ -48,6 +48,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@pokit/config": "workspace:*",
     "fast-glob": "^3.3.2"
   },
   "devDependencies": {

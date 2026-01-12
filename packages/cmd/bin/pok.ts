@@ -16,7 +16,6 @@
 import { resolve } from 'bun';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { PokConfig } from '../src/config';
 
 // Handle init before config discovery - must work without a config file
 const args = process.argv.slice(2);
@@ -27,12 +26,10 @@ if (args[0] === 'init') {
 }
 
 /**
- * Search for a config file starting from the given directory,
- * walking up the directory tree until found or reaching root.
- *
- * @returns Path to config file and the directory it was found in, or null if not found
+ * Simple inline config file search (no external dependencies).
+ * Searches for pok.config.ts starting from startDir, walking up the tree.
  */
-function findConfigFile(startDir: string): { configPath: string; configDir: string } | null {
+function findConfigFileSimple(startDir: string): { configPath: string; configDir: string } | null {
   let dir = startDir;
 
   while (true) {
@@ -58,45 +55,11 @@ function findConfigFile(startDir: string): { configPath: string; configDir: stri
   }
 }
 
-/**
- * Validate required config fields and return clear error messages
- */
-function validateConfig(config: unknown, configPath: string): PokConfig {
-  if (!config || typeof config !== 'object') {
-    console.error(`Error: Invalid configuration in ${configPath}\n`);
-    console.error('The config file must export a default object.');
-    process.exit(1);
-  }
-
-  const cfg = config as Record<string, unknown>;
-
-  // Check required fields
-  const requiredFields = ['commandsDir', 'reporterAdapter', 'prompter'] as const;
-  for (const field of requiredFields) {
-    if (!cfg[field]) {
-      console.error(`Error: ${field} is required in ${configPath}\n`);
-      console.error('Example configuration:');
-      console.error(`
-  import { defineConfig } from 'pokit'
-
-  export default defineConfig({
-    commandsDir: './commands',
-    reporterAdapter: '@pokit/reporter-clack',
-    prompter: '@pokit/prompter-clack',
-  })
-`);
-      process.exit(1);
-    }
-  }
-
-  return cfg as unknown as PokConfig;
-}
-
 async function main() {
   const cwd = process.cwd();
 
-  // Step 1: Find config file
-  const configResult = findConfigFile(cwd);
+  // Step 1: Find config file using simple inline search
+  const configResult = findConfigFileSimple(cwd);
 
   if (!configResult) {
     console.error(`Error: No pok configuration found.
@@ -108,11 +71,36 @@ Run \`pok init\` to create a pok.config.ts file.
 
   const { configPath, configDir } = configResult;
 
-  // Step 2: Load and validate config
-  let config: PokConfig;
+  // Step 2: Dynamically resolve @pokit/config from the project directory
+  let configModule: {
+    validateConfig: (config: unknown, configPath: string) => {
+      commandsDir: string;
+      projectRoot?: string;
+      appName?: string;
+      reporterAdapter: string;
+      prompter: string;
+      tabs?: string;
+      version?: string;
+    };
+  };
+
   try {
-    const configModule = await import(configPath);
-    config = validateConfig(configModule.default, configPath);
+    const configModulePath = await resolve('@pokit/config', configDir);
+    configModule = await import(configModulePath);
+  } catch {
+    console.error(
+      `Error: @pokit/config is not installed in ${configDir}\n\n` +
+        'Install it with:\n' +
+        '  bun add @pokit/config\n'
+    );
+    process.exit(1);
+  }
+
+  // Step 3: Load and validate config using the dynamically imported module
+  let config: ReturnType<typeof configModule.validateConfig>;
+  try {
+    const rawConfig = await import(configPath);
+    config = configModule.validateConfig(rawConfig.default, configPath);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error(`Error: Failed to load config from ${configPath}\n`);
@@ -120,7 +108,7 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 3: Resolve paths relative to config file location
+  // Step 4: Resolve paths relative to config file location
   const commandsDir = path.resolve(configDir, config.commandsDir);
   const projectRoot = config.projectRoot
     ? path.resolve(configDir, config.projectRoot)
@@ -133,7 +121,7 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 4: Resolve @pokit/core from the config directory
+  // Step 5: Resolve @pokit/core from the config directory
   let corePath: string;
   try {
     corePath = await resolve('@pokit/core', configDir);
@@ -146,7 +134,7 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 5: Dynamically import adapters from the config directory
+  // Step 6: Dynamically import adapters from the config directory
   let createReporterAdapter: (options?: { output?: unknown }) => unknown;
   let createPrompter: () => unknown;
   let createTabs: (() => unknown) | undefined;
@@ -195,7 +183,7 @@ Run \`pok init\` to create a pok.config.ts file.
     }
   }
 
-  // Step 6: Import core and call runCli
+  // Step 7: Import core and call runCli
   const { runCli } = await import(corePath);
 
   await runCli(process.argv.slice(2), {
