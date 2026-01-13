@@ -11,8 +11,9 @@ import { versionBump } from 'bumpp';
 
 const PACKAGE_GROUPS = {
   scoped: {
-    label: '@pokit/* packages (core, op, reporter-clack, etc.)',
+    label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
     files: [
+      'packages/config/package.json',
       'packages/core/package.json',
       'packages/op/package.json',
       'packages/prompter-clack/package.json',
@@ -43,9 +44,8 @@ export const command = defineCommand({
       schema: z.enum(['scoped', 'cli']),
       description: 'Package group to version: scoped (@pokit/*) or cli (pokit, create-pokit)',
     },
-    noPush: {
+    skipPush: {
       from: 'flag',
-      flag: 'no-push',
       schema: z.boolean().optional(),
       description: 'Skip pushing to remote',
     },
@@ -58,7 +58,7 @@ export const command = defineCommand({
     await versionBump({
       release,
       files: [...group.files],
-      push: !ctx.context.noPush,
+      push: !ctx.context.skipPush,
       tag: group.tag,
       commit: group.commit,
       preid: 'alpha',
