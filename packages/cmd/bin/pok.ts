@@ -74,8 +74,9 @@ Run \`pok init\` to create a pok.config.ts file.
   // Step 2: Dynamically resolve @pokit/config from the project directory
   let configModule: {
     validateConfig: (config: unknown, configPath: string) => {
+      appDir: string;
+      cwd: string;
       commandsDir: string;
-      projectRoot?: string;
       appName?: string;
       reporterAdapter: string;
       prompter: string;
@@ -109,10 +110,10 @@ Run \`pok init\` to create a pok.config.ts file.
   }
 
   // Step 4: Resolve paths relative to config file location
-  const commandsDir = path.resolve(configDir, config.commandsDir);
-  const projectRoot = config.projectRoot
-    ? path.resolve(configDir, config.projectRoot)
-    : configDir;
+  // appDir is relative to configDir, commandsDir is relative to appDir
+  const appDir = path.resolve(configDir, config.appDir);
+  const commandsDir = path.resolve(appDir, config.commandsDir);
+  const cwd = path.resolve(configDir, config.cwd);
 
   // Verify commands directory exists
   if (!fs.existsSync(commandsDir)) {
@@ -121,27 +122,27 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 5: Resolve @pokit/core from the config directory
+  // Step 5: Resolve @pokit/core from appDir (where packages are installed)
   let corePath: string;
   try {
-    corePath = await resolve('@pokit/core', configDir);
+    corePath = await resolve('@pokit/core', appDir);
   } catch {
     console.error(
-      `Error: @pokit/core is not installed in ${configDir}\n\n` +
+      `Error: @pokit/core is not installed in ${appDir}\n\n` +
         'Install it with:\n' +
         '  bun add @pokit/core\n'
     );
     process.exit(1);
   }
 
-  // Step 6: Dynamically import adapters from the config directory
+  // Step 6: Dynamically import adapters from appDir
   let createReporterAdapter: (options?: { output?: unknown }) => unknown;
   let createPrompter: () => unknown;
   let createTabs: (() => unknown) | undefined;
 
   // Import reporter adapter
   try {
-    const reporterPath = await resolve(config.reporterAdapter, configDir);
+    const reporterPath = await resolve(config.reporterAdapter, appDir);
     const reporterModule = await import(reporterPath);
     createReporterAdapter = reporterModule.createReporterAdapter;
   } catch {
@@ -155,7 +156,7 @@ Run \`pok init\` to create a pok.config.ts file.
 
   // Import prompter
   try {
-    const prompterPath = await resolve(config.prompter, configDir);
+    const prompterPath = await resolve(config.prompter, appDir);
     const prompterModule = await import(prompterPath);
     createPrompter = prompterModule.createPrompter;
   } catch {
@@ -170,7 +171,7 @@ Run \`pok init\` to create a pok.config.ts file.
   // Import tabs adapter if configured
   if (config.tabs) {
     try {
-      const tabsPath = await resolve(config.tabs, configDir);
+      const tabsPath = await resolve(config.tabs, appDir);
       const tabsModule = await import(tabsPath);
       createTabs = tabsModule.createTabs;
     } catch {
@@ -188,7 +189,7 @@ Run \`pok init\` to create a pok.config.ts file.
 
   await runCli(process.argv.slice(2), {
     commandsDir,
-    projectRoot,
+    projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
     reporterAdapter: createReporterAdapter(),

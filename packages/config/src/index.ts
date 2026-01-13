@@ -12,11 +12,14 @@ import * as path from 'path';
  * pok configuration schema
  */
 export type PokConfig = {
-  /** Directory containing command files - REQUIRED */
-  commandsDir: string;
+  /** Root directory of the pok CLI app, where packages are resolved from (defaults to '.') */
+  appDir?: string;
 
-  /** Project root for running shell commands (defaults to config file directory) */
-  projectRoot?: string;
+  /** Working directory for running commands (defaults to '.') */
+  cwd?: string;
+
+  /** Directory containing command files, relative to appDir (defaults to './commands') */
+  commandsDir?: string;
 
   /** App name for CLI display */
   appName?: string;
@@ -35,11 +38,16 @@ export type PokConfig = {
 };
 
 /**
+ * Resolved configuration with all defaults applied
+ */
+export type ResolvedPokConfig = Required<Pick<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>> &
+  Omit<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>;
+
+/**
  * Identity function for type inference in config files
  *
  * @example
  * export default defineConfig({
- *   commandsDir: './commands',
  *   reporterAdapter: '@pokit/reporter-clack',
  *   prompter: '@pokit/prompter-clack',
  * })
@@ -81,9 +89,9 @@ export function findConfigFile(startDir: string): { configPath: string; configDi
 }
 
 /**
- * Validate required config fields and return clear error messages
+ * Validate required config fields, apply defaults, and return resolved config
  */
-export function validateConfig(config: unknown, configPath: string): PokConfig {
+export function validateConfig(config: unknown, configPath: string): ResolvedPokConfig {
   if (!config || typeof config !== 'object') {
     throw new Error(
       `Invalid configuration in ${configPath}\n\n` +
@@ -94,7 +102,7 @@ export function validateConfig(config: unknown, configPath: string): PokConfig {
   const cfg = config as Record<string, unknown>;
 
   // Check required fields
-  const requiredFields = ['commandsDir', 'reporterAdapter', 'prompter'] as const;
+  const requiredFields = ['reporterAdapter', 'prompter'] as const;
   for (const field of requiredFields) {
     if (!cfg[field]) {
       throw new Error(
@@ -102,7 +110,6 @@ export function validateConfig(config: unknown, configPath: string): PokConfig {
         'Example configuration:\n\n' +
         `  import { defineConfig } from '@pokit/config'\n\n` +
         `  export default defineConfig({\n` +
-        `    commandsDir: './commands',\n` +
         `    reporterAdapter: '@pokit/reporter-clack',\n` +
         `    prompter: '@pokit/prompter-clack',\n` +
         `  })\n`
@@ -110,16 +117,21 @@ export function validateConfig(config: unknown, configPath: string): PokConfig {
     }
   }
 
-  return cfg as unknown as PokConfig;
+  // Apply defaults
+  return {
+    appDir: '.',
+    cwd: '.',
+    commandsDir: './commands',
+    ...cfg,
+  } as ResolvedPokConfig;
 }
 
 /**
  * Template string for scaffolding new pok.config.ts files
  */
-export const CONFIG_TEMPLATE = `import { defineConfig } from 'pokit'
+export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/config'
 
 export default defineConfig({
-  commandsDir: './commands',
   reporterAdapter: '@pokit/reporter-clack',
   prompter: '@pokit/prompter-clack',
 })
