@@ -1,6 +1,6 @@
 {
   "name": "@pokit/core",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Core framework for building CLI applications with pok",
   "keywords": [
     "cli",
@@ -34,12 +34,8 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "pok": "./bin/pok.ts"
-  },
   "files": [
     "dist",
-    "bin",
     "README.md",
     "LICENSE",
     "src"
