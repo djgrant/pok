@@ -56,10 +56,10 @@ function findConfigFileSimple(startDir: string): { configPath: string; configDir
 }
 
 async function main() {
-  const cwd = process.cwd();
+  const processCwd = process.cwd();
 
   // Step 1: Find config file using simple inline search
-  const configResult = findConfigFileSimple(cwd);
+  const configResult = findConfigFileSimple(processCwd);
 
   if (!configResult) {
     console.error(`Error: No pok configuration found.
