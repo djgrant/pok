@@ -1,6 +1,6 @@
 {
   "name": "@pokit/config",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Configuration types and utilities for pok",
   "type": "module",
   "license": "MIT",
