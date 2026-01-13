@@ -45,6 +45,41 @@ export type RunCliConfig = {
 };
 
 /**
+ * Extract detailed error information from process execution errors
+ */
+function getErrorDetails(error: unknown): string {
+  if (!error || typeof error !== 'object') {
+    return String(error);
+  }
+
+  const err = error as Record<string, unknown>;
+  
+  // Check for tinyexec-style output property
+  if (err.output && typeof err.output === 'object') {
+    const output = err.output as Record<string, unknown>;
+    const parts: string[] = [];
+    
+    if (output.stderr) {
+      parts.push(String(output.stderr).trim());
+    }
+    if (output.stdout) {
+      parts.push(String(output.stdout).trim());
+    }
+    
+    if (parts.length > 0) {
+      return parts.filter(Boolean).join('\n');
+    }
+  }
+
+  // Fall back to error message
+  if (err.message) {
+    return String(err.message);
+  }
+
+  return String(error);
+}
+
+/**
  * Run the CLI with the given arguments and pre-resolved configuration
  *
  * @param args - Command line arguments (without 'node' and script name)
@@ -77,14 +112,19 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
 
     // Handle unexpected errors with clean messages
     const isDebug = process.env.DEBUG !== undefined;
+    const errorDetails = getErrorDetails(error);
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (isDebug) {
       // In debug mode, show full stack trace
       console.error('Error:', error);
     } else {
-      // In normal mode, show clean error message
-      console.error(`Error: ${errorMessage}`);
+      // Show the detailed error (stderr/stdout from process) if available
+      if (errorDetails !== errorMessage) {
+        console.error(`Error: ${errorDetails}`);
+      } else {
+        console.error(`Error: ${errorMessage}`);
+      }
       console.error('\nSet DEBUG=1 for full stack trace.');
     }
 
