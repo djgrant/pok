@@ -4,8 +4,9 @@ import { $ } from 'bun';
 
 const PACKAGE_GROUPS = {
   scoped: {
-    label: '@pokit/* packages (core, op, reporter-clack, etc.)',
+    label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
     packages: [
+      '@pokit/config',
       '@pokit/core',
       '@pokit/op',
       '@pokit/prompter-clack',
