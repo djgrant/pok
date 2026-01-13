@@ -605,55 +605,104 @@ export function createRunner<TContext extends Record<string, unknown>>(
         await cmd.env(env).cwd(runCwd);
       } else if (Array.isArray(cmd)) {
         // Array form: bypass shell entirely using runtime.spawn
+        // Always pipe output so we can capture it for error messages
         const proc = runtime.spawn(cmd, {
           cwd: runCwd,
-          stdio: runQuiet ? 'pipe' : 'inherit',
+          stdio: 'pipe',
           env,
         });
 
         runnerProcesses.add(proc);
-        const exitCode = await proc.exited;
+
+        // Capture output while optionally streaming to terminal
+        const stdoutChunks: Uint8Array[] = [];
+        const stderrChunks: Uint8Array[] = [];
+
+        // Read streams in parallel with process execution
+        const readStream = async (
+          stream: ReadableStream<Uint8Array> | null,
+          chunks: Uint8Array[],
+          output: NodeJS.WriteStream | null
+        ): Promise<void> => {
+          if (!stream) return;
+          const reader = stream.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (value) {
+                chunks.push(value);
+                if (output) {
+                  output.write(value);
+                }
+              }
+            }
+          } catch {
+            // Stream may be cancelled when process is killed
+          } finally {
+            reader.releaseLock();
+          }
+        };
+
+        const stdoutPromise = readStream(
+          proc.stdout,
+          stdoutChunks,
+          runQuiet ? null : process.stdout
+        );
+        const stderrPromise = readStream(
+          proc.stderr,
+          stderrChunks,
+          runQuiet ? null : process.stderr
+        );
+
+        // Create abort promise if signal provided
+        const abortPromise = runSignal
+          ? new Promise<'aborted'>((resolve) => {
+              if (runSignal.aborted) resolve('aborted');
+              else runSignal.addEventListener('abort', () => resolve('aborted'), { once: true });
+            })
+          : null;
+
+        // Wait for exit code, racing against abort signal
+        const exitResult = abortPromise
+          ? await Promise.race([proc.exited.then((code) => ({ type: 'exit' as const, code })), abortPromise])
+          : { type: 'exit' as const, code: await proc.exited };
+
         runnerProcesses.delete(proc);
 
-        if (runSignal?.aborted) {
+        if (exitResult === 'aborted' || runSignal?.aborted) {
+          // Kill the process if still running
+          if (!proc.killed) {
+            try {
+              proc.kill();
+            } catch {
+              // Process may already be dead
+            }
+          }
           throw new AbortError();
         }
 
+        const exitCode = exitResult.code;
+
+        // Give streams a short time to flush, but don't block indefinitely
+        await Promise.race([
+          Promise.all([stdoutPromise, stderrPromise]),
+          new Promise((resolve) => setTimeout(resolve, 100)),
+        ]);
+
         if (exitCode !== 0 && exitCode !== null) {
-          if (runQuiet) {
-            const stdout = await streamToText(proc.stdout);
-            const stderr = await streamToText(proc.stderr);
-            const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-            throw new CommandError(`Command failed: ${cmdLabel}`, output);
-          }
-          throw new CommandError(`Command failed: ${cmdLabel}`, '');
+          const decoder = new TextDecoder();
+          const stdout = stdoutChunks.map((c) => decoder.decode(c)).join('').trim();
+          const stderr = stderrChunks.map((c) => decoder.decode(c)).join('').trim();
+          const output = [stdout, stderr].filter(Boolean).join('\n');
+          throw new CommandError(`Command failed: ${cmdLabel}`, output);
         }
       } else {
         // String form: pass to sh -c
         const finalCmd = cmd.trim();
-        if (runQuiet) {
-          const proc = runtime.spawn(['sh', '-c', finalCmd], {
-            cwd: runCwd,
-            stdio: 'pipe',
-            env,
-          });
-
-          runnerProcesses.add(proc);
-          const exitCode = await proc.exited;
-          runnerProcesses.delete(proc);
-
-          if (runSignal?.aborted) {
-            throw new AbortError();
-          }
-
-          if (exitCode !== 0 && exitCode !== null) {
-            const stdout = await streamToText(proc.stdout);
-            const stderr = await streamToText(proc.stderr);
-            const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
-            throw new CommandError(`Command failed: ${finalCmd}`, output);
-          }
-        } else if (interactive) {
+        if (interactive) {
           // Interactive mode: use spawn with inherited stdio for browser auth, OTP prompts, etc.
+          // Cannot capture output in interactive mode
           const proc = runtime.spawn(['sh', '-c', finalCmd], {
             cwd: runCwd,
             stdio: 'inherit',
@@ -672,10 +721,97 @@ export function createRunner<TContext extends Record<string, unknown>>(
             throw new CommandError(`Command failed: ${finalCmd}`, '');
           }
         } else {
-          // Non-quiet string form: use shell (captures output for error messages)
-          const result = await runtime.shell(finalCmd, { cwd: runCwd, env });
-          if (result.exitCode !== 0) {
-            throw new CommandError(`Command failed: ${finalCmd}`, result.stderr || result.stdout);
+          // Always pipe and capture output so we can show it on failure
+          const proc = runtime.spawn(['sh', '-c', finalCmd], {
+            cwd: runCwd,
+            stdio: 'pipe',
+            env,
+          });
+
+          runnerProcesses.add(proc);
+
+          // Capture output while optionally streaming to terminal
+          const stdoutChunks: Uint8Array[] = [];
+          const stderrChunks: Uint8Array[] = [];
+
+          // Read streams in parallel with process execution
+          const readStream = async (
+            stream: ReadableStream<Uint8Array> | null,
+            chunks: Uint8Array[],
+            output: NodeJS.WriteStream | null
+          ): Promise<void> => {
+            if (!stream) return;
+            const reader = stream.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (value) {
+                  chunks.push(value);
+                  if (output) {
+                    output.write(value);
+                  }
+                }
+              }
+            } catch {
+              // Stream may be cancelled when process is killed
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
+          const stdoutPromise = readStream(
+            proc.stdout,
+            stdoutChunks,
+            runQuiet ? null : process.stdout
+          );
+          const stderrPromise = readStream(
+            proc.stderr,
+            stderrChunks,
+            runQuiet ? null : process.stderr
+          );
+
+          // Create abort promise if signal provided
+          const abortPromise = runSignal
+            ? new Promise<'aborted'>((resolve) => {
+                if (runSignal.aborted) resolve('aborted');
+                else runSignal.addEventListener('abort', () => resolve('aborted'), { once: true });
+              })
+            : null;
+
+          // Wait for exit code, racing against abort signal
+          const exitResult = abortPromise
+            ? await Promise.race([proc.exited.then((code) => ({ type: 'exit' as const, code })), abortPromise])
+            : { type: 'exit' as const, code: await proc.exited };
+
+          runnerProcesses.delete(proc);
+
+          if (exitResult === 'aborted' || runSignal?.aborted) {
+            // Kill the process if still running
+            if (!proc.killed) {
+              try {
+                proc.kill();
+              } catch {
+                // Process may already be dead
+              }
+            }
+            throw new AbortError();
+          }
+
+          const exitCode = exitResult.code;
+
+          // Give streams a short time to flush, but don't block indefinitely
+          await Promise.race([
+            Promise.all([stdoutPromise, stderrPromise]),
+            new Promise((resolve) => setTimeout(resolve, 100)),
+          ]);
+
+          if (exitCode !== 0 && exitCode !== null) {
+            const decoder = new TextDecoder();
+            const stdout = stdoutChunks.map((c) => decoder.decode(c)).join('').trim();
+            const stderr = stderrChunks.map((c) => decoder.decode(c)).join('').trim();
+            const output = [stdout, stderr].filter(Boolean).join('\n');
+            throw new CommandError(`Command failed: ${finalCmd}`, output);
           }
         }
       }
