@@ -1,5 +1,6 @@
 # pok
 
+[![Experimental](https://img.shields.io/badge/status-experimental-orange.svg)](https://github.com/anomalyco/ai)
 [![npm version](https://img.shields.io/npm/v/@pokit/core.svg)](https://www.npmjs.com/package/@pokit/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/notation-dev/openpok/actions/workflows/ci.yml/badge.svg)](https://github.com/notation-dev/openpok/actions/workflows/ci.yml)
