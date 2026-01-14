@@ -8,6 +8,47 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+// =============================================================================
+// Adapter Type Contracts
+// =============================================================================
+
+/**
+ * Minimal structural type for reporter adapters.
+ * Full behavioral contract defined in @pokit/core.
+ */
+export interface ReporterAdapter {
+  start(bus: unknown): { stop(): void };
+}
+
+/**
+ * Minimal structural type for prompter adapters.
+ * Full behavioral contract defined in @pokit/core.
+ */
+export interface Prompter {
+  select<T>(options: { message: string; options: Array<{ value: T; label: string }> }): Promise<T>;
+  multiselect<T>(options: {
+    message: string;
+    options: Array<{ value: T; label: string }>;
+  }): Promise<T[]>;
+  confirm(options: { message: string }): Promise<boolean>;
+  text(options: { message: string }): Promise<string>;
+}
+
+/**
+ * Minimal structural type for tabs adapters.
+ * Full behavioral contract defined in @pokit/core.
+ */
+export interface TabsAdapter {
+  run(
+    items: Array<{ label: string; exec: string }>,
+    options: { name: string; cwd: string; env: Record<string, string | undefined> }
+  ): Promise<void>;
+}
+
+// =============================================================================
+// Configuration Types
+// =============================================================================
+
 /**
  * pok configuration schema
  */
@@ -24,14 +65,14 @@ export type PokConfig = {
   /** App name for CLI display */
   appName?: string;
 
-  /** Reporter adapter package name, e.g. '@pokit/reporter-clack' */
-  reporterAdapter: string;
+  /** Reporter adapter instance */
+  reporter: ReporterAdapter;
 
-  /** Prompter package name, e.g. '@pokit/prompter-clack' */
-  prompter: string;
+  /** Prompter instance */
+  prompter: Prompter;
 
-  /** Tabs adapter package name, e.g. '@pokit/tabs-ink' */
-  tabs?: string;
+  /** Optional tabs adapter instance */
+  tabs?: TabsAdapter;
 
   /** Version string for --version flag */
   version?: string;
@@ -47,9 +88,13 @@ export type ResolvedPokConfig = Required<Pick<PokConfig, 'appDir' | 'cwd' | 'com
  * Identity function for type inference in config files
  *
  * @example
+ * import { defineConfig } from '@pokit/config'
+ * import { createReporterAdapter } from '@pokit/reporter-clack'
+ * import { createPrompter } from '@pokit/prompter-clack'
+ *
  * export default defineConfig({
- *   reporterAdapter: '@pokit/reporter-clack',
- *   prompter: '@pokit/prompter-clack',
+ *   reporter: createReporterAdapter(),
+ *   prompter: createPrompter(),
  * })
  */
 export function defineConfig(config: PokConfig): PokConfig {
@@ -94,27 +139,39 @@ export function findConfigFile(startDir: string): { configPath: string; configDi
 export function validateConfig(config: unknown, configPath: string): ResolvedPokConfig {
   if (!config || typeof config !== 'object') {
     throw new Error(
-      `Invalid configuration in ${configPath}\n\n` +
-      'The config file must export a default object.'
+      `Invalid configuration in ${configPath}\n\n` + 'The config file must export a default object.'
     );
   }
 
   const cfg = config as Record<string, unknown>;
 
   // Check required fields
-  const requiredFields = ['reporterAdapter', 'prompter'] as const;
-  for (const field of requiredFields) {
-    if (!cfg[field]) {
-      throw new Error(
-        `${field} is required in ${configPath}\n\n` +
+  if (!cfg.reporter) {
+    throw new Error(
+      `reporter is required in ${configPath}\n\n` +
         'Example configuration:\n\n' +
-        `  import { defineConfig } from '@pokit/config'\n\n` +
+        `  import { defineConfig } from '@pokit/config'\n` +
+        `  import { createReporterAdapter } from '@pokit/reporter-clack'\n` +
+        `  import { createPrompter } from '@pokit/prompter-clack'\n\n` +
         `  export default defineConfig({\n` +
-        `    reporterAdapter: '@pokit/reporter-clack',\n` +
-        `    prompter: '@pokit/prompter-clack',\n` +
+        `    reporter: createReporterAdapter(),\n` +
+        `    prompter: createPrompter(),\n` +
         `  })\n`
-      );
-    }
+    );
+  }
+
+  if (!cfg.prompter) {
+    throw new Error(
+      `prompter is required in ${configPath}\n\n` +
+        'Example configuration:\n\n' +
+        `  import { defineConfig } from '@pokit/config'\n` +
+        `  import { createReporterAdapter } from '@pokit/reporter-clack'\n` +
+        `  import { createPrompter } from '@pokit/prompter-clack'\n\n` +
+        `  export default defineConfig({\n` +
+        `    reporter: createReporterAdapter(),\n` +
+        `    prompter: createPrompter(),\n` +
+        `  })\n`
+    );
   }
 
   // Apply defaults
@@ -130,9 +187,11 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
  * Template string for scaffolding new pok.config.ts files
  */
 export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/config'
+import { createReporterAdapter } from '@pokit/reporter-clack'
+import { createPrompter } from '@pokit/prompter-clack'
 
 export default defineConfig({
-  reporterAdapter: '@pokit/reporter-clack',
-  prompter: '@pokit/prompter-clack',
+  reporter: createReporterAdapter(),
+  prompter: createPrompter(),
 })
 `;

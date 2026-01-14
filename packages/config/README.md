@@ -12,11 +12,12 @@ bun add @pokit/config
 
 ```ts
 import { defineConfig } from '@pokit/config'
+import { createReporterAdapter } from '@pokit/reporter-clack'
+import { createPrompter } from '@pokit/prompter-clack'
 
 export default defineConfig({
-  commandsDir: './commands',
-  reporterAdapter: '@pokit/reporter-clack',
-  prompter: '@pokit/prompter-clack',
+  reporter: createReporterAdapter(),
+  prompter: createPrompter(),
 })
 ```
 
@@ -30,7 +31,7 @@ Identity function for type inference in config files.
 
 Search for a config file starting from the given directory, walking up the directory tree until found or reaching root.
 
-### `validateConfig(config: unknown, configPath: string): PokConfig`
+### `validateConfig(config: unknown, configPath: string): ResolvedPokConfig`
 
 Validate required config fields and return clear error messages.
 
@@ -42,10 +43,21 @@ Template string for scaffolding new pok.config.ts files.
 
 Configuration type with the following fields:
 
-- `commandsDir` (required) - Directory containing command files
-- `reporterAdapter` (required) - Reporter adapter package name
-- `prompter` (required) - Prompter package name
-- `projectRoot` (optional) - Project root for running shell commands
+- `reporter` (required) - Instantiated reporter adapter
+- `prompter` (required) - Instantiated prompter
+- `commandsDir` (optional) - Directory containing command files (defaults to './commands')
+- `appDir` (optional) - Root directory of the pok CLI app (defaults to '.')
+- `cwd` (optional) - Working directory for running commands (defaults to '.')
 - `appName` (optional) - App name for CLI display
-- `tabs` (optional) - Tabs adapter package name
+- `tabs` (optional) - Instantiated tabs adapter
 - `version` (optional) - Version string for --version flag
+
+### Adapter Types
+
+The package exports minimal structural types for adapters:
+
+- `ReporterAdapter` - Contract for reporter adapters
+- `Prompter` - Contract for prompter adapters  
+- `TabsAdapter` - Contract for tabs adapters
+
+Full behavioral contracts are defined in `@pokit/core`.
