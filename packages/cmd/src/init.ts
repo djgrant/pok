@@ -14,12 +14,13 @@ const CONFIG_FILENAME = 'pok.config.ts';
  * Fallback template used when @pokit/config isn't installed yet.
  * This enables bootstrapping new projects.
  */
-const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from 'pokit'
+const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/config'
+import { createReporterAdapter } from '@pokit/reporter-clack'
+import { createPrompter } from '@pokit/prompter-clack'
 
 export default defineConfig({
-  commandsDir: './commands',
-  reporterAdapter: '@pokit/reporter-clack',
-  prompter: '@pokit/prompter-clack',
+  reporter: createReporterAdapter(),
+  prompter: createPrompter(),
 })
 `;
 

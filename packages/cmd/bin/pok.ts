@@ -6,8 +6,7 @@
  * 1. Searches for pok.config.ts (or .config/pok.config.ts) starting from cwd
  * 2. Loads and validates the config
  * 3. Resolves paths relative to config file location
- * 4. Dynamically imports adapters
- * 5. Calls runCli() with resolved configuration
+ * 4. Calls runCli() with the config
  *
  * Install globally with: bun add -g pokit
  * Then run `pok` from any project with a pok.config.ts file.
@@ -73,14 +72,17 @@ Run \`pok init\` to create a pok.config.ts file.
 
   // Step 2: Dynamically resolve @pokit/config from the project directory
   let configModule: {
-    validateConfig: (config: unknown, configPath: string) => {
+    validateConfig: (
+      config: unknown,
+      configPath: string
+    ) => {
       appDir: string;
       cwd: string;
       commandsDir: string;
       appName?: string;
-      reporterAdapter: string;
-      prompter: string;
-      tabs?: string;
+      reporter: unknown;
+      prompter: unknown;
+      tabs?: unknown;
       version?: string;
     };
   };
@@ -135,56 +137,7 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 6: Dynamically import adapters from appDir
-  let createReporterAdapter: (options?: { output?: unknown }) => unknown;
-  let createPrompter: () => unknown;
-  let createTabs: (() => unknown) | undefined;
-
-  // Import reporter adapter
-  try {
-    const reporterPath = await resolve(config.reporterAdapter, appDir);
-    const reporterModule = await import(reporterPath);
-    createReporterAdapter = reporterModule.createReporterAdapter;
-  } catch {
-    console.error(
-      `Error: Reporter adapter "${config.reporterAdapter}" is not installed.\n\n` +
-        `Install it with:\n` +
-        `  bun add ${config.reporterAdapter}\n`
-    );
-    process.exit(1);
-  }
-
-  // Import prompter
-  try {
-    const prompterPath = await resolve(config.prompter, appDir);
-    const prompterModule = await import(prompterPath);
-    createPrompter = prompterModule.createPrompter;
-  } catch {
-    console.error(
-      `Error: Prompter "${config.prompter}" is not installed.\n\n` +
-        `Install it with:\n` +
-        `  bun add ${config.prompter}\n`
-    );
-    process.exit(1);
-  }
-
-  // Import tabs adapter if configured
-  if (config.tabs) {
-    try {
-      const tabsPath = await resolve(config.tabs, appDir);
-      const tabsModule = await import(tabsPath);
-      createTabs = tabsModule.createTabs;
-    } catch {
-      console.error(
-        `Error: Tabs adapter "${config.tabs}" is not installed.\n\n` +
-          `Install it with:\n` +
-          `  bun add ${config.tabs}\n`
-      );
-      process.exit(1);
-    }
-  }
-
-  // Step 7: Import core and call runCli
+  // Step 6: Import core and call runCli with config adapters
   const { runCli } = await import(corePath);
 
   await runCli(process.argv.slice(2), {
@@ -192,9 +145,9 @@ Run \`pok init\` to create a pok.config.ts file.
     projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
-    reporterAdapter: createReporterAdapter(),
-    prompter: createPrompter(),
-    tabs: createTabs?.(),
+    reporterAdapter: config.reporter,
+    prompter: config.prompter,
+    tabs: config.tabs,
   });
 }
 

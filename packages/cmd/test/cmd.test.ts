@@ -29,16 +29,34 @@ describe('pokit', () => {
         })
       );
 
-      // Create pok.config.ts
+      // Link packages first so imports work in config
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
+      fs.mkdirSync(nodeModulesDir, { recursive: true });
+
+      const packagesDir = path.resolve(import.meta.dir, '../..');
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
+      fs.symlinkSync(
+        path.join(packagesDir, 'reporter-clack'),
+        path.join(nodeModulesDir, 'reporter-clack')
+      );
+      fs.symlinkSync(
+        path.join(packagesDir, 'prompter-clack'),
+        path.join(nodeModulesDir, 'prompter-clack')
+      );
+
+      // Create pok.config.ts with instantiated adapters
       fs.writeFileSync(
         path.join(tempDir, 'pok.config.ts'),
         `
-import { defineConfig } from '${path.resolve(import.meta.dir, '../src/config.ts')}';
+import { defineConfig } from '@pokit/config';
+import { createReporterAdapter } from '@pokit/reporter-clack';
+import { createPrompter } from '@pokit/prompter-clack';
 
 export default defineConfig({
   commandsDir: './commands',
-  reporterAdapter: '@pokit/reporter-clack',
-  prompter: '@pokit/prompter-clack',
+  reporter: createReporterAdapter(),
+  prompter: createPrompter(),
 });
 `
       );
@@ -57,21 +75,6 @@ export const command = defineCommand({
   },
 });
 `
-      );
-
-      // Link to the workspace packages by creating node_modules symlinks
-      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
-      fs.mkdirSync(nodeModulesDir, { recursive: true });
-
-      const packagesDir = path.resolve(import.meta.dir, '../..');
-      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
-      fs.symlinkSync(
-        path.join(packagesDir, 'reporter-clack'),
-        path.join(nodeModulesDir, 'reporter-clack')
-      );
-      fs.symlinkSync(
-        path.join(packagesDir, 'prompter-clack'),
-        path.join(nodeModulesDir, 'prompter-clack')
       );
     });
 
@@ -149,17 +152,18 @@ export const command = defineCommand({
         `
 export default {
   commandsDir: './commands',
-  // Missing reporterAdapter and prompter
+  // Missing reporter and prompter
 };
 `
       );
 
-      // Link core
+      // Link packages
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
     });
 
     afterAll(() => {
@@ -176,7 +180,7 @@ export default {
       const stderr = await new Response(proc.stderr).text();
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('reporterAdapter is required');
+      expect(stderr).toContain('reporter is required');
     });
   });
 
@@ -191,26 +195,13 @@ export default {
         JSON.stringify({ name: 'test-project', type: 'module' })
       );
 
-      // Create pok.config.ts pointing to non-existent directory
-      fs.writeFileSync(
-        path.join(tempDir, 'pok.config.ts'),
-        `
-import { defineConfig } from '${path.resolve(import.meta.dir, '../src/config.ts')}';
-
-export default defineConfig({
-  commandsDir: './non-existent-commands',
-  reporterAdapter: '@pokit/reporter-clack',
-  prompter: '@pokit/prompter-clack',
-});
-`
-      );
-
-      // Link packages
+      // Link packages first
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
       fs.symlinkSync(
         path.join(packagesDir, 'reporter-clack'),
         path.join(nodeModulesDir, 'reporter-clack')
@@ -218,6 +209,22 @@ export default defineConfig({
       fs.symlinkSync(
         path.join(packagesDir, 'prompter-clack'),
         path.join(nodeModulesDir, 'prompter-clack')
+      );
+
+      // Create pok.config.ts pointing to non-existent directory
+      fs.writeFileSync(
+        path.join(tempDir, 'pok.config.ts'),
+        `
+import { defineConfig } from '@pokit/config';
+import { createReporterAdapter } from '@pokit/reporter-clack';
+import { createPrompter } from '@pokit/prompter-clack';
+
+export default defineConfig({
+  commandsDir: './non-existent-commands',
+  reporter: createReporterAdapter(),
+  prompter: createPrompter(),
+});
+`
       );
     });
 
