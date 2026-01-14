@@ -58,7 +58,7 @@ export const command = defineCommand({
 
     await r.group('Publish to npm', { layout: 'sequence' }, async (g) => {
       await g.activity('Build packages', async () => {
-        await r.exec('pok build');
+        await r.exec('bun tsc --build');
       });
 
       await g.activity(`Publish ${group.packages.length} packages`, async () => {
