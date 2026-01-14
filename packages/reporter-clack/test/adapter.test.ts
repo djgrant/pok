@@ -28,7 +28,9 @@ describe('ClackReporterAdapter', () => {
   async function getScreenshot(events: CLIEvent[]): Promise<string[]> {
     vt = createVirtualTerminal();
     const bus = createEventBus();
-    const adapter = createReporterAdapter();
+    const adapter = createReporterAdapter({
+      output: { color: true, unicode: true, verbose: false },
+    });
     const controller = adapter.start(bus);
 
     for (const event of events) {
@@ -343,7 +345,9 @@ describe('ClackReporterAdapter', () => {
     async function getScreenshotVerbose(events: CLIEvent[]): Promise<string[]> {
       vt = createVirtualTerminal();
       const bus = createEventBus();
-      const adapter = createReporterAdapter({ verbose: true });
+      const adapter = createReporterAdapter({
+        output: { color: true, unicode: true, verbose: true },
+      });
       const controller = adapter.start(bus);
 
       for (const event of events) {
@@ -368,7 +372,7 @@ describe('ClackReporterAdapter', () => {
     });
   });
 
-  describe('plain mode (--plain or CI)', () => {
+  describe('no-unicode output', () => {
     async function getScreenshotPlain(events: CLIEvent[]): Promise<string[]> {
       vt = createVirtualTerminal();
       const bus = createEventBus();
@@ -475,7 +479,7 @@ describe('ClackReporterAdapter', () => {
       expect(allOutput).toContain('Health check');
     });
 
-    it('displays logs immediately without buffering in plain mode', async () => {
+    it('displays logs immediately without buffering in no-unicode output', async () => {
       const events: CLIEvent[] = [
         { type: 'group:start', id: 'g1', label: 'Build', layout: 'sequence' },
         { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Compile' },
@@ -633,7 +637,7 @@ describe('ClackReporterAdapter', () => {
       expect(allOutput).toContain('https://docs.docker.com/get-started/');
     });
 
-    it('displays remediation in plain mode', async () => {
+    it('displays remediation in no-unicode output', async () => {
       vt = createVirtualTerminal();
       const bus = createEventBus();
       const adapter = createReporterAdapter({
@@ -662,7 +666,7 @@ describe('ClackReporterAdapter', () => {
       const lines = await vt.screenshot();
       const allOutput = lines.join('\n');
 
-      // Should show remediation in plain mode too
+      // Should show remediation in no-unicode output too
       expect(allOutput).toContain('To fix:');
       expect(allOutput).toContain('Start Docker Desktop');
       expect(allOutput).toContain('More info:');

@@ -1,5 +1,3 @@
-# CLI Flags
-
 pok CLIs support several built-in flags that control behavior across all commands.
 
 ## Help
@@ -12,7 +10,7 @@ mycli -h
 mycli deploy --help
 ```
 
-When used at the root level, shows the main menu with all available commands. When used with a specific command, shows that command's usage, options, and description.
+When used at the root level, shows the root help with all available commands. When used with a specific command, shows that command's usage, options, and description.
 
 ### Help Output
 
@@ -40,27 +38,41 @@ mycli --version
 
 Shows the version from your `package.json`.
 
-## Plain Mode
+## No TTY
 
-Disable interactive features and use simple output.
+Disable interactive UI (menus, prompts, spinners).
 
 ```bash
-mycli deploy --plain
+mycli --no-tty
 ```
 
-When `--plain` is enabled:
+When `--no-tty` is enabled:
 
-- No spinners or progress animations
-- No interactive prompts (commands fail if required values are missing)
-- No color output
-- Simple line-by-line output
+- No interactive menus or prompts
+- Missing required flags fail with helpful errors
+- Root invocation (`mycli`) prints help instead of opening the menu
 
 This is useful for:
 
 - CI/CD environments
 - Piping output to other tools
 - Environments without TTY support
-- Logging and debugging
+- Automation scripts
+
+`CI` and `NO_TTY=1` are treated as `--no-tty`.
+
+## No Unicode
+
+Disable Unicode symbols and use ASCII fallbacks.
+
+```bash
+mycli deploy --no-unicode
+```
+
+When `--no-unicode` is enabled:
+
+- Unicode symbols are replaced with ASCII fallbacks
+- Color and interactivity are unaffected
 
 ## Verbose Mode
 
@@ -89,15 +101,14 @@ Strips ANSI color codes from all output. This is automatically enabled when:
 
 - `NO_COLOR` environment variable is set
 - Output is not a TTY (e.g., piped to a file)
-- `--plain` mode is enabled
 
 ## Flag Combinations
 
 Flags can be combined:
 
 ```bash
-# CI-friendly: no prompts, no colors, verbose logging
-mycli deploy --plain --verbose
+# CI-friendly: no prompts, no unicode, no colors
+mycli deploy --no-tty --no-unicode --no-color
 
 # Debugging: full output with colors
 mycli deploy --verbose
@@ -107,11 +118,11 @@ mycli deploy --verbose
 
 Some flags can also be set via environment variables:
 
-| Flag         | Environment Variable |
+| Flag          | Environment Variable |
 | ------------ | -------------------- |
 | `--no-color` | `NO_COLOR=1`         |
-| `--plain`    | `POK_PLAIN=1`        |
-| `--verbose`  | `POK_VERBOSE=1`      |
+| `--no-unicode` | `NO_UNICODE=1`     |
+| `--no-tty`   | `NO_TTY=1`           |
 
 Environment variables are overridden by explicit flags.
 

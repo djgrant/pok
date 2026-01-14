@@ -32,7 +32,12 @@ await run(args, {
 
 ```typescript
 createReporterAdapter({
-  plain: false, // Disable colors and spinners
+  output: {
+    color: false,
+    unicode: false,
+    interactive: false,
+    verbose: false,
+  },
 });
 ```
 

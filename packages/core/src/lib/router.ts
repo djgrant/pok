@@ -68,6 +68,8 @@ export type RouterConfig = {
   tabs?: TabsAdapter;
   /** Optional version string (auto-discovered from package.json if not provided) */
   version?: string;
+  /** Disable interactive prompts and menus */
+  noTty?: boolean;
 };
 
 /**
@@ -467,6 +469,17 @@ async function executeNode(
     throw new RouterError(`Command "${node.path}" has no implementation or children`);
   }
 
+  if (ctx.config.noTty) {
+    const helpText = generateHelp({
+      commandPath: node.path.split('.'),
+      command: config,
+      children,
+      appName: ctx.appName,
+    });
+    console.log(helpText);
+    return;
+  }
+
   // If not already in a menu group, wrap in one
   if (!menuOpen) {
     await reporter.group(config.label, { layout: 'sequence' }, async () => {
@@ -585,13 +598,16 @@ async function executeLeaf(
   // Extract choices for interactive prompts
   const choices = extractChoices(contextDef);
 
+  const allowPrompt = !ctx.config.noTty;
+
   // Resolve interactive context (prompts appear inside menu box if menuOpen)
   const resolvedContext = await resolveInteractiveContext(
     parsed.context,
     contextDef,
     choices,
     prompter,
-    fromMenu
+    fromMenu && allowPrompt,
+    allowPrompt
   );
 
   // Validate required context fields
@@ -673,12 +689,14 @@ async function resolveChildrenContexts(
     };
     const parsed = parseContext(args, contextDef, { errorContext });
     const choices = extractChoices(contextDef);
+    const allowPrompt = !ctx.config.noTty;
     const resolvedContext = await resolveInteractiveContext(
       parsed.context,
       contextDef,
       choices,
       prompter,
-      fromMenu
+      fromMenu && allowPrompt,
+      allowPrompt
     );
     validateRequiredContext(resolvedContext, contextDef, { errorContext });
 
@@ -1121,13 +1139,16 @@ async function selectFromMenu(
     // Extract choices for interactive prompts
     const choices = extractChoices(contextDef);
 
+    const allowPrompt = !ctx.config.noTty;
+
     // Resolve interactive context (prompts appear inside menu box)
     const resolvedContext = await resolveInteractiveContext(
       parsed.context,
       contextDef,
       choices,
       prompter,
-      true // fromMenu
+      allowPrompt,
+      allowPrompt
     );
 
     // Validate required context fields
@@ -1253,6 +1274,15 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
       // No command specified, just --help - show root help
       if (hasHelpFlag(args)) {
+        const topLevelCommands = Array.from(tree.values());
+        const helpText = generateRootHelp({
+          appName: resolvedAppName,
+          commands: topLevelCommands,
+        });
+        console.log(helpText);
+        return;
+      }
+      if (args.length === 0 && config.noTty) {
         const topLevelCommands = Array.from(tree.values());
         const helpText = generateRootHelp({
           appName: resolvedAppName,

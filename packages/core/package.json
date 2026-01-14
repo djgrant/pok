@@ -51,6 +51,7 @@
     "@types/bun": "latest",
     "@pokit/reporter-clack": "workspace:*",
     "@pokit/prompter-clack": "workspace:*",
+    "@pokit/test-utils": "workspace:*",
     "zod": "^4.0.0"
   },
   "peerDependencies": {

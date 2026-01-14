@@ -165,7 +165,9 @@ const fixtures: FixtureDefinition[] = [
 async function generateFixture(fixture: FixtureDefinition): Promise<string[]> {
   const vt = createVirtualTerminal();
   const bus = createEventBus();
-  const adapter = createReporterAdapter();
+  const adapter = createReporterAdapter({
+    output: { color: true, unicode: true, verbose: false },
+  });
   const controller = adapter.start(bus);
 
   for (const event of fixture.events) {

@@ -1,5 +1,3 @@
-# Terminal Requirements
-
 pok is designed for modern terminal emulators with Unicode and color support.
 
 ## Recommended Terminals
@@ -32,7 +30,7 @@ pok uses Unicode symbols for visual feedback:
 | ✔      | Done          | Done     |
 | ✘      | Failed        | Failed   |
 
-If your terminal doesn't display these correctly, use `--plain` mode.
+If your terminal doesn't display these correctly, use `--no-unicode` mode.
 
 ### Color Support
 
@@ -60,9 +58,9 @@ The tabs TUI requires:
 
 ## Fallback Modes
 
-### Plain Mode (`--plain`)
+### No Unicode Mode (`--no-unicode`)
 
-Disables all Unicode symbols and colors:
+Disables Unicode symbols and uses ASCII fallbacks:
 
 ```
 [Build]
@@ -74,12 +72,12 @@ Disables all Unicode symbols and colors:
 Enable with:
 
 ```bash
-mycli build --plain
+mycli build --no-unicode
 ```
 
 ### No-Color Mode (`--no-color`)
 
-Disables colors but keeps Unicode:
+Disables colors but keeps Unicode symbols:
 
 ```bash
 mycli build --no-color
@@ -87,9 +85,19 @@ mycli build --no-color
 NO_COLOR=1 mycli build
 ```
 
+### No-TTY Mode (`--no-tty`)
+
+Disables interactive menus and spinners for non-interactive environments:
+
+```bash
+mycli build --no-tty
+# or
+NO_TTY=1 mycli build
+```
+
 ### CI Environments
 
-Plain mode is auto-enabled when `CI=true` is set.
+Setting `CI=true` enables `--no-tty` behavior by default.
 
 ## Troubleshooting
 
@@ -106,7 +114,7 @@ If you see escape codes like `[32m◇[39m`:
 If you see boxes (□) instead of symbols:
 
 1. Install a font with Unicode support (e.g., Fira Code, JetBrains Mono)
-2. Use `--plain` mode as fallback
+2. Use `--no-unicode` mode as fallback
 
 ### Spinner Not Animating
 
@@ -115,10 +123,12 @@ If you see boxes (□) instead of symbols:
 
 ## Environment Variables
 
-| Variable       | Effect                       |
-| -------------- | ---------------------------- |
-| `NO_COLOR`     | Disables color output        |
-| `FORCE_COLOR`  | Forces color even in non-TTY |
-| `CI`           | Enables plain mode           |
-| `TERM`         | Terminal type detection      |
-| `TERM_PROGRAM` | Terminal program detection   |
+| Variable       | Effect                          |
+| -------------- | ------------------------------- |
+| `NO_COLOR`     | Disables color output           |
+| `NO_UNICODE`   | Disables Unicode symbols        |
+| `NO_TTY`       | Disables interactive UI         |
+| `CI`           | Enables `--no-tty` behavior     |
+| `FORCE_COLOR`  | Forces color even in non-TTY    |
+| `TERM`         | Terminal type detection         |
+| `TERM_PROGRAM` | Terminal program detection      |
