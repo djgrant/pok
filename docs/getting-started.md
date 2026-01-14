@@ -181,7 +181,7 @@ export const command = defineCommand({
 pok works best in modern terminals with Unicode and color support.
 See [Terminal Requirements](./terminal-requirements.md) for details.
 
-If you experience display issues, try `--plain` mode.
+If you experience display issues, try `--no-unicode` mode.
 
 ## Next Steps
 

@@ -12,18 +12,19 @@
  * - Process output is never interleaved with spinners
  *
  * Rendering strategy:
- * - group:start -> p.intro() with bold label (or plain text in plain mode)
+ * - group:start -> p.intro() with bold label (or line-based output)
  * - group:end -> p.outro() with success indicator
- * - activity:start (sequential) -> spinner.start() (or plain text indicator)
+ * - activity:start (sequential) -> spinner.start() (or line-based output)
  * - activity:start (parallel) -> track activity, update combined spinner
  * - activity:success -> spinner.stop() with checkmark (code 0) or update combined spinner
  * - activity:failure -> spinner.stop() with X (code 1)
  * - activity:update -> spinner.message()
  * - log -> pause spinner if active, p.log.*, resume spinner
  *
- * Plain mode (--plain or CI environment):
- * - When unicode is disabled, uses ASCII symbols and bypasses clack's decorative output
- * - When color is disabled (--no-color or NO_COLOR env), strips ANSI color codes
+ * Non-interactive output (--no-tty/NO_TTY/CI):
+ * - Uses line-based output without spinners or clack decorative UI
+ * - Unicode symbols are controlled separately with --no-unicode/NO_UNICODE
+ * - Color is controlled separately with --no-color/NO_COLOR
  */
 
 import * as p from '@clack/prompts';
@@ -71,6 +72,14 @@ function colorize(text: string, colorFn: (s: string) => string, useColor: boolea
  */
 function writeLine(line: string): void {
   process.stdout.write(line + '\n');
+}
+
+function isPlainOutput(outputConfig: OutputConfig): boolean {
+  return !outputConfig.unicode || !outputConfig.interactive;
+}
+
+function canUseInteractiveUI(outputConfig: OutputConfig): boolean {
+  return outputConfig.unicode && outputConfig.interactive;
 }
 
 type SpinnerInstance = ReturnType<typeof p.spinner>;
@@ -172,7 +181,7 @@ function updateParallelSpinnerMessage(state: AdapterState): void {
 
 /**
  * Display a log message.
- * Uses clack's log functions in unicode mode, plain console.log in plain mode.
+ * Uses clack's log functions in interactive unicode mode, line output otherwise.
  *
  * @param level - The log level
  * @param message - The message to display
@@ -187,8 +196,8 @@ function displayLog(
 ): void {
   const { outputConfig, symbols } = state;
 
-  // In plain mode (no unicode), use simple console output
-  if (!outputConfig.unicode) {
+  // In plain or non-interactive mode, use simple console output
+  if (isPlainOutput(outputConfig)) {
     const prefix = indented ? `${symbols.groupLine}  ` : '';
     const levelPrefix = {
       info: symbols.info,
@@ -201,7 +210,7 @@ function displayLog(
     return;
   }
 
-  // Unicode mode - use clack's decorative output
+  // Unicode + interactive mode - use clack's decorative output
   const prefix = indented ? '\u2502  ' : ''; // │  for indented logs
   const formattedMessage = prefix + message;
 
@@ -261,12 +270,13 @@ export type ReporterAdapterOptions = {
  * @param options - Optional configuration for the adapter
  */
 export function createReporterAdapter(options?: ReporterAdapterOptions): ReporterAdapter {
-  // Get output config from options, or use defaults
-  const outputConfig: OutputConfig = options?.output ?? {
-    color: true,
-    unicode: true,
-    verbose: options?.verbose ?? false,
-  };
+  // Get output config from options, or detect from args/env
+  const outputConfig: OutputConfig = options?.output ?? detectOutputConfig(process.argv.slice(2));
+  // Backwards compatibility: default interactive when missing
+  if (outputConfig.interactive === undefined) {
+    outputConfig.interactive = true;
+  }
+
   // Verbose can be set via options.verbose for backwards compatibility
   if (options?.verbose !== undefined) {
     outputConfig.verbose = options.verbose;
@@ -307,8 +317,8 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               hasFailure: false,
             });
 
-            // In plain mode, use simple bracket notation
-            if (!state.outputConfig.unicode) {
+            // In plain or non-interactive mode, use simple bracket notation
+            if (isPlainOutput(state.outputConfig)) {
               const label = colorize(event.label, pc.bold, state.outputConfig.color);
               writeLine(`${state.symbols.groupStart}${label}${state.symbols.groupEnd}`);
             } else {
@@ -384,7 +394,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               for (const [activityId, activity] of state.parallelActivities) {
                 if (activity.groupId !== event.id) continue;
                 if (activity.status === 'success') {
-                  if (!state.outputConfig.unicode) {
+                  if (isPlainOutput(state.outputConfig)) {
                     const prefix = colorize(
                       state.symbols.success,
                       pc.green,
@@ -397,7 +407,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 } else if (activity.status === 'failure') {
                   hasFailures = true;
                   // Show label inside group, defer error message with remediation
-                  if (!state.outputConfig.unicode) {
+                  if (isPlainOutput(state.outputConfig)) {
                     const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
                     writeLine(`  ${prefix} ${activity.label}`);
                   } else {
@@ -424,8 +434,8 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             }
 
             // Show appropriate outro based on whether there were failures
-            if (!state.outputConfig.unicode) {
-              // Plain mode - simple bracket notation
+            if (isPlainOutput(state.outputConfig)) {
+              // Plain output - simple bracket notation
               if (hasFailures) {
                 const failedText = colorize(state.symbols.failed, pc.red, state.outputConfig.color);
                 writeLine(`${state.symbols.groupStart}${failedText}${state.symbols.groupEnd}`);
@@ -434,7 +444,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 writeLine(`${state.symbols.groupStart}${doneText}${state.symbols.groupEnd}`);
               }
             } else {
-              // Unicode mode - use clack's outro
+              // Unicode + interactive mode - use clack's outro
               if (hasFailures) {
                 p.outro(
                   colorize(`${state.symbols.failed} Failed`, pc.red, state.outputConfig.color)
@@ -446,7 +456,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
             // Print deferred error messages with remediation after the group closes
             for (const deferred of deferredErrors) {
-              if (!state.outputConfig.unicode) {
+              if (isPlainOutput(state.outputConfig)) {
                 writeLine(`${state.symbols.error} ${deferred.error}`);
               } else {
                 p.log.error(deferred.error);
@@ -485,15 +495,15 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 status: 'pending',
               });
 
-              // In plain mode, just track activities - results shown at group:end
-              if (!state.outputConfig.unicode) {
+              // In plain or non-interactive mode, track activities - results shown at group:end
+              if (isPlainOutput(state.outputConfig)) {
                 if (!state.parallelSpinnerGroupId) {
                   state.parallelSpinnerGroupId = event.parentId as GroupId;
                   const activities = state.parallelActivities.size;
                   writeLine(`  Running ${activities} task${activities > 1 ? 's' : ''}...`);
                 }
               } else {
-                // Unicode mode: create or update the parallel spinner
+                // Unicode + interactive mode: create or update the parallel spinner
                 if (!state.parallelSpinner) {
                   const spinner = p.spinner();
                   state.parallelSpinner = {
@@ -508,16 +518,16 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               }
             } else {
               // Sequential activity
-              if (!state.outputConfig.unicode) {
-                // Plain mode: track activity without spinner - result shown on completion
+              if (isPlainOutput(state.outputConfig)) {
+                // Plain output: track activity without spinner - result shown on completion
                 state.spinners.set(event.id, {
-                  spinner: null as unknown as SpinnerInstance, // Not used in plain mode
+                  spinner: null as unknown as SpinnerInstance, // Not used in non-interactive output
                   label: event.label,
                   currentMessage: event.label,
                   parentGroupId: event.parentId as GroupId | undefined,
                 });
               } else {
-                // Unicode mode: create individual spinner
+                // Unicode + interactive mode: create individual spinner
                 const spinner = p.spinner();
                 state.spinners.set(event.id, {
                   spinner,
@@ -540,7 +550,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Update the activity label if message provided
               if (event.payload.message) {
                 parallelActivity.label = event.payload.message;
-                if (state.outputConfig.unicode) {
+                if (canUseInteractiveUI(state.outputConfig)) {
                   updateParallelSpinnerMessage(state);
                 }
               }
@@ -556,7 +566,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               if (text) {
                 entry.currentMessage = text;
                 // Only update spinner in unicode mode
-                if (state.outputConfig.unicode && entry.spinner) {
+                if (canUseInteractiveUI(state.outputConfig) && entry.spinner) {
                   entry.spinner.message(text);
                 }
               }
@@ -569,7 +579,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             const parallelActivity = state.parallelActivities.get(event.id);
             if (parallelActivity) {
               parallelActivity.status = 'success';
-              if (state.outputConfig.unicode) {
+              if (canUseInteractiveUI(state.outputConfig)) {
                 updateParallelSpinnerMessage(state);
               }
               // Note: For parallel activities, logs will be flushed at group:end
@@ -579,12 +589,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             // Sequential activity
             const entry = state.spinners.get(event.id);
             if (entry) {
-              if (!state.outputConfig.unicode) {
-                // Plain mode - print success line
+              if (isPlainOutput(state.outputConfig)) {
+                // Plain output - print success line
                 const prefix = colorize(state.symbols.success, pc.green, state.outputConfig.color);
                 writeLine(`  ${prefix} ${entry.label}`);
               } else if (entry.spinner) {
-                // Unicode mode - stop spinner
+                // Unicode + interactive mode - stop spinner
                 entry.spinner.stop(entry.label, 0);
               }
               state.spinners.delete(event.id);
@@ -595,7 +605,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
               if (suspended && !state.suspended) {
-                if (!state.outputConfig.unicode) {
+                if (isPlainOutput(state.outputConfig)) {
                   const prefix = colorize(
                     state.symbols.success,
                     pc.green,
@@ -626,7 +636,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               if (parentGroup) {
                 parentGroup.hasFailure = true;
               }
-              if (state.outputConfig.unicode) {
+              if (canUseInteractiveUI(state.outputConfig)) {
                 updateParallelSpinnerMessage(state);
               }
               break;
@@ -643,12 +653,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 }
               }
 
-              if (!state.outputConfig.unicode) {
-                // Plain mode - print error line
+              if (isPlainOutput(state.outputConfig)) {
+                // Plain output - print error line
                 const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
                 writeLine(`  ${prefix} ${errorMessage}`);
               } else if (entry.spinner) {
-                // Unicode mode - stop spinner with error
+                // Unicode + interactive mode - stop spinner with error
                 entry.spinner.stop(errorMessage, 1);
               }
               state.spinners.delete(event.id);
@@ -675,7 +685,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Check if this was a suspended activity
               const suspended = state.suspendedActivities.get(event.id);
               if (suspended && !state.suspended) {
-                if (!state.outputConfig.unicode) {
+                if (isPlainOutput(state.outputConfig)) {
                   const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
                   writeLine(`  ${prefix} ${suspended.label}: ${errorMessage}`);
                 } else {
@@ -704,7 +714,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               event.level === 'error' &&
               hasActiveSpinners &&
               event.activityId &&
-              state.outputConfig.unicode
+              canUseInteractiveUI(state.outputConfig)
             ) {
               const spinner = state.spinners.get(event.activityId);
               if (spinner && spinner.spinner) {
@@ -747,8 +757,8 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
           // Reporter control events
           case 'reporter:suspend': {
             state.suspended = true;
-            // Stop all active spinners and track them for completion messages (only in unicode mode)
-            if (state.outputConfig.unicode) {
+            // Stop all active spinners and track them for completion messages
+            if (canUseInteractiveUI(state.outputConfig)) {
               for (const [id, entry] of state.spinners) {
                 try {
                   if (entry.spinner) {
@@ -785,8 +795,8 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
       return {
         stop(): void {
-          // Stop all active spinners (only in unicode mode where spinners exist)
-          if (state.outputConfig.unicode) {
+          // Stop all active spinners (only in interactive mode where spinners exist)
+          if (canUseInteractiveUI(state.outputConfig)) {
             for (const entry of state.spinners.values()) {
               try {
                 if (entry.spinner) {

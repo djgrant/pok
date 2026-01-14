@@ -80,6 +80,9 @@ importers:
       '@pokit/reporter-clack':
         specifier: workspace:*
         version: link:../reporter-clack
+      '@pokit/test-utils':
+        specifier: workspace:*
+        version: link:../../test/utils
       '@types/bun':
         specifier: latest
         version: 1.3.5
@@ -147,6 +150,9 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:../core
+      '@pokit/test-utils':
+        specifier: workspace:*
+        version: link:../../test/utils
       '@types/bun':
         specifier: latest
         version: 1.3.5

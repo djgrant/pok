@@ -91,6 +91,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
   // Detect output configuration from args
   const { outputArgs, remainingArgs } = extractOutputFlags(args);
   const outputConfig = detectOutputConfig(outputArgs);
+  const noTty = !outputConfig.interactive;
 
   // Get app name (default to directory name)
   const appName = config.appName ?? path.basename(projectRoot);
@@ -104,6 +105,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       reporterAdapter,
       prompter,
       tabs,
+      noTty,
     });
   } catch (error) {
     if (error instanceof RouterError) {

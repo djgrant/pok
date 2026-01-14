@@ -428,6 +428,7 @@ export function parseContext<C extends ContextDef>(
  * @param choices - Pre-computed choices for enum fields
  * @param prompts - TTY prompts adapter for user interaction
  * @param fromMenu - Whether the command was invoked from the interactive menu
+ * @param allowPrompt - Whether prompting is allowed
  * @returns Context with values resolved
  */
 export async function resolveInteractiveContext<C extends ContextDef>(
@@ -435,9 +436,14 @@ export async function resolveInteractiveContext<C extends ContextDef>(
   contextDef: C,
   choices: Map<string, string[]>,
   prompter: Prompter,
-  fromMenu: boolean = false
+  fromMenu: boolean = false,
+  allowPrompt: boolean = true
 ): Promise<InferContext<C>> {
   const resolved = { ...context };
+
+  if (!allowPrompt) {
+    return resolved;
+  }
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
     const currentValue = resolved[name as keyof typeof resolved];

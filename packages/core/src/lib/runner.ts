@@ -896,15 +896,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
         }
       );
     } else if (isDeferredTask(item)) {
-      const retryConfig = item.task.retry;
-      await executeWithRetry(
-        () => item.then(() => {}),
-        retryConfig,
-        itemSignal,
-        (attempt, max) => {
-          reporter.warn(`Retrying task "${item.task.label}" (${attempt}/${max})...`);
-        }
-      );
+      await executeTask(item.task, item.params, itemSignal);
     } else {
       throw new CommandError(
         `r.parallel() item at index ${index} is invalid`,
@@ -1018,10 +1010,13 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
   const executeTask = async <TReturn>(
     task: AnyTaskConfig,
-    params?: Record<string, unknown>
+    params?: Record<string, unknown>,
+    taskSignal?: AbortSignal
   ): Promise<TReturn> => {
+    const runSignal = taskSignal ?? signal;
+
     // Check if already aborted before starting
-    if (signal?.aborted) {
+    if (runSignal?.aborted) {
       throw new AbortError();
     }
 
@@ -1101,12 +1096,12 @@ export function createRunner<TContext extends Record<string, unknown>>(
             executeCmd(cmd, {
               cwd,
               env: mergeEnv(allEnv),
-              quiet,
-              signal,
-            }),
-          task.retry,
-          signal,
-          (attempt, max) => {
+                quiet,
+                signal: runSignal,
+              }),
+            task.retry,
+            runSignal,
+            (attempt, max) => {
             reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
           }
         );
@@ -1126,7 +1121,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
       return executeWithRetry(
         () => runTask.run(runner, taskContext as any) as Promise<TReturn>,
         task.retry,
-        signal,
+        runSignal,
         (attempt, max) => {
           reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
         }

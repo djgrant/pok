@@ -2,6 +2,14 @@
   "name": "pokjs",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "test",
+    "test/utils",
+    ".test-projects/*",
+    "website",
+    "playground"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
