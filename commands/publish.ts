@@ -54,9 +54,16 @@ export const command = defineCommand({
   run: async (r, ctx) => {
     const group = PACKAGE_GROUPS[ctx.context.packages as PackageGroup];
     const filterArgs = group.packages.map((pkg) => `--filter "${pkg}"`).join(' ');
+    const installFilterArgs = [...group.packages, '@pokit/test-utils']
+      .map((pkg) => `--filter "${pkg}"`)
+      .join(' ');
     const dryRunFlag = ctx.context.dryRun ? ' --dry-run' : '';
 
     await r.group('Publish to npm', { layout: 'sequence' }, async (g) => {
+      await g.activity('Install publish dependencies', async () => {
+        await r.exec(`pnpm ${installFilterArgs} install --frozen-lockfile`);
+      });
+
       await g.activity('Build packages', async () => {
         await r.exec('bun tsc --build');
       });
