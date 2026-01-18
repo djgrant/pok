@@ -3,7 +3,6 @@ import { defineCommand, defineCheck } from '@pokit/core';
 import { $ } from 'bun';
 
 const SCOPED_PACKAGES = [
-  '@pokit/config',
   '@pokit/core',
   '@pokit/op',
   '@pokit/prompter-clack',
