@@ -20,6 +20,7 @@
     "url": "https://github.com/djgrant/pok/issues"
   },
   "scripts": {
+    "fallback": "bun packages/cmd/bin/pok.ts",
     "quick-check": "echo 'quick check'"
   },
   "devDependencies": {
