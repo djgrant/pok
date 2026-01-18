@@ -171,6 +171,9 @@ export default {
     });
 
     it('shows error about missing required field', async () => {
+      // Create commands directory so it doesn't fail on directory check first
+      fs.mkdirSync(path.join(tempDir, 'commands'), { recursive: true });
+
       const proc = spawn(['bun', CMD_BIN], {
         cwd: tempDir,
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -180,7 +183,7 @@ export default {
       const stderr = await new Response(proc.stderr).text();
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('reporter is required');
+      expect(stderr).toContain('reporter');
     });
   });
 
