@@ -1,3 +1,10 @@
+/**
+ * CLI Event Types
+ *
+ * This is the "wire protocol" of the CLI. Events represent **what happened**,
+ * not how it looks. The UI adapters decide how to render these events.
+ */
+
 export type ActivityId = string;
 export type GroupId = string;
 
@@ -86,6 +93,32 @@ export type CLIEvent =
   | { type: 'reporter:resume' };
 
 /**
+ * Event listener function type
+ */
+export type EventListener = (event: CLIEvent) => void;
+
+/**
+ * Unsubscribe function returned by `on()`
+ */
+export type Unsubscribe = () => void;
+
+/**
+ * The Event Bus interface - the bridge between emitters and consumers
+ */
+export interface EventBus {
+  /**
+   * Emit an event to all listeners
+   */
+  emit(event: CLIEvent): void;
+
+  /**
+   * Subscribe to events
+   * @returns Unsubscribe function
+   */
+  on(listener: EventListener): Unsubscribe;
+}
+
+/**
  * Type guards for event types
  */
 export function isRootEvent(
@@ -117,20 +150,3 @@ export function isActivityEvent(event: CLIEvent): event is Extract<
 export function isLogEvent(event: CLIEvent): event is Extract<CLIEvent, { type: 'log' }> {
   return event.type === 'log';
 }
-
-import type { EventBus } from './bus.js';
-
-/**
- * Event listener function type
- */
-export type EventListener = (event: CLIEvent) => void;
-
-/**
- * Unsubscribe function returned by `on()`
- */
-export type Unsubscribe = () => void;
-
-import type { ReporterAdapter, ReporterAdapterController } from './adapter.js';
-
-export type { EventBus, ReporterAdapter, ReporterAdapterController };
-

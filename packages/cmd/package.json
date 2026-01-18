@@ -1,6 +1,6 @@
 {
   "name": "pokit",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Global CLI launcher for pok - install once, run anywhere",
   "type": "module",
   "license": "MIT",
@@ -15,6 +15,12 @@
   },
   "bin": {
     "pok": "./bin/pok.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/protocol.ts",
+      "import": "./bin/pok.ts"
+    }
   },
   "files": [
     "bin",

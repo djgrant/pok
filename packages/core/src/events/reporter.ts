@@ -5,8 +5,7 @@
  * A Reporter instance is always tied to a context (Root, Group, or Activity).
  */
 
-import type { EventBus } from './bus.js';
-import type { ActivityId, GroupId, GroupLayout, LogLevel } from './types.js';
+import type { ActivityId, CLIEvent, EventBus, GroupId, GroupLayout, LogLevel } from './types.js';
 import { CheckError } from '../lib/check.js';
 
 /**

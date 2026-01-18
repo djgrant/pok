@@ -18,7 +18,7 @@ export type {
 export { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from './types';
 
 // Event bus
-export type { EventBus, EventListener, Unsubscribe } from './bus';
+export type { EventBus, EventListener, Unsubscribe } from './types';
 export { createEventBus } from './bus';
 
 // Reporter (user-facing API for emitting events)

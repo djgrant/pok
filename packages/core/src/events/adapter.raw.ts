@@ -5,9 +5,7 @@
  * Designed for testing - allows assertions on emitted events.
  */
 
-import type { EventBus } from './bus';
-import type { CLIEvent } from './types';
-import type { ReporterAdapter, ReporterAdapterController } from './adapter';
+import type { CLIEvent, EventBus, ReporterAdapter, ReporterAdapterController } from './types';
 
 /**
  * Options for the raw reporter adapter

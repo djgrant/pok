@@ -14,7 +14,7 @@ const CONFIG_FILENAME = 'pok.config.ts';
  * Fallback template used when @pokit/config isn't installed yet.
  * This enables bootstrapping new projects.
  */
-const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/config'
+const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
 import { createReporterAdapter } from '@pokit/reporter-clack'
 import { createPrompter } from '@pokit/prompter-clack'
 
@@ -25,15 +25,15 @@ export default defineConfig({
 `;
 
 /**
- * Try to get CONFIG_TEMPLATE from @pokit/config, falling back to hardcoded template.
+ * Try to get CONFIG_TEMPLATE from @pokit/core, falling back to hardcoded template.
  */
 async function getConfigTemplate(cwd: string): Promise<string> {
   try {
-    const configModulePath = await resolve('@pokit/config', cwd);
+    const configModulePath = await resolve('@pokit/core', cwd);
     const configModule = await import(configModulePath);
     return configModule.CONFIG_TEMPLATE ?? FALLBACK_CONFIG_TEMPLATE;
   } catch {
-    // @pokit/config not installed yet - use fallback for bootstrapping
+    // @pokit/core not installed yet - use fallback for bootstrapping
     return FALLBACK_CONFIG_TEMPLATE;
   }
 }

@@ -5,17 +5,23 @@
  * Provides a simple pub/sub mechanism for CLI events.
  */
 
-import type { CLIEvent } from './types.js';
+import type { CLIEvent, EventListener, Unsubscribe } from './types.js';
 
 /**
- * Event listener function type
+ * Event Bus interface - the bridge between emitters and consumers
  */
-export type EventListener = (event: CLIEvent) => void;
+export interface EventBus {
+  /**
+   * Emit an event to all listeners
+   */
+  emit(event: CLIEvent): void;
 
-/**
- * Unsubscribe function returned by `on()`
- */
-export type Unsubscribe = () => void;
+  /**
+   * Subscribe to events
+   * @returns Unsubscribe function
+   */
+  on(listener: EventListener): Unsubscribe;
+}
 
 /**
  * Error handler function type for event bus errors
@@ -34,22 +40,6 @@ export type EventBusOptions = {
    */
   onError?: EventBusErrorHandler | 'throw' | 'silent';
 };
-
-/**
- * The Event Bus interface - the bridge between emitters and consumers
- */
-export interface EventBus {
-  /**
-   * Emit an event to all listeners
-   */
-  emit(event: CLIEvent): void;
-
-  /**
-   * Subscribe to events
-   * @returns Unsubscribe function
-   */
-  on(listener: EventListener): Unsubscribe;
-}
 
 /**
  * Create a new EventBus instance

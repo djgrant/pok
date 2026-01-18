@@ -13,7 +13,6 @@ const PACKAGE_GROUPS = {
   scoped: {
     label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
     files: [
-      'packages/config/package.json',
       'packages/core/package.json',
       'packages/op/package.json',
       'packages/prompter-clack/package.json',
