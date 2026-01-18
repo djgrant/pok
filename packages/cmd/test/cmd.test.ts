@@ -35,7 +35,6 @@ describe('pokit', () => {
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
-      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
       fs.symlinkSync(
         path.join(packagesDir, 'reporter-clack'),
         path.join(nodeModulesDir, 'reporter-clack')
@@ -49,7 +48,7 @@ describe('pokit', () => {
       fs.writeFileSync(
         path.join(tempDir, 'pok.config.ts'),
         `
-import { defineConfig } from '@pokit/config';
+import { defineConfig } from '@pokit/core';
 import { createReporterAdapter } from '@pokit/reporter-clack';
 import { createPrompter } from '@pokit/prompter-clack';
 
@@ -163,7 +162,6 @@ export default {
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
-      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
     });
 
     afterAll(() => {
@@ -204,7 +202,6 @@ export default {
 
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
-      fs.symlinkSync(path.join(packagesDir, 'config'), path.join(nodeModulesDir, 'config'));
       fs.symlinkSync(
         path.join(packagesDir, 'reporter-clack'),
         path.join(nodeModulesDir, 'reporter-clack')
@@ -218,7 +215,7 @@ export default {
       fs.writeFileSync(
         path.join(tempDir, 'pok.config.ts'),
         `
-import { defineConfig } from '@pokit/config';
+import { defineConfig } from '@pokit/core';
 import { createReporterAdapter } from '@pokit/reporter-clack';
 import { createPrompter } from '@pokit/prompter-clack';
 

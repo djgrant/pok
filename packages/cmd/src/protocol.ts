@@ -29,7 +29,7 @@ export interface LauncherSkeleton {
 }
 
 /**
- * The shape of the module exported by @pokit/config
+ * The shape of the module exported by @pokit/core
  */
 export interface ConfigModule {
   validateConfig(config: unknown, configPath: string): LauncherSkeleton;

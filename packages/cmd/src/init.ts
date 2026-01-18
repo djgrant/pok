@@ -11,7 +11,7 @@ import * as path from 'path';
 const CONFIG_FILENAME = 'pok.config.ts';
 
 /**
- * Fallback template used when @pokit/config isn't installed yet.
+ * Fallback template used when @pokit/core isn't installed yet.
  * This enables bootstrapping new projects.
  */
 const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
@@ -51,7 +51,7 @@ export async function runInit(): Promise<void> {
     process.exit(1);
   }
 
-  // Get the config template (from @pokit/config or fallback)
+  // Get the config template (from @pokit/core or fallback)
   const template = await getConfigTemplate(cwd);
 
   // Write the config file
