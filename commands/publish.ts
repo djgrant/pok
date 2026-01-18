@@ -2,24 +2,32 @@ import { z } from 'zod';
 import { defineCommand, defineCheck } from '@pokit/core';
 import { $ } from 'bun';
 
+const SCOPED_PACKAGES = [
+  '@pokit/config',
+  '@pokit/core',
+  '@pokit/op',
+  '@pokit/prompter-clack',
+  '@pokit/reporter-clack',
+  '@pokit/reporter-web',
+  '@pokit/tabs-core',
+  '@pokit/tabs-ink',
+  '@pokit/tabs-opentui',
+] as const;
+
+const CLI_PACKAGES = ['pokit', 'create-pokit'] as const;
+
 const PACKAGE_GROUPS = {
   scoped: {
     label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
-    packages: [
-      '@pokit/config',
-      '@pokit/core',
-      '@pokit/op',
-      '@pokit/prompter-clack',
-      '@pokit/reporter-clack',
-      '@pokit/reporter-web',
-      '@pokit/tabs-core',
-      '@pokit/tabs-ink',
-      '@pokit/tabs-opentui',
-    ],
+    packages: SCOPED_PACKAGES,
   },
   cli: {
     label: 'CLI packages (pokit, create-pokit)',
-    packages: ['pokit', 'create-pokit'],
+    packages: CLI_PACKAGES,
+  },
+  all: {
+    label: 'All packages',
+    packages: [...SCOPED_PACKAGES, ...CLI_PACKAGES],
   },
 } as const;
 
@@ -42,8 +50,8 @@ export const command = defineCommand({
   context: {
     packages: {
       from: 'flag',
-      schema: z.enum(['scoped', 'cli']),
-      description: 'Package group to publish: scoped (@pokit/*) or cli (pokit, create-pokit)',
+      schema: z.enum(['scoped', 'cli', 'all']),
+      description: 'Package group to publish: scoped (@pokit/*), cli (pokit, create-pokit), or all',
     },
     dryRun: {
       from: 'flag',
