@@ -10,6 +10,8 @@ import { CLIError, type ErrorContext } from './cli-error';
 export type ParseContextOptions = {
   /** Error context for rich error messages */
   errorContext?: ErrorContext;
+  /** When true, unknown flags are ignored and added to 'rest' instead of throwing */
+  ignoreUnknownFlags?: boolean;
 };
 
 /**
@@ -353,6 +355,11 @@ export function parseContext<C extends ContextDef>(
       const fieldDef = contextDef[flagName];
 
       if (!fieldDef) {
+        if (options?.ignoreUnknownFlags) {
+          rest.push(arg);
+          i++;
+          continue;
+        }
         // Try to find a close match for typo detection
         const suggestion = findClosestMatch(rawFlagName, knownFlags);
         let errorMessage = `Unknown flag: ${arg}`;

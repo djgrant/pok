@@ -5,12 +5,14 @@
  * for pok projects.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+ import * as fs from 'fs';
+ import * as path from 'path';
+ import { z } from 'zod';
+ 
+ // =============================================================================
+ // Adapter Type Contracts
+ // =============================================================================
 
-// =============================================================================
-// Adapter Type Contracts
-// =============================================================================
 
 /**
  * Minimal structural type for reporter adapters.
@@ -71,18 +73,37 @@ export type PokConfig = {
   /** Prompter instance */
   prompter: Prompter;
 
-  /** Optional tabs adapter instance */
-  tabs?: TabsAdapter;
+   /** Optional tabs adapter instance */
+   tabs?: TabsAdapter;
+ 
+   /** Version string for --version flag */
+   version?: string;
+ 
+   /** NPM scripts to include as commands (true for all, or array of names) */
+   npmScripts?: boolean | string[];
+ };
+ 
+ /**
+  * pok configuration schema
+  */
+ export const PokConfigSchema = z.object({
+   appDir: z.string().optional(),
+   cwd: z.string().optional(),
+   commandsDir: z.string().optional(),
+   appName: z.string().optional(),
+   reporter: z.any(),
+   prompter: z.any(),
+   tabs: z.any().optional(),
+   version: z.string().optional(),
+   npmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
+ });
+ 
+ /**
+  * Resolved configuration with all defaults applied
+  */
+ export type ResolvedPokConfig = Required<Pick<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>> &
+   Omit<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>;
 
-  /** Version string for --version flag */
-  version?: string;
-};
-
-/**
- * Resolved configuration with all defaults applied
- */
-export type ResolvedPokConfig = Required<Pick<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>> &
-  Omit<PokConfig, 'appDir' | 'cwd' | 'commandsDir'>;
 
 /**
  * Identity function for type inference in config files
@@ -133,55 +154,36 @@ export function findConfigFile(startDir: string): { configPath: string; configDi
   }
 }
 
-/**
- * Validate required config fields, apply defaults, and return resolved config
- */
-export function validateConfig(config: unknown, configPath: string): ResolvedPokConfig {
-  if (!config || typeof config !== 'object') {
-    throw new Error(
-      `Invalid configuration in ${configPath}\n\n` + 'The config file must export a default object.'
-    );
-  }
+ /**
+  * Validate required config fields, apply defaults, and return resolved config
+  */
+ export function validateConfig(config: unknown, configPath: string): ResolvedPokConfig {
+   if (!config || typeof config !== 'object') {
+     throw new Error(
+       `Invalid configuration in ${configPath}\n\n` + 'The config file must export a default object.'
+     );
+   }
+ 
+   const result = PokConfigSchema.safeParse(config);
+ 
+   if (!result.success) {
+     const issues = result.error.issues
+       .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+       .join('\n');
+     throw new Error(`Invalid configuration in ${configPath}:\n${issues}`);
+   }
+ 
+   const cfg = result.data;
+ 
+   // Apply defaults
+   return {
+     appDir: '.',
+     cwd: '.',
+     commandsDir: './commands',
+     ...cfg,
+   } as ResolvedPokConfig;
+ }
 
-  const cfg = config as Record<string, unknown>;
-
-  // Check required fields
-  if (!cfg.reporter) {
-    throw new Error(
-      `reporter is required in ${configPath}\n\n` +
-        'Example configuration:\n\n' +
-        `  import { defineConfig } from '@pokit/config'\n` +
-        `  import { createReporterAdapter } from '@pokit/reporter-clack'\n` +
-        `  import { createPrompter } from '@pokit/prompter-clack'\n\n` +
-        `  export default defineConfig({\n` +
-        `    reporter: createReporterAdapter(),\n` +
-        `    prompter: createPrompter(),\n` +
-        `  })\n`
-    );
-  }
-
-  if (!cfg.prompter) {
-    throw new Error(
-      `prompter is required in ${configPath}\n\n` +
-        'Example configuration:\n\n' +
-        `  import { defineConfig } from '@pokit/config'\n` +
-        `  import { createReporterAdapter } from '@pokit/reporter-clack'\n` +
-        `  import { createPrompter } from '@pokit/prompter-clack'\n\n` +
-        `  export default defineConfig({\n` +
-        `    reporter: createReporterAdapter(),\n` +
-        `    prompter: createPrompter(),\n` +
-        `  })\n`
-    );
-  }
-
-  // Apply defaults
-  return {
-    appDir: '.',
-    cwd: '.',
-    commandsDir: './commands',
-    ...cfg,
-  } as ResolvedPokConfig;
-}
 
 /**
  * Template string for scaffolding new pok.config.ts files

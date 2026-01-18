@@ -40,11 +40,14 @@ export type RunCliConfig = {
   prompter: Prompter;
   /** Optional tabs adapter (instantiated) */
   tabs?: TabsAdapter;
-  /** Optional version string for --version flag */
-  version?: string;
-};
+   /** Optional version string for --version flag */
+   version?: string;
+   /** NPM scripts to include as commands */
+   npmScripts?: boolean | string[];
+ };
+ 
+ /**
 
-/**
  * Extract detailed error information from process execution errors
  */
 function getErrorDetails(error: unknown): string {
@@ -96,18 +99,20 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
   // Get app name (default to directory name)
   const appName = config.appName ?? path.basename(projectRoot);
 
-  try {
-    await run(remainingArgs, {
-      commandsDir,
-      projectRoot,
-      appName,
-      version,
-      reporterAdapter,
-      prompter,
-      tabs,
-      noTty,
-    });
-  } catch (error) {
+   try {
+     await run(remainingArgs, {
+       commandsDir,
+       projectRoot,
+       appName,
+       version,
+       reporterAdapter,
+       prompter,
+       tabs,
+       noTty,
+       npmScripts: config.npmScripts,
+     });
+   } catch (error) {
+
     if (error instanceof RouterError) {
       process.exit(error.exitCode);
     }

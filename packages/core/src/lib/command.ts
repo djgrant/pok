@@ -228,6 +228,14 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
    * @default true
    */
   quietRunAll?: boolean;
+
+  /**
+   * When true, unknown flags are not rejected and are instead passed
+   * to the command in `extraArgs`.
+   *
+   * @default false
+   */
+  ignoreUnknownFlags?: boolean;
 };
 
 /**
