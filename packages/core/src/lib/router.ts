@@ -384,8 +384,12 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
  * @returns Command configuration
  */
 function createPmAction(type: 'run' | 'exec', name: string, cwd: string): CommandConfig {
+  const pm = getPackageManager(cwd);
+  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${name}`;
+
   return {
     label: name,
+    description,
     ignoreUnknownFlags: true,
     run: async (r, ctx) => {
       const pm = getPackageManager(cwd);
