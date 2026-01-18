@@ -73,12 +73,19 @@ export type RouterConfig = {
    /** Disable interactive prompts and menus */
    noTty?: boolean;
     /**
-     * NPM scripts to include as commands.
+     * Package manager scripts to include as commands.
      * - true: Include all scripts from root package.json
      * - string[]: List of script names, glob patterns (e.g. 'test:*'),
      *   or package discovery paths (e.g. 'packages/*')
      */
-    npmScripts?: boolean | string[];
+    pmScripts?: boolean | string[];
+
+    /**
+     * Native package manager commands to include (e.g. 'install', 'add', 'run').
+     * - true: Include standard lifecycle commands
+     * - string[]: List of specific commands to include
+     */
+    pmCommands?: boolean | string[];
  };
  
  /**
@@ -159,18 +166,19 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
    const runtime = await getRuntime();
    const { reporter } = ctx;
  
-   // 1. Add npm scripts if configured
-   if (ctx.config.npmScripts) {
+   // 1. Add package manager scripts (pmScripts)
+   const scriptsConfig = ctx.config.pmScripts;
+   if (scriptsConfig) {
      const projectRoot = ctx.projectRoot;
      const { reporter } = ctx;
- 
+
      try {
-       const patterns = Array.isArray(ctx.config.npmScripts)
-         ? ctx.config.npmScripts
+       const patterns = Array.isArray(scriptsConfig)
+         ? scriptsConfig
          : [true];
- 
+
        const allScripts = new Map<string, { scriptName: string; cwd: string }>();
- 
+
        for (const pattern of patterns) {
          if (typeof pattern === 'boolean') {
            if (pattern === true) {
@@ -187,13 +195,13 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
            }
            continue;
          }
- 
+
          // 1. Try matching against root package scripts
          try {
            const rootPkgContent = await runtime.readFile(path.join(projectRoot, 'package.json'));
            const rootPkg = JSON.parse(rootPkgContent);
            const rootScripts = rootPkg.scripts || {};
- 
+
            if (rootScripts[pattern]) {
              allScripts.set(pattern, { scriptName: pattern, cwd: projectRoot });
            } else if (!pattern.includes('/')) {
@@ -208,7 +216,7 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
          } catch {
            // Root package.json might not exist or be invalid, ignore
          }
- 
+
          // 2. Try matching as a path glob for other package.jsons (monorepo support)
          if (pattern.includes('/') || pattern.includes('\\') || pattern.includes('*')) {
            let globPattern = pattern;
@@ -218,18 +226,18 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
                ? `${pattern}package.json`
                : `${pattern}/package.json`;
            }
- 
+
            try {
              for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
                // Skip root package.json if it was already handled as true or matched above
                if (pkgPath === 'package.json') continue;
- 
+
                const absPath = path.join(projectRoot, pkgPath);
                const content = await runtime.readFile(absPath);
                const pkg = JSON.parse(content);
                const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
                const pkgDir = path.dirname(absPath);
- 
+
                for (const scriptName of Object.keys(pkg.scripts || {})) {
                  // Use package name as prefix for workspace scripts
                  const commandPath = `${pkgName}:${scriptName}`;
@@ -241,21 +249,81 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
            }
          }
        }
- 
-       for (const [commandPath, info] of allScripts) {
-         const config = createNpmScriptCommand(info.scriptName, info.cwd);
-         const segments = commandPath.split(/[:.]/);
-         insertIntoTree(tree, segments, config);
-       }
-     } catch (error) {
-       reporter.warn(
-         `Failed to load npm scripts: ${error instanceof Error ? error.message : String(error)}`
-       );
-     }
-   }
- 
-   // 2. Load file-based commands
-   for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
+
+        for (const [commandPath, info] of allScripts) {
+          const config = createPmAction('run', info.scriptName, info.cwd);
+          const segments = commandPath.split(/[:.]/);
+          insertIntoTree(tree, segments, config);
+        }
+      } catch (error) {
+        reporter.warn(
+          `Failed to load scripts: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+
+    // 2. Add native package manager commands
+    if (ctx.config.pmCommands) {
+      const projectRoot = ctx.projectRoot;
+      const commandsConfig = ctx.config.pmCommands;
+
+      // Normalize commands list and discovery patterns
+      const commands: string[] = [];
+      const patterns: string[] = [];
+
+      if (commandsConfig === true) {
+        commands.push('install', 'add', 'remove', 'update', 'audit', 'outdated');
+      } else if (Array.isArray(commandsConfig)) {
+         for (const item of commandsConfig) {
+           if (item.includes('/') || item.includes('\\') || item.includes('*')) {
+             patterns.push(item);
+           } else {
+             commands.push(item);
+           }
+         }
+      }
+
+      // 1. Register commands for root
+      for (const cmd of commands) {
+        const config = createPmAction('exec', cmd, projectRoot);
+        insertIntoTree(tree, [cmd], config);
+      }
+
+      // 2. Register commands for workspaces if patterns exist
+      if (patterns.length > 0) {
+         for (const pattern of patterns) {
+            let globPattern = pattern;
+            if (!pattern.endsWith('package.json')) {
+              globPattern = pattern.endsWith('/')
+                ? `${pattern}package.json`
+                : `${pattern}/package.json`;
+            }
+
+            try {
+              for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
+                if (pkgPath === 'package.json') continue;
+
+                const absPath = path.join(projectRoot, pkgPath);
+                const content = await runtime.readFile(absPath);
+                const pkg = JSON.parse(content);
+                const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
+                const pkgDir = path.dirname(absPath);
+
+                for (const cmd of commands) {
+                  const commandPath = `${pkgName}:${cmd}`;
+                  const config = createPmAction('exec', cmd, pkgDir);
+                  insertIntoTree(tree, commandPath.split(/[:.]/), config);
+                }
+              }
+            } catch {
+              // Ignore glob errors
+            }
+         }
+      }
+    }
+
+    // 2. Load file-based commands
+    for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
      // Skip non-command files
      if (file.startsWith('_')) continue;
  
@@ -303,31 +371,35 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
    // Validate aliases after building the tree
    validateAliases(tree);
  
-   return tree;
- }
- 
- /**
-  * Create a command that runs an npm script
-  *
-  * @internal
-  * @param scriptName - Name of the npm script from package.json
-  * @param projectRoot - Root directory of the project
-  * @returns Command configuration
-  */
-   function createNpmScriptCommand(scriptName: string, cwd: string): CommandConfig {
-     return {
-       label: scriptName,
-       ignoreUnknownFlags: true,
-       run: async (r, ctx) => {
-         const pm = getPackageManager(cwd);
-         const args = ctx.extraArgs.length > 0 ? ` -- ${ctx.extraArgs.join(' ')}` : '';
-         await r.exec(`${pm} run ${scriptName}${args}`, { interactive: true, cwd });
-       },
-     };
-   }
- 
- /**
-  * Insert a command into the tree, creating intermediate nodes as needed.
+  return tree;
+}
+
+/**
+ * Create a command that runs a package manager action (script or command)
+ *
+ * @internal
+ * @param type - 'run' for scripts (pm run x), 'exec' for native commands (pm x)
+ * @param name - The script name or command name
+ * @param cwd - Working directory for the command
+ * @returns Command configuration
+ */
+function createPmAction(type: 'run' | 'exec', name: string, cwd: string): CommandConfig {
+  return {
+    label: name,
+    ignoreUnknownFlags: true,
+    run: async (r, ctx) => {
+      const pm = getPackageManager(cwd);
+      const args = ctx.extraArgs.length > 0
+        ? (type === 'run' ? ` -- ${ctx.extraArgs.join(' ')}` : ` ${ctx.extraArgs.join(' ')}`)
+        : '';
+      const cmd = type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${name}${args}`;
+      await r.exec(cmd, { interactive: true, cwd });
+    },
+  };
+}
+
+/**
+ * Insert a command into the tree, creating intermediate nodes as needed.
 
  *
  * Walks the segment path (e.g., ['generate', 'types', 'cloudflare']) and creates
