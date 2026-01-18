@@ -8,9 +8,10 @@
  * 1. Explicit config: Pass commandsDir and projectRoot
  * 2. Autodiscovery: Finds commands/ sibling directory from calling file
  */
-import * as path from 'path';
-import { getRuntime } from '../runtime';
-import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
+ import * as path from 'path';
+ import { getRuntime, getPackageManager } from '../runtime';
+ import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
+
 import type { CheckConfig } from './check';
 import { CheckError } from './check';
 import {
@@ -66,13 +67,16 @@ export type RouterConfig = {
   prompter: Prompter;
   /** Optional tabs adapter for tabbed console */
   tabs?: TabsAdapter;
-  /** Optional version string (auto-discovered from package.json if not provided) */
-  version?: string;
-  /** Disable interactive prompts and menus */
-  noTty?: boolean;
-};
+   /** Optional version string (auto-discovered from package.json if not provided) */
+   version?: string;
+   /** Disable interactive prompts and menus */
+   noTty?: boolean;
+   /** NPM scripts to include as commands */
+   npmScripts?: boolean | string[];
+ };
+ 
+ /**
 
-/**
  * Runtime context containing all state needed during router execution.
  * This replaces the previous module-level global state.
  */
@@ -138,70 +142,118 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
   }
 }
 
-/**
- * Load all command files and build a command tree
- */
-export async function buildCommandTree(
-  commandsDir: string,
-  ctx: RouterContext
-): Promise<CommandTree> {
-  const tree: CommandTree = new Map();
-  const runtime = await getRuntime();
-  const { reporter } = ctx;
-
-  for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
-    // Skip non-command files
-    if (file.startsWith('_')) continue;
-
-    const filePath = path.join(commandsDir, file);
-
-    try {
-      const module = await import(filePath);
-
-      if (!module.command) {
-        // File doesn't export a command - skip
-        continue;
-      }
-
-      // Convert filename to command path
-      // e.g., 'generate.types.cloudflare.ts' -> ['generate', 'types', 'cloudflare']
-      const commandPath = file.replace(/\.tsx?$/, '');
-      const segments = commandPath.split('.');
-
-      const config = module.command as CommandConfig;
-
-      // Warn if command has conflicting configuration
-      if (config.run && config.enableRunAllChildren) {
-        reporter.warn(
-          `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
-            `The 'enableRunAllChildren' option will be ignored.`
-        );
-      }
-
-      // Insert into tree
-      insertIntoTree(tree, segments, config);
-    } catch (error) {
-      // Log with actionable guidance - allows partial loading
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      reporter.error(
-        `Failed to load command "${file}":\n` +
-          `  ${errorMessage}\n\n` +
-          `To fix this:\n` +
-          `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
-          `  2. Check for syntax errors or missing imports in the file\n` +
-          `  3. Verify all referenced tasks and checks are properly defined`
-      );
-    }
+ /**
+  * Load all command files and build a command tree
+  */
+ export async function buildCommandTree(
+   commandsDir: string,
+   ctx: RouterContext
+ ): Promise<CommandTree> {
+   const tree: CommandTree = new Map();
+   const runtime = await getRuntime();
+   const { reporter } = ctx;
+ 
+  // 1. Add npm scripts if configured
+  if (ctx.config.npmScripts) {
+    const projectRoot = ctx.projectRoot;
+     const packageJsonPath = path.join(projectRoot, 'package.json');
+     try {
+      const content = await runtime.readFile(packageJsonPath);
+      const pkg = JSON.parse(content);
+      const scripts = pkg.scripts || {};
+      const scriptsToInclude = Array.isArray(ctx.config.npmScripts)
+         ? ctx.config.npmScripts
+         : Object.keys(scripts);
+ 
+       for (const scriptName of scriptsToInclude) {
+         if (scripts[scriptName]) {
+           const config = createNpmScriptCommand(scriptName, projectRoot);
+           // Support both colon and dot as separators for nested commands
+           const segments = scriptName.split(/[:.]/);
+           insertIntoTree(tree, segments, config);
+         }
+       }
+     } catch (error) {
+       // Ignore if package.json not found or invalid
+       reporter.warn(`Failed to load npm scripts from package.json: ${error instanceof Error ? error.message : String(error)}`);
+     }
+   }
+ 
+   // 2. Load file-based commands
+   for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
+     // Skip non-command files
+     if (file.startsWith('_')) continue;
+ 
+     const filePath = path.join(commandsDir, file);
+ 
+     try {
+       const module = await import(filePath);
+ 
+       if (!module.command) {
+         // File doesn't export a command - skip
+         continue;
+       }
+ 
+       // Convert filename to command path
+       // e.g., 'generate.types.cloudflare.ts' -> ['generate', 'types', 'cloudflare']
+       const commandPath = file.replace(/\.tsx?$/, '');
+       const segments = commandPath.split('.');
+ 
+       const config = module.command as CommandConfig;
+ 
+       // Warn if command has conflicting configuration
+       if (config.run && config.enableRunAllChildren) {
+         reporter.warn(
+           `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
+             `The 'enableRunAllChildren' option will be ignored.`
+         );
+       }
+ 
+       // Insert into tree
+       insertIntoTree(tree, segments, config);
+     } catch (error) {
+       // Log with actionable guidance - allows partial loading
+       const errorMessage = error instanceof Error ? error.message : String(error);
+       reporter.error(
+         `Failed to load command "${file}":\n` +
+           `  ${errorMessage}\n\n` +
+           `To fix this:\n` +
+           `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
+           `  2. Check for syntax errors or missing imports in the file\n` +
+           `  3. Verify all referenced tasks and checks are properly defined`
+       );
+     }
+   }
+ 
+   // Validate aliases after building the tree
+   validateAliases(tree);
+ 
+   return tree;
+ }
+ 
+ /**
+  * Create a command that runs an npm script
+  *
+  * @internal
+  * @param scriptName - Name of the npm script from package.json
+  * @param projectRoot - Root directory of the project
+  * @returns Command configuration
+  */
+  function createNpmScriptCommand(scriptName: string, projectRoot: string): CommandConfig {
+    return {
+      label: scriptName,
+      ignoreUnknownFlags: true,
+      run: async (r, ctx) => {
+        const pm = getPackageManager(projectRoot);
+        const args = ctx.extraArgs.length > 0 ? ` -- ${ctx.extraArgs.join(' ')}` : '';
+        await r.exec(`${pm} run ${scriptName}${args}`, { interactive: true });
+      },
+    };
   }
+ 
+ /**
+  * Insert a command into the tree, creating intermediate nodes as needed.
 
-  // Validate aliases after building the tree
-  validateAliases(tree);
-
-  return tree;
-}
-
-/**
- * Insert a command into the tree, creating intermediate nodes as needed.
  *
  * Walks the segment path (e.g., ['generate', 'types', 'cloudflare']) and creates
  * tree nodes as necessary. Intermediate nodes get a placeholder config with just
@@ -593,7 +645,10 @@ async function executeLeaf(
   };
 
   // Parse context from args
-  const parsed = parseContext(args, contextDef, { errorContext });
+  const parsed = parseContext(args, contextDef, {
+    errorContext,
+    ignoreUnknownFlags: config.ignoreUnknownFlags,
+  });
 
   // Extract choices for interactive prompts
   const choices = extractChoices(contextDef);
@@ -687,7 +742,10 @@ async function resolveChildrenContexts(
       appName,
       commandPath: leaf.path.split('.'),
     };
-    const parsed = parseContext(args, contextDef, { errorContext });
+    const parsed = parseContext(args, contextDef, {
+      errorContext,
+      ignoreUnknownFlags: leaf.config.ignoreUnknownFlags,
+    });
     const choices = extractChoices(contextDef);
     const allowPrompt = !ctx.config.noTty;
     const resolvedContext = await resolveInteractiveContext(
@@ -1134,7 +1192,10 @@ async function selectFromMenu(
     };
 
     // Parse context from args (empty since we're in menu mode)
-    const parsed = parseContext([], contextDef, { errorContext });
+    const parsed = parseContext([], contextDef, {
+      errorContext,
+      ignoreUnknownFlags: config.ignoreUnknownFlags,
+    });
 
     // Extract choices for interactive prompts
     const choices = extractChoices(contextDef);

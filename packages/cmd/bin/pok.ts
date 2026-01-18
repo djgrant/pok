@@ -81,11 +81,13 @@ Run \`pok init\` to create a pok.config.ts file.
       commandsDir: string;
       appName?: string;
       reporter: unknown;
-      prompter: unknown;
-      tabs?: unknown;
-      version?: string;
-    };
-  };
+       prompter: unknown;
+       tabs?: unknown;
+       version?: string;
+       npmScripts?: boolean | string[];
+     };
+   };
+ 
 
   try {
     const configModulePath = await resolve('@pokit/config', configDir);
@@ -145,11 +147,13 @@ Run \`pok init\` to create a pok.config.ts file.
     projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
-    reporterAdapter: config.reporter,
-    prompter: config.prompter,
-    tabs: config.tabs,
-  });
-}
+     reporterAdapter: config.reporter,
+     prompter: config.prompter,
+     tabs: config.tabs,
+     npmScripts: config.npmScripts,
+   });
+ }
+
 
 main().catch((err) => {
   console.error(err);
