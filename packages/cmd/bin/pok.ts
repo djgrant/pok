@@ -123,7 +123,8 @@ Run \`pok init\` to create a pok.config.ts file.
      reporterAdapter: config.reporter,
      prompter: config.prompter,
      tabs: config.tabs,
-     npmScripts: config.npmScripts,
+     pmScripts: config.pmScripts,
+     pmCommands: config.pmCommands,
    });
  }
 
