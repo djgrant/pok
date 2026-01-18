@@ -1,6 +1,6 @@
 {
   "name": "create-pokit",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Scaffold a new pok project",
   "type": "module",
   "license": "MIT",
