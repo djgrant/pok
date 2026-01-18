@@ -722,9 +722,10 @@ async function showParentSubmenu(
 
   // Add child commands
   for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
+    const description = child.config.description || child.config.label;
     options.push({
       value: child.segment,
-      label: `${child.segment} - ${child.config.label}`,
+      label: `${child.segment} - ${description}`,
     });
   }
 
@@ -1265,10 +1266,13 @@ async function selectFromMenu(
     // Initial selection
     const selected = await prompter.select({
       message: 'What would you like to do?',
-      options: topLevel.map((node) => ({
-        value: node.segment,
-        label: `${node.segment} - ${node.config.label}`,
-      })),
+      options: topLevel.map((node) => {
+        const description = node.config.description || node.config.label;
+        return {
+          value: node.segment,
+          label: `${node.segment} - ${description}`,
+        };
+      }),
     });
 
     currentNode = tree.get(String(selected)) ?? null;
@@ -1303,9 +1307,10 @@ async function selectFromMenu(
 
       // Add child commands
       for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
+        const description = child.config.description || child.config.label;
         options.push({
           value: child.segment,
-          label: `${child.segment} - ${child.config.label}`,
+          label: `${child.segment} - ${description}`,
         });
       }
 
