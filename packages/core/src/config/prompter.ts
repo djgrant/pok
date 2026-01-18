@@ -2,6 +2,9 @@
  * Prompter Interface
  *
  * Defines the contract for interactive user input adapters.
+ * This is the "input" side of the CLI - blocking calls that wait for user response.
+ *
+ * Implementations: @pokit/prompter-clack
  */
 
 // =============================================================================

@@ -15,6 +15,7 @@
 import { resolve } from 'bun';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ConfigModule, LauncherSkeleton } from '../src/protocol';
 
 // Handle init before config discovery - must work without a config file
 const args = process.argv.slice(2);
@@ -70,39 +71,23 @@ Run \`pok init\` to create a pok.config.ts file.
 
   const { configPath, configDir } = configResult;
 
-  // Step 2: Dynamically resolve @pokit/config from the project directory
-  let configModule: {
-    validateConfig: (
-      config: unknown,
-      configPath: string
-    ) => {
-      appDir: string;
-      cwd: string;
-      commandsDir: string;
-      appName?: string;
-      reporter: unknown;
-       prompter: unknown;
-       tabs?: unknown;
-       version?: string;
-       npmScripts?: boolean | string[];
-     };
-   };
- 
+  // Step 2: Dynamically resolve @pokit/core from the project directory
+  let configModule: ConfigModule;
 
   try {
-    const configModulePath = await resolve('@pokit/config', configDir);
+    const configModulePath = await resolve('@pokit/core', configDir);
     configModule = await import(configModulePath);
   } catch {
     console.error(
-      `Error: @pokit/config is not installed in ${configDir}\n\n` +
+      `Error: @pokit/core is not installed in ${configDir}\n\n` +
         'Install it with:\n' +
-        '  bun add @pokit/config\n'
+        '  bun add @pokit/core\n'
     );
     process.exit(1);
   }
 
   // Step 3: Load and validate config using the dynamically imported module
-  let config: ReturnType<typeof configModule.validateConfig>;
+  let config: LauncherSkeleton;
   try {
     const rawConfig = await import(configPath);
     config = configModule.validateConfig(rawConfig.default, configPath);
@@ -126,21 +111,9 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 5: Resolve @pokit/core from appDir (where packages are installed)
-  let corePath: string;
-  try {
-    corePath = await resolve('@pokit/core', appDir);
-  } catch {
-    console.error(
-      `Error: @pokit/core is not installed in ${appDir}\n\n` +
-        'Install it with:\n' +
-        '  bun add @pokit/core\n'
-    );
-    process.exit(1);
-  }
-
-  // Step 6: Import core and call runCli with config adapters
-  const { runCli } = await import(corePath);
+  // Step 5: Import core and call runCli with config adapters
+  // (In merged architecture, configModule and core are the same package)
+  const { runCli } = configModule as any;
 
   await runCli(process.argv.slice(2), {
     commandsDir,

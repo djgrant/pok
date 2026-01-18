@@ -23,7 +23,6 @@
     "quick-check": "echo 'quick check'"
   },
   "devDependencies": {
-    "@pokit/config": "workspace:*",
     "@pokit/core": "workspace:*",
     "@pokit/prompter-clack": "workspace:*",
     "@pokit/reporter-clack": "workspace:*",

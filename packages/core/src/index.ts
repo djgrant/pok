@@ -267,9 +267,8 @@ export { runCli } from './cli';
 export type { RunCliConfig } from './cli';
 
 // =============================================================================
-// Config (Re-exported from @pokit/config)
+// Config
 // =============================================================================
 
-// Re-export config utilities for programmatic use
-export { defineConfig, findConfigFile, validateConfig, CONFIG_TEMPLATE } from '@pokit/config';
-export type { PokConfig } from '@pokit/config';
+export * from './config';
+
