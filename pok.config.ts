@@ -1,4 +1,4 @@
-import { defineConfig } from '@pokit/config';
+import { defineConfig } from '@pokit/core';
 import { createReporterAdapter } from '@pokit/reporter-clack';
 import { createPrompter } from '@pokit/prompter-clack';
 
