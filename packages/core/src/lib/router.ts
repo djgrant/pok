@@ -9,6 +9,7 @@
  * 2. Autodiscovery: Finds commands/ sibling directory from calling file
  */
  import * as path from 'path';
+ import picomatch from 'picomatch';
  import { getRuntime, getPackageManager } from '../runtime';
  import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
 
@@ -71,8 +72,13 @@ export type RouterConfig = {
    version?: string;
    /** Disable interactive prompts and menus */
    noTty?: boolean;
-   /** NPM scripts to include as commands */
-   npmScripts?: boolean | string[];
+    /**
+     * NPM scripts to include as commands.
+     * - true: Include all scripts from root package.json
+     * - string[]: List of script names, glob patterns (e.g. 'test:*'),
+     *   or package discovery paths (e.g. 'packages/*')
+     */
+    npmScripts?: boolean | string[];
  };
  
  /**
@@ -153,29 +159,98 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
    const runtime = await getRuntime();
    const { reporter } = ctx;
  
-  // 1. Add npm scripts if configured
-  if (ctx.config.npmScripts) {
-    const projectRoot = ctx.projectRoot;
-     const packageJsonPath = path.join(projectRoot, 'package.json');
-     try {
-      const content = await runtime.readFile(packageJsonPath);
-      const pkg = JSON.parse(content);
-      const scripts = pkg.scripts || {};
-      const scriptsToInclude = Array.isArray(ctx.config.npmScripts)
-         ? ctx.config.npmScripts
-         : Object.keys(scripts);
+   // 1. Add npm scripts if configured
+   if (ctx.config.npmScripts) {
+     const projectRoot = ctx.projectRoot;
+     const { reporter } = ctx;
  
-       for (const scriptName of scriptsToInclude) {
-         if (scripts[scriptName]) {
-           const config = createNpmScriptCommand(scriptName, projectRoot);
-           // Support both colon and dot as separators for nested commands
-           const segments = scriptName.split(/[:.]/);
-           insertIntoTree(tree, segments, config);
+     try {
+       const patterns = Array.isArray(ctx.config.npmScripts)
+         ? ctx.config.npmScripts
+         : [true];
+ 
+       const allScripts = new Map<string, { scriptName: string; cwd: string }>();
+ 
+       for (const pattern of patterns) {
+         if (typeof pattern === 'boolean') {
+           if (pattern === true) {
+             const rootPkgPath = path.join(projectRoot, 'package.json');
+             try {
+               const content = await runtime.readFile(rootPkgPath);
+               const pkg = JSON.parse(content);
+               for (const name of Object.keys(pkg.scripts || {})) {
+                 allScripts.set(name, { scriptName: name, cwd: projectRoot });
+               }
+             } catch {
+               // Ignore
+             }
+           }
+           continue;
+         }
+ 
+         // 1. Try matching against root package scripts
+         try {
+           const rootPkgContent = await runtime.readFile(path.join(projectRoot, 'package.json'));
+           const rootPkg = JSON.parse(rootPkgContent);
+           const rootScripts = rootPkg.scripts || {};
+ 
+           if (rootScripts[pattern]) {
+             allScripts.set(pattern, { scriptName: pattern, cwd: projectRoot });
+           } else if (!pattern.includes('/')) {
+             // Only try script name glob if there's no slash (avoid confusion with paths)
+             const isMatch = picomatch(pattern);
+             for (const name of Object.keys(rootScripts)) {
+               if (isMatch(name)) {
+                 allScripts.set(name, { scriptName: name, cwd: projectRoot });
+               }
+             }
+           }
+         } catch {
+           // Root package.json might not exist or be invalid, ignore
+         }
+ 
+         // 2. Try matching as a path glob for other package.jsons (monorepo support)
+         if (pattern.includes('/') || pattern.includes('\\') || pattern.includes('*')) {
+           let globPattern = pattern;
+           // If it doesn't end in package.json, assume it's a directory pattern
+           if (!pattern.endsWith('package.json')) {
+             globPattern = pattern.endsWith('/')
+               ? `${pattern}package.json`
+               : `${pattern}/package.json`;
+           }
+ 
+           try {
+             for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
+               // Skip root package.json if it was already handled as true or matched above
+               if (pkgPath === 'package.json') continue;
+ 
+               const absPath = path.join(projectRoot, pkgPath);
+               const content = await runtime.readFile(absPath);
+               const pkg = JSON.parse(content);
+               const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
+               const pkgDir = path.dirname(absPath);
+ 
+               for (const scriptName of Object.keys(pkg.scripts || {})) {
+                 // Use package name as prefix for workspace scripts
+                 const commandPath = `${pkgName}:${scriptName}`;
+                 allScripts.set(commandPath, { scriptName, cwd: pkgDir });
+               }
+             }
+           } catch {
+             // Ignore glob errors
+           }
          }
        }
+ 
+       for (const [commandPath, info] of allScripts) {
+         const config = createNpmScriptCommand(info.scriptName, info.cwd);
+         const segments = commandPath.split(/[:.]/);
+         insertIntoTree(tree, segments, config);
+       }
      } catch (error) {
-       // Ignore if package.json not found or invalid
-       reporter.warn(`Failed to load npm scripts from package.json: ${error instanceof Error ? error.message : String(error)}`);
+       reporter.warn(
+         `Failed to load npm scripts: ${error instanceof Error ? error.message : String(error)}`
+       );
      }
    }
  
@@ -239,17 +314,17 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
   * @param projectRoot - Root directory of the project
   * @returns Command configuration
   */
-  function createNpmScriptCommand(scriptName: string, projectRoot: string): CommandConfig {
-    return {
-      label: scriptName,
-      ignoreUnknownFlags: true,
-      run: async (r, ctx) => {
-        const pm = getPackageManager(projectRoot);
-        const args = ctx.extraArgs.length > 0 ? ` -- ${ctx.extraArgs.join(' ')}` : '';
-        await r.exec(`${pm} run ${scriptName}${args}`, { interactive: true });
-      },
-    };
-  }
+   function createNpmScriptCommand(scriptName: string, cwd: string): CommandConfig {
+     return {
+       label: scriptName,
+       ignoreUnknownFlags: true,
+       run: async (r, ctx) => {
+         const pm = getPackageManager(cwd);
+         const args = ctx.extraArgs.length > 0 ? ` -- ${ctx.extraArgs.join(' ')}` : '';
+         await r.exec(`${pm} run ${scriptName}${args}`, { interactive: true, cwd });
+       },
+     };
+   }
  
  /**
   * Insert a command into the tree, creating intermediate nodes as needed.
