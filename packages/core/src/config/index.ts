@@ -77,44 +77,53 @@ export type PokConfig = {
   version?: string;
 
    /**
-    * NPM scripts to include as commands.
+    * Package manager scripts to include as commands.
     * - true: Include all scripts from root package.json
     * - string[]: List of script names, glob patterns (e.g. 'test:*'),
     *   or package discovery paths (e.g. 'packages/*')
     */
-   npmScripts?: boolean | string[];
-};
+   pmScripts?: boolean | string[];
 
-/**
- * pok configuration schema
- */
-export const PokConfigSchema = z.object({
-  appDir: z.string().optional(),
-  cwd: z.string().optional(),
-  commandsDir: z.string().optional(),
-  appName: z.string().optional(),
-  reporter: z.any(),
-  prompter: z.any(),
-  tabs: z.any().optional(),
-  version: z.string().optional(),
-  npmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
-});
+   /**
+    * Native package manager commands to include (e.g. 'install', 'add', 'run').
+    * - true: Include standard lifecycle commands
+    * - string[]: List of specific commands to include
+    */
+   pmCommands?: boolean | string[];
+ };
 
-/**
- * Resolved configuration with all defaults applied.
- * This MUST satisfy the LauncherSkeleton defined in the pokit launcher.
- */
-export interface ResolvedPokConfig extends LauncherSkeleton {
-  appDir: string;
-  cwd: string;
-  commandsDir: string;
-  appName?: string;
-  version?: string;
-  reporter: ReporterAdapter;
-  prompter: Prompter;
-  tabs?: TabsAdapter;
-  npmScripts?: boolean | string[];
-}
+ /**
+  * pok configuration schema
+  */
+ export const PokConfigSchema = z.object({
+   appDir: z.string().optional(),
+   cwd: z.string().optional(),
+   commandsDir: z.string().optional(),
+   appName: z.string().optional(),
+   reporter: z.any(),
+   prompter: z.any(),
+   tabs: z.any().optional(),
+   version: z.string().optional(),
+   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
+   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
+ });
+
+ /**
+  * Resolved configuration with all defaults applied.
+  * This MUST satisfy the LauncherSkeleton defined in the pokit launcher.
+  */
+ export interface ResolvedPokConfig extends LauncherSkeleton {
+   appDir: string;
+   cwd: string;
+   commandsDir: string;
+   appName?: string;
+   version?: string;
+   reporter: ReporterAdapter;
+   prompter: Prompter;
+   tabs?: TabsAdapter;
+   pmScripts?: boolean | string[];
+   pmCommands?: boolean | string[];
+ }
 
 /**
  * Identity function for type inference in config files

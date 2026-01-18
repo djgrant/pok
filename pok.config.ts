@@ -7,5 +7,6 @@ export default defineConfig({
   reporter: createReporterAdapter(),
   prompter: createPrompter(),
   appName: 'pok',
-  npmScripts: ['quick-check'],
+  pmScripts: ['quick-check'],
+  pmCommands: ['repo'],
 });
