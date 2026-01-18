@@ -42,8 +42,13 @@ export type RunCliConfig = {
   tabs?: TabsAdapter;
    /** Optional version string for --version flag */
    version?: string;
-   /** NPM scripts to include as commands */
-   npmScripts?: boolean | string[];
+    /**
+     * NPM scripts to include as commands.
+     * - true: Include all scripts from root package.json
+     * - string[]: List of script names, glob patterns (e.g. 'test:*'),
+     *   or package discovery paths (e.g. 'packages/*')
+     */
+    npmScripts?: boolean | string[];
  };
  
  /**

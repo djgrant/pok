@@ -45,10 +45,12 @@
   },
   "dependencies": {
     "fast-glob": "^3.3.2",
+    "picomatch": "^4.0.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/picomatch": "^3.0.1",
     "@pokit/reporter-clack": "workspace:*",
     "@pokit/prompter-clack": "workspace:*",
     "@pokit/test-utils": "workspace:*",

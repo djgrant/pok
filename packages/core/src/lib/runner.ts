@@ -29,7 +29,12 @@ export type ExecOptions = {
    * Use this when the command needs user input (e.g., browser auth, OTP prompts).
    * Output won't be captured - it goes directly to the terminal.
    */
-  interactive?: boolean;
+   interactive?: boolean;
+  /**
+   * Working directory for this command.
+   * If not specified, uses the runner's default CWD.
+   */
+  cwd?: string;
 };
 
 /**
@@ -848,10 +853,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
 
-          await executeWithRetry(
+           await executeWithRetry(
             () =>
               executeCmd(cmd, {
-                cwd,
+                cwd: opts?.cwd || cwd,
                 env: mergeEnv(allEnv),
                 quiet,
                 signal,
@@ -881,10 +886,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
   ): Promise<void> => {
     if (isCommand(item)) {
       const retryConfig = item.opts?.retry;
-      await executeWithRetry(
+       await executeWithRetry(
         () =>
           executeCmd(item.cmd, {
-            cwd,
+            cwd: item.opts?.cwd || cwd,
             env: envVars,
             quiet: false,
             signal: itemSignal,

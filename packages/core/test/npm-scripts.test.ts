@@ -117,3 +117,161 @@ describe('ignoreUnknownFlags', () => {
     expect(result.rest).toContain('val');
   });
 });
+
+describe('NPM Scripts Glob Patterns', () => {
+  it('includes scripts matching glob patterns', async () => {
+    const pkgJson = JSON.stringify({
+      scripts: {
+        'test:unit': 'echo unit',
+        'test:e2e': 'echo e2e',
+        'build': 'echo build',
+        'lint': 'echo lint'
+      }
+    });
+
+    const projectRoot = path.join(process.cwd(), 'temp-npm-glob-test');
+    const commandsDir = path.join(projectRoot, 'commands');
+    const runtime = await getRuntime();
+    const originalReadFile = runtime.readFile;
+    const originalGlob = runtime.glob;
+    const originalSpawn = runtime.spawn;
+
+    runtime.readFile = async (p: string) => {
+      if (p.endsWith('package.json')) return pkgJson;
+      return originalReadFile(p);
+    };
+
+    runtime.glob = async function* (pattern: string, options: any) {
+      if (options?.cwd === commandsDir) return;
+      yield* originalGlob(pattern, options);
+    };
+
+    const spawnCalls: string[][] = [];
+    runtime.spawn = ((cmd: string[]) => {
+      spawnCalls.push(cmd);
+      return {
+        exitCode: 0,
+        killed: false,
+        kill: () => {},
+        exited: Promise.resolve(0),
+        stdout: null,
+        stderr: null,
+      };
+    }) as any;
+
+    const eventBus = createEventBus();
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    const config = {
+      commandsDir,
+      projectRoot,
+      appName: 'test-cli',
+      reporterAdapter,
+      prompter,
+      npmScripts: ['test:*', 'build'],
+    };
+
+    try {
+      await run(['test', 'unit'], config);
+      expect(spawnCalls[0].join(' ')).toContain('run test:unit');
+
+      await run(['test', 'e2e'], config);
+      expect(spawnCalls[1].join(' ')).toContain('run test:e2e');
+
+      await run(['build'], config);
+      expect(spawnCalls[2].join(' ')).toContain('run build');
+
+      try {
+        await run(['lint'], config);
+        expect(true).toBe(false);
+      } catch (e) {
+        expect(String(e)).toContain('Unknown command: lint');
+      }
+    } finally {
+      runtime.readFile = originalReadFile;
+      runtime.glob = originalGlob;
+      runtime.spawn = originalSpawn;
+    }
+  });
+
+  it('supports monorepo discovery with path globs', async () => {
+    const rootPkgJson = JSON.stringify({
+      scripts: { 'root-script': 'echo root' }
+    });
+    const pkgAPkgJson = JSON.stringify({
+      name: 'pkg-a',
+      scripts: { 'test': 'echo test-a' }
+    });
+    const pkgBPkgJson = JSON.stringify({
+      name: 'pkg-b',
+      scripts: { 'test': 'echo test-b' }
+    });
+
+    const projectRoot = path.join(process.cwd(), 'temp-monorepo-test');
+    const commandsDir = path.join(projectRoot, 'commands');
+    
+    const runtime = await getRuntime();
+    const originalReadFile = runtime.readFile;
+    const originalGlob = runtime.glob;
+    const originalSpawn = runtime.spawn;
+    
+    runtime.readFile = async (p: string) => {
+      if (p === path.join(projectRoot, 'package.json')) return rootPkgJson;
+      if (p === path.join(projectRoot, 'packages/pkg-a/package.json')) return pkgAPkgJson;
+      if (p === path.join(projectRoot, 'packages/pkg-b/package.json')) return pkgBPkgJson;
+      return originalReadFile(p);
+    };
+
+    runtime.glob = async function* (pattern: string, options: any) {
+      if (pattern === 'packages/*/package.json') {
+        yield 'packages/pkg-a/package.json';
+        yield 'packages/pkg-b/package.json';
+        return;
+      }
+      if (options?.cwd === commandsDir) return;
+      yield* originalGlob(pattern, options);
+    };
+
+    const spawnCalls: { cmd: string; cwd: string }[] = [];
+    runtime.spawn = ((cmd: string[], options: any) => {
+      spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+      return {
+        exitCode: 0,
+        killed: false,
+        kill: () => {},
+        exited: Promise.resolve(0),
+        stdout: null,
+        stderr: null,
+      };
+    }) as any;
+
+    const eventBus = createEventBus();
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    const config = {
+      commandsDir,
+      projectRoot,
+      appName: 'test-cli',
+      reporterAdapter,
+      prompter,
+      npmScripts: ['root-script', 'packages/*'],
+    };
+
+    try {
+      await run(['root-script'], config);
+      expect(spawnCalls[0].cwd).toBe(projectRoot);
+
+      await run(['pkg-a', 'test'], config);
+      expect(spawnCalls[1].cwd).toBe(path.join(projectRoot, 'packages/pkg-a'));
+
+      await run(['pkg-b', 'test'], config);
+      expect(spawnCalls[2].cwd).toBe(path.join(projectRoot, 'packages/pkg-b'));
+    } finally {
+      runtime.readFile = originalReadFile;
+      runtime.glob = originalGlob;
+      runtime.spawn = originalSpawn;
+    }
+  });
+});
