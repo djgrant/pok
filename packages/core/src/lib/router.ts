@@ -339,7 +339,13 @@ export async function buildCommandTree(
                     const args = ctx.extraArgs.length > 0 ? ` ${ctx.extraArgs.join(' ')}` : '';
                     // The original script already has " --", so we just append
                     const fullCmd = `${info.scriptContent} ${childName}${args}`;
-                    await r.exec(fullCmd, { interactive: true, cwd: info.cwd });
+                    await r.exec(fullCmd, {
+                      interactive: true,
+                      cwd: info.cwd,
+                      env: {
+                        npm_config_recursive: undefined,
+                      },
+                    });
                   },
                 };
                 insertIntoTree(tree, childSegments, childConfig);
@@ -560,7 +566,13 @@ function createPmAction(
           : '';
       const cmd =
         type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${flags}${args}`;
-      await r.exec(cmd, { interactive: true, cwd });
+      await r.exec(cmd, {
+        interactive: true,
+        cwd,
+        env: {
+          npm_config_recursive: undefined,
+        },
+      });
     },
   };
 }
