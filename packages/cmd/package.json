@@ -30,7 +30,10 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@pokit/core": "workspace:*",
+    "@pokit/reporter-clack": "workspace:*",
+    "@pokit/prompter-clack": "workspace:*"
   },
   "engines": {
     "bun": ">=1.0.0"

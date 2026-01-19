@@ -55,6 +55,87 @@ function findConfigFileSimple(startDir: string): { configPath: string; configDir
   }
 }
 
+/**
+ * Simple inline package.json search.
+ */
+function findPackageJsonSimple(startDir: string): { pkgPath: string; pkgDir: string } | null {
+  let dir = startDir;
+
+  while (true) {
+    const pkgPath = path.join(dir, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      return { pkgPath, pkgDir: dir };
+    }
+
+    const parentDir = path.dirname(dir);
+    if (parentDir === dir) {
+      return null;
+    }
+    dir = parentDir;
+  }
+}
+
+/**
+ * Try to resolve a module from the project directory, then from the launcher's own dependencies.
+ */
+async function resolveModule(name: string, configDir: string) {
+  try {
+    // 1. Try resolving from the project's node_modules
+    const projectModulePath = await resolve(name, configDir);
+    return await import(projectModulePath);
+  } catch {
+    try {
+      // 2. Try resolving from the launcher's own dependencies
+      return await import(name);
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
+ * Run pok in fallback mode when no config is found but package.json exists.
+ */
+async function runInFallbackMode(pkgDir: string) {
+  const core = await resolveModule('@pokit/core', pkgDir);
+  const reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
+  const prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+
+  if (!core || !reporter || !prompter) {
+    console.error(
+      `Error: Required pok modules not found.\n\n` +
+        `Install them in your project to enable the fallback menu:\n` +
+        `  bun add -d @pokit/core @pokit/reporter-clack @pokit/prompter-clack\n\n` +
+        `Or run \`pok init\` to bootstrap a configuration.`
+    );
+    process.exit(1);
+  }
+
+  const { runCli, defineCommand } = core;
+  const { createReporterAdapter } = reporter;
+  const { createPrompter } = prompter;
+  const { runInit } = await import('../src/init');
+
+  await runCli(process.argv.slice(2), {
+    commandsDir: path.join(pkgDir, 'commands'),
+    projectRoot: pkgDir,
+    appName: path.basename(pkgDir),
+    reporterAdapter: createReporterAdapter(),
+    prompter: createPrompter(),
+    pmScripts: true,
+    pmCommands: true,
+    extraCommands: {
+      init: defineCommand({
+        label: 'init',
+        description: 'Initialize pok config in this repo',
+        run: async () => {
+          await runInit();
+        },
+      }),
+    },
+  });
+}
+
 async function main() {
   const processCwd = process.cwd();
 
@@ -62,7 +143,14 @@ async function main() {
   const configResult = findConfigFileSimple(processCwd);
 
   if (!configResult) {
-    console.error(`Error: No pok configuration found.
+    // Look for package.json
+    const pkgJsonResult = findPackageJsonSimple(processCwd);
+    if (pkgJsonResult) {
+      await runInFallbackMode(pkgJsonResult.pkgDir);
+      return;
+    }
+
+    console.error(`Error: No pok configuration or package.json found.
 
 Run \`pok init\` to create a pok.config.ts file.
 `);
@@ -72,12 +160,9 @@ Run \`pok init\` to create a pok.config.ts file.
   const { configPath, configDir } = configResult;
 
   // Step 2: Dynamically resolve @pokit/core from the project directory
-  let configModule: ConfigModule;
+  const configModule = await resolveModule('@pokit/core', configDir);
 
-  try {
-    const configModulePath = await resolve('@pokit/core', configDir);
-    configModule = await import(configModulePath);
-  } catch {
+  if (!configModule) {
     console.error(
       `Error: @pokit/core is not installed in ${configDir}\n\n` +
         'Install it with:\n' +
@@ -107,7 +192,9 @@ Run \`pok init\` to create a pok.config.ts file.
   // Verify commands directory exists
   if (!fs.existsSync(commandsDir)) {
     console.error(`Error: Commands directory not found: ${commandsDir}\n`);
-    console.error(`The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`);
+    console.error(
+      `The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`
+    );
     process.exit(1);
   }
 
@@ -120,14 +207,13 @@ Run \`pok init\` to create a pok.config.ts file.
     projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
-     reporterAdapter: config.reporter,
-     prompter: config.prompter,
-     tabs: config.tabs,
-     pmScripts: config.pmScripts,
-     pmCommands: config.pmCommands,
-   });
- }
-
+    reporterAdapter: config.reporter,
+    prompter: config.prompter,
+    tabs: config.tabs,
+    pmScripts: config.pmScripts,
+    pmCommands: config.pmCommands,
+  });
+}
 
 main().catch((err) => {
   console.error(err);

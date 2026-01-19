@@ -8,10 +8,12 @@
  * 1. Explicit config: Pass commandsDir and projectRoot
  * 2. Autodiscovery: Finds commands/ sibling directory from calling file
  */
- import * as path from 'path';
- import picomatch from 'picomatch';
- import { getRuntime, getPackageManager } from '../runtime';
- import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
+import * as fs from 'fs';
+import * as path from 'path';
+import picomatch from 'picomatch';
+
+import { getRuntime, getPackageManager } from '../runtime';
+import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
 
 import type { CheckConfig } from './check';
 import { CheckError } from './check';
@@ -68,27 +70,34 @@ export type RouterConfig = {
   prompter: Prompter;
   /** Optional tabs adapter for tabbed console */
   tabs?: TabsAdapter;
-   /** Optional version string (auto-discovered from package.json if not provided) */
-   version?: string;
-   /** Disable interactive prompts and menus */
-   noTty?: boolean;
-    /**
-     * Package manager scripts to include as commands.
-     * - true: Include all scripts from root package.json
-     * - string[]: List of script names, glob patterns (e.g. 'test:*'),
-     *   or package discovery paths (e.g. 'packages/*')
-     */
-    pmScripts?: boolean | string[];
+  /** Optional version string (auto-discovered from package.json if not provided) */
+  version?: string;
+  /** Disable interactive prompts and menus */
+  noTty?: boolean;
+  /**
+   * Package manager scripts to include as commands.
+   * - true: Include all scripts from root package.json
+   * - string[]: List of script names, glob patterns (e.g. 'test:*'),
+   *   or package discovery paths (e.g. 'packages/*')
+   */
+  pmScripts?: boolean | string[];
 
-    /**
-     * Native package manager commands to include (e.g. 'install', 'add', 'run').
-     * - true: Include standard lifecycle commands
-     * - string[]: List of specific commands to include
-     */
-    pmCommands?: boolean | string[];
- };
- 
- /**
+  /**
+   * Native package manager commands to include (e.g. 'install', 'add', 'run').
+   * - true: Include standard lifecycle commands
+   * - string[]: List of specific commands to include
+   */
+  pmCommands?: boolean | string[];
+
+  /**
+   * Extra commands to inject into the tree manually.
+   * Useful for dynamically generated commands or internal tooling.
+   */
+  extraCommands?: Record<string, import('./command').CommandConfig>;
+};
+
+/**
+
 
  * Runtime context containing all state needed during router execution.
  * This replaces the previous module-level global state.
@@ -155,222 +164,230 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
   }
 }
 
- /**
-  * Load all command files and build a command tree
-  */
- export async function buildCommandTree(
-   commandsDir: string,
-   ctx: RouterContext
- ): Promise<CommandTree> {
-   const tree: CommandTree = new Map();
-   const runtime = await getRuntime();
-   const { reporter } = ctx;
- 
-   // 1. Add package manager scripts (pmScripts)
-   const scriptsConfig = ctx.config.pmScripts;
-   if (scriptsConfig) {
-     const projectRoot = ctx.projectRoot;
-     const { reporter } = ctx;
+/**
+ * Load all command files and build a command tree
+ */
+export async function buildCommandTree(
+  commandsDir: string,
+  ctx: RouterContext
+): Promise<CommandTree> {
+  const tree: CommandTree = new Map();
+  const runtime = await getRuntime();
+  const { reporter } = ctx;
 
-     try {
-       const patterns = Array.isArray(scriptsConfig)
-         ? scriptsConfig
-         : [true];
+  // 1. Add package manager scripts (pmScripts)
+  const scriptsConfig = ctx.config.pmScripts;
+  if (scriptsConfig) {
+    const projectRoot = ctx.projectRoot;
+    const { reporter } = ctx;
 
-       const allScripts = new Map<string, { scriptName: string; cwd: string }>();
+    try {
+      const patterns = Array.isArray(scriptsConfig) ? scriptsConfig : [true];
 
-       for (const pattern of patterns) {
-         if (typeof pattern === 'boolean') {
-           if (pattern === true) {
-             const rootPkgPath = path.join(projectRoot, 'package.json');
-             try {
-               const content = await runtime.readFile(rootPkgPath);
-               const pkg = JSON.parse(content);
-               for (const name of Object.keys(pkg.scripts || {})) {
-                 allScripts.set(name, { scriptName: name, cwd: projectRoot });
-               }
-             } catch {
-               // Ignore
-             }
-           }
-           continue;
-         }
+      const allScripts = new Map<string, { scriptName: string; cwd: string }>();
 
-         // 1. Try matching against root package scripts
-         try {
-           const rootPkgContent = await runtime.readFile(path.join(projectRoot, 'package.json'));
-           const rootPkg = JSON.parse(rootPkgContent);
-           const rootScripts = rootPkg.scripts || {};
-
-           if (rootScripts[pattern]) {
-             allScripts.set(pattern, { scriptName: pattern, cwd: projectRoot });
-           } else if (!pattern.includes('/')) {
-             // Only try script name glob if there's no slash (avoid confusion with paths)
-             const isMatch = picomatch(pattern);
-             for (const name of Object.keys(rootScripts)) {
-               if (isMatch(name)) {
-                 allScripts.set(name, { scriptName: name, cwd: projectRoot });
-               }
-             }
-           }
-         } catch {
-           // Root package.json might not exist or be invalid, ignore
-         }
-
-         // 2. Try matching as a path glob for other package.jsons (monorepo support)
-         if (pattern.includes('/') || pattern.includes('\\') || pattern.includes('*')) {
-           let globPattern = pattern;
-           // If it doesn't end in package.json, assume it's a directory pattern
-           if (!pattern.endsWith('package.json')) {
-             globPattern = pattern.endsWith('/')
-               ? `${pattern}package.json`
-               : `${pattern}/package.json`;
-           }
-
-           try {
-             for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
-               // Skip root package.json if it was already handled as true or matched above
-               if (pkgPath === 'package.json') continue;
-
-               const absPath = path.join(projectRoot, pkgPath);
-               const content = await runtime.readFile(absPath);
-               const pkg = JSON.parse(content);
-               const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
-               const pkgDir = path.dirname(absPath);
-
-               for (const scriptName of Object.keys(pkg.scripts || {})) {
-                 // Use package name as prefix for workspace scripts
-                 const commandPath = `${pkgName}:${scriptName}`;
-                 allScripts.set(commandPath, { scriptName, cwd: pkgDir });
-               }
-             }
-           } catch {
-             // Ignore glob errors
-           }
-         }
-       }
-
-        for (const [commandPath, info] of allScripts) {
-          const config = createPmAction('run', info.scriptName, info.cwd);
-          const segments = commandPath.split(/[:.]/);
-          insertIntoTree(tree, segments, config);
+      for (const pattern of patterns) {
+        if (typeof pattern === 'boolean') {
+          if (pattern === true) {
+            const rootPkgPath = path.join(projectRoot, 'package.json');
+            try {
+              const content = await runtime.readFile(rootPkgPath);
+              const pkg = JSON.parse(content);
+              for (const name of Object.keys(pkg.scripts || {})) {
+                allScripts.set(name, { scriptName: name, cwd: projectRoot });
+              }
+            } catch {
+              // Ignore
+            }
+          }
+          continue;
         }
+
+        // 1. Try matching against root package scripts
+        try {
+          const rootPkgContent = await runtime.readFile(path.join(projectRoot, 'package.json'));
+          const rootPkg = JSON.parse(rootPkgContent);
+          const rootScripts = rootPkg.scripts || {};
+
+          if (rootScripts[pattern]) {
+            allScripts.set(pattern, { scriptName: pattern, cwd: projectRoot });
+          } else if (!pattern.includes('/')) {
+            // Only try script name glob if there's no slash (avoid confusion with paths)
+            const isMatch = picomatch(pattern);
+            for (const name of Object.keys(rootScripts)) {
+              if (isMatch(name)) {
+                allScripts.set(name, { scriptName: name, cwd: projectRoot });
+              }
+            }
+          }
+        } catch {
+          // Root package.json might not exist or be invalid, ignore
+        }
+
+        // 2. Try matching as a path glob for other package.jsons (monorepo support)
+        if (pattern.includes('/') || pattern.includes('\\') || pattern.includes('*')) {
+          let globPattern = pattern;
+          // If it doesn't end in package.json, assume it's a directory pattern
+          if (!pattern.endsWith('package.json')) {
+            globPattern = pattern.endsWith('/')
+              ? `${pattern}package.json`
+              : `${pattern}/package.json`;
+          }
+
+          try {
+            for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
+              // Skip root package.json if it was already handled as true or matched above
+              if (pkgPath === 'package.json') continue;
+
+              const absPath = path.join(projectRoot, pkgPath);
+              const content = await runtime.readFile(absPath);
+              const pkg = JSON.parse(content);
+              const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
+              const pkgDir = path.dirname(absPath);
+
+              for (const scriptName of Object.keys(pkg.scripts || {})) {
+                // Use package name as prefix for workspace scripts
+                const commandPath = `${pkgName}:${scriptName}`;
+                allScripts.set(commandPath, { scriptName, cwd: pkgDir });
+              }
+            }
+          } catch {
+            // Ignore glob errors
+          }
+        }
+      }
+
+      for (const [commandPath, info] of allScripts) {
+        const config = createPmAction('run', info.scriptName, info.cwd);
+        const segments = commandPath.split(/[:.]/);
+        insertIntoTree(tree, segments, config);
+      }
+    } catch (error) {
+      reporter.warn(
+        `Failed to load scripts: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  // 2. Add native package manager commands
+  if (ctx.config.pmCommands) {
+    const projectRoot = ctx.projectRoot;
+    const commandsConfig = ctx.config.pmCommands;
+
+    // Normalize commands list and discovery patterns
+    const commands: string[] = [];
+    const patterns: string[] = [];
+
+    if (commandsConfig === true) {
+      commands.push('install', 'add', 'remove', 'update', 'audit', 'outdated');
+    } else if (Array.isArray(commandsConfig)) {
+      for (const item of commandsConfig) {
+        if (item.includes('/') || item.includes('\\') || item.includes('*')) {
+          patterns.push(item);
+        } else {
+          commands.push(item);
+        }
+      }
+    }
+
+    // 1. Register commands for root
+    for (const cmd of commands) {
+      const config = createPmAction('exec', cmd, projectRoot);
+      insertIntoTree(tree, [cmd], config);
+    }
+
+    // 2. Register commands for workspaces if patterns exist
+    if (patterns.length > 0) {
+      for (const pattern of patterns) {
+        let globPattern = pattern;
+        if (!pattern.endsWith('package.json')) {
+          globPattern = pattern.endsWith('/')
+            ? `${pattern}package.json`
+            : `${pattern}/package.json`;
+        }
+
+        try {
+          for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
+            if (pkgPath === 'package.json') continue;
+
+            const absPath = path.join(projectRoot, pkgPath);
+            const content = await runtime.readFile(absPath);
+            const pkg = JSON.parse(content);
+            const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
+            const pkgDir = path.dirname(absPath);
+
+            for (const cmd of commands) {
+              const commandPath = `${pkgName}:${cmd}`;
+              const config = createPmAction('exec', cmd, pkgDir);
+              insertIntoTree(tree, commandPath.split(/[:.]/), config);
+            }
+          }
+        } catch {
+          // Ignore glob errors
+        }
+      }
+    }
+  }
+
+  // 3. Add extra commands
+  if (ctx.config.extraCommands) {
+    for (const [name, config] of Object.entries(ctx.config.extraCommands)) {
+      insertIntoTree(tree, name.split('.'), config);
+    }
+  }
+
+  // 4. Load file-based commands
+  if (fs.existsSync(commandsDir)) {
+    for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
+      // Skip non-command files
+      if (file.startsWith('_')) continue;
+
+      const filePath = path.join(commandsDir, file);
+
+      try {
+        const module = await import(filePath);
+
+        if (!module.command) {
+          // File doesn't export a command - skip
+          continue;
+        }
+
+        // Convert filename to command path
+        // e.g., 'generate.types.cloudflare.ts' -> ['generate', 'types', 'cloudflare']
+        const commandPath = file.replace(/\.tsx?$/, '');
+        const segments = commandPath.split('.');
+
+        const config = module.command as CommandConfig;
+
+        // Warn if command has conflicting configuration
+        if (config.run && config.enableRunAllChildren) {
+          reporter.warn(
+            `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
+              `The 'enableRunAllChildren' option will be ignored.`
+          );
+        }
+
+        // Insert into tree
+        insertIntoTree(tree, segments, config);
       } catch (error) {
-        reporter.warn(
-          `Failed to load scripts: ${error instanceof Error ? error.message : String(error)}`
+        // Log with actionable guidance - allows partial loading
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        reporter.error(
+          `Failed to load command "${file}":\n` +
+            `  ${errorMessage}\n\n` +
+            `To fix this:\n` +
+            `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
+            `  2. Check for syntax errors or missing imports in the file\n` +
+            `  3. Verify all referenced tasks and checks are properly defined`
         );
       }
     }
+  }
 
-    // 2. Add native package manager commands
-    if (ctx.config.pmCommands) {
-      const projectRoot = ctx.projectRoot;
-      const commandsConfig = ctx.config.pmCommands;
+  // Validate aliases after building the tree
 
-      // Normalize commands list and discovery patterns
-      const commands: string[] = [];
-      const patterns: string[] = [];
+  validateAliases(tree);
 
-      if (commandsConfig === true) {
-        commands.push('install', 'add', 'remove', 'update', 'audit', 'outdated');
-      } else if (Array.isArray(commandsConfig)) {
-         for (const item of commandsConfig) {
-           if (item.includes('/') || item.includes('\\') || item.includes('*')) {
-             patterns.push(item);
-           } else {
-             commands.push(item);
-           }
-         }
-      }
-
-      // 1. Register commands for root
-      for (const cmd of commands) {
-        const config = createPmAction('exec', cmd, projectRoot);
-        insertIntoTree(tree, [cmd], config);
-      }
-
-      // 2. Register commands for workspaces if patterns exist
-      if (patterns.length > 0) {
-         for (const pattern of patterns) {
-            let globPattern = pattern;
-            if (!pattern.endsWith('package.json')) {
-              globPattern = pattern.endsWith('/')
-                ? `${pattern}package.json`
-                : `${pattern}/package.json`;
-            }
-
-            try {
-              for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
-                if (pkgPath === 'package.json') continue;
-
-                const absPath = path.join(projectRoot, pkgPath);
-                const content = await runtime.readFile(absPath);
-                const pkg = JSON.parse(content);
-                const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
-                const pkgDir = path.dirname(absPath);
-
-                for (const cmd of commands) {
-                  const commandPath = `${pkgName}:${cmd}`;
-                  const config = createPmAction('exec', cmd, pkgDir);
-                  insertIntoTree(tree, commandPath.split(/[:.]/), config);
-                }
-              }
-            } catch {
-              // Ignore glob errors
-            }
-         }
-      }
-    }
-
-    // 2. Load file-based commands
-    for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
-     // Skip non-command files
-     if (file.startsWith('_')) continue;
- 
-     const filePath = path.join(commandsDir, file);
- 
-     try {
-       const module = await import(filePath);
- 
-       if (!module.command) {
-         // File doesn't export a command - skip
-         continue;
-       }
- 
-       // Convert filename to command path
-       // e.g., 'generate.types.cloudflare.ts' -> ['generate', 'types', 'cloudflare']
-       const commandPath = file.replace(/\.tsx?$/, '');
-       const segments = commandPath.split('.');
- 
-       const config = module.command as CommandConfig;
- 
-       // Warn if command has conflicting configuration
-       if (config.run && config.enableRunAllChildren) {
-         reporter.warn(
-           `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
-             `The 'enableRunAllChildren' option will be ignored.`
-         );
-       }
- 
-       // Insert into tree
-       insertIntoTree(tree, segments, config);
-     } catch (error) {
-       // Log with actionable guidance - allows partial loading
-       const errorMessage = error instanceof Error ? error.message : String(error);
-       reporter.error(
-         `Failed to load command "${file}":\n` +
-           `  ${errorMessage}\n\n` +
-           `To fix this:\n` +
-           `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
-           `  2. Check for syntax errors or missing imports in the file\n` +
-           `  3. Verify all referenced tasks and checks are properly defined`
-       );
-     }
-   }
- 
-   // Validate aliases after building the tree
-   validateAliases(tree);
- 
   return tree;
 }
 
@@ -385,7 +402,21 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
  */
 function createPmAction(type: 'run' | 'exec', name: string, cwd: string): CommandConfig {
   const pm = getPackageManager(cwd);
-  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${name}`;
+
+  // Map logical command names to PM-specific commands
+  let actualName = name;
+  if (type === 'exec') {
+    if (pm === 'npm') {
+      if (name === 'add') actualName = 'install';
+      if (name === 'remove') actualName = 'uninstall';
+    } else if (pm === 'yarn') {
+      if (name === 'update') actualName = 'upgrade';
+    } else if (pm === 'bun') {
+      if (name === 'audit') actualName = 'pm audit';
+    }
+  }
+
+  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${actualName}`;
 
   return {
     label: name,
@@ -393,10 +424,13 @@ function createPmAction(type: 'run' | 'exec', name: string, cwd: string): Comman
     ignoreUnknownFlags: true,
     run: async (r, ctx) => {
       const pm = getPackageManager(cwd);
-      const args = ctx.extraArgs.length > 0
-        ? (type === 'run' ? ` -- ${ctx.extraArgs.join(' ')}` : ` ${ctx.extraArgs.join(' ')}`)
-        : '';
-      const cmd = type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${name}${args}`;
+      const args =
+        ctx.extraArgs.length > 0
+          ? type === 'run'
+            ? ` -- ${ctx.extraArgs.join(' ')}`
+            : ` ${ctx.extraArgs.join(' ')}`
+          : '';
+      const cmd = type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${args}`;
       await r.exec(cmd, { interactive: true, cwd });
     },
   };
