@@ -1,6 +1,6 @@
 {
   "name": "@pokit/tabs-opentui",
-  "version": "0.0.15",
+  "version": "0.0.18",
   "description": "OpenTUI-based tab renderer for pok CLI applications",
   "keywords": [
     "cli",
