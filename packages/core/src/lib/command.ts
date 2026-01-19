@@ -236,6 +236,14 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
    * @default false
    */
   ignoreUnknownFlags?: boolean;
+
+  /**
+   * When true, this command expects additional arguments to be provided.
+   * If invoked without arguments from the menu, the user will be prompted to enter them.
+   *
+   * @default false
+   */
+  requestArgs?: boolean;
 };
 
 /**

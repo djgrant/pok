@@ -184,7 +184,10 @@ export async function buildCommandTree(
     try {
       const patterns = Array.isArray(scriptsConfig) ? scriptsConfig : [true];
 
-      const allScripts = new Map<string, { scriptName: string; cwd: string }>();
+      const allScripts = new Map<
+        string,
+        { scriptName: string; cwd: string; scriptContent: string; requestArgs: boolean }
+      >();
 
       for (const pattern of patterns) {
         if (typeof pattern === 'boolean') {
@@ -193,8 +196,16 @@ export async function buildCommandTree(
             try {
               const content = await runtime.readFile(rootPkgPath);
               const pkg = JSON.parse(content);
-              for (const name of Object.keys(pkg.scripts || {})) {
-                allScripts.set(name, { scriptName: name, cwd: projectRoot });
+              for (const [name, script] of Object.entries(pkg.scripts || {})) {
+                if (name !== 'preinstall') {
+                  const scriptStr = typeof script === 'string' ? script : '';
+                  allScripts.set(name, {
+                    scriptName: name,
+                    cwd: projectRoot,
+                    scriptContent: scriptStr,
+                    requestArgs: scriptStr.trim().endsWith(' --'),
+                  });
+                }
               }
             } catch {
               // Ignore
@@ -210,13 +221,26 @@ export async function buildCommandTree(
           const rootScripts = rootPkg.scripts || {};
 
           if (rootScripts[pattern]) {
-            allScripts.set(pattern, { scriptName: pattern, cwd: projectRoot });
+            const script = rootScripts[pattern];
+            const scriptStr = typeof script === 'string' ? script : '';
+            allScripts.set(pattern, {
+              scriptName: pattern,
+              cwd: projectRoot,
+              scriptContent: scriptStr,
+              requestArgs: scriptStr.trim().endsWith(' --'),
+            });
           } else if (!pattern.includes('/')) {
             // Only try script name glob if there's no slash (avoid confusion with paths)
             const isMatch = picomatch(pattern);
-            for (const name of Object.keys(rootScripts)) {
+            for (const [name, script] of Object.entries(rootScripts)) {
               if (isMatch(name)) {
-                allScripts.set(name, { scriptName: name, cwd: projectRoot });
+                const scriptStr = typeof script === 'string' ? script : '';
+                allScripts.set(name, {
+                  scriptName: name,
+                  cwd: projectRoot,
+                  scriptContent: scriptStr,
+                  requestArgs: scriptStr.trim().endsWith(' --'),
+                });
               }
             }
           }
@@ -245,10 +269,16 @@ export async function buildCommandTree(
               const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
               const pkgDir = path.dirname(absPath);
 
-              for (const scriptName of Object.keys(pkg.scripts || {})) {
+              for (const [scriptName, script] of Object.entries(pkg.scripts || {})) {
                 // Use package name as prefix for workspace scripts
                 const commandPath = `${pkgName}:${scriptName}`;
-                allScripts.set(commandPath, { scriptName, cwd: pkgDir });
+                const scriptStr = typeof script === 'string' ? script : '';
+                allScripts.set(commandPath, {
+                  scriptName,
+                  cwd: pkgDir,
+                  scriptContent: scriptStr,
+                  requestArgs: scriptStr.trim().endsWith(' --'),
+                });
               }
             }
           } catch {
@@ -257,8 +287,77 @@ export async function buildCommandTree(
         }
       }
 
+      // Build workspace map if any script looks like a filter command
+      let workspaceMap: Map<string, string> | null = null;
+      const hasFilterScript = Array.from(allScripts.values()).some((i) =>
+        i.scriptContent.match(/(?:pnpm|bun)\s+(?:--filter|-F)\s+([^\s]+)/)
+      );
+
+      if (hasFilterScript) {
+        workspaceMap = await buildWorkspaceMap(projectRoot, runtime);
+      }
+
       for (const [commandPath, info] of allScripts) {
-        const config = createPmAction('run', info.scriptName, info.cwd);
+        // Check for pnpm/bun filter script
+        const filterMatch = info.scriptContent.match(/(?:pnpm|bun)\s+(?:--filter|-F)\s+([^\s]+)/);
+
+        if (filterMatch && info.scriptContent.trim().endsWith(' --') && workspaceMap) {
+          const targetPkgName = filterMatch[1];
+          const targetPkgDir = workspaceMap.get(targetPkgName);
+
+          if (targetPkgDir) {
+            // Found target package - create submenu
+            try {
+              const content = await runtime.readFile(path.join(targetPkgDir, 'package.json'));
+              const pkg = JSON.parse(content);
+              const targetScripts = pkg.scripts || {};
+
+              // 1. Create parent node (representing the proxy command)
+              // We do this by inserting children directly under this path
+              const segments = commandPath.split(/[:.]/);
+
+              // Add description for the parent
+              const parentConfig: CommandConfig = {
+                label: info.scriptName,
+                description: `Proxy to ${targetPkgName} scripts`,
+              };
+              // We need to ensure the parent node exists or is created with this config.
+              // insertIntoTree handles creating nodes. We can just insert children.
+
+              let addedChild = false;
+              for (const [childName, childScript] of Object.entries(targetScripts)) {
+                // Child command: originalScript + ' ' + childName (+ args)
+                const childSegments = [...segments, childName];
+                const pm = getPackageManager(targetPkgDir); // Usually same as root but safe to check
+
+                const childConfig: CommandConfig = {
+                  label: childName,
+                  description: typeof childScript === 'string' ? childScript : `Run ${childName}`,
+                  ignoreUnknownFlags: true,
+                  run: async (r, ctx) => {
+                    // Construct full command: original script + child name + args
+                    const args = ctx.extraArgs.length > 0 ? ` ${ctx.extraArgs.join(' ')}` : '';
+                    // The original script already has " --", so we just append
+                    const fullCmd = `${info.scriptContent} ${childName}${args}`;
+                    await r.exec(fullCmd, { interactive: true, cwd: info.cwd });
+                  },
+                };
+                insertIntoTree(tree, childSegments, childConfig);
+                addedChild = true;
+              }
+
+              if (addedChild) {
+                // If we successfully added children, we don't need to add the leaf node for the proxy itself
+                // effectively turning it into a folder.
+                continue;
+              }
+            } catch {
+              // Failed to read target package or scripts, fall back to leaf
+            }
+          }
+        }
+
+        const config = createPmAction('run', info.scriptName, info.cwd, info.requestArgs);
         const segments = commandPath.split(/[:.]/);
         insertIntoTree(tree, segments, config);
       }
@@ -400,37 +499,67 @@ export async function buildCommandTree(
  * @param cwd - Working directory for the command
  * @returns Command configuration
  */
-function createPmAction(type: 'run' | 'exec', name: string, cwd: string): CommandConfig {
+function createPmAction(
+  type: 'run' | 'exec',
+  name: string,
+  cwd: string,
+  requestArgs: boolean = false
+): CommandConfig {
   const pm = getPackageManager(cwd);
+  const isPnpmWorkspace = pm === 'pnpm' && fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml'));
+  const isYarnWorkspace =
+    pm === 'yarn' &&
+    fs.existsSync(path.join(cwd, 'package.json')) &&
+    (() => {
+      try {
+        return !!JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')).workspaces;
+      } catch {
+        return false;
+      }
+    })();
 
   // Map logical command names to PM-specific commands
   let actualName = name;
+  let flags = '';
+
   if (type === 'exec') {
     if (pm === 'npm') {
       if (name === 'add') actualName = 'install';
       if (name === 'remove') actualName = 'uninstall';
     } else if (pm === 'yarn') {
       if (name === 'update') actualName = 'upgrade';
+      // Yarn v1 needs -W for root commands in workspace
+      if (isYarnWorkspace && ['add', 'remove', 'upgrade', 'install'].includes(actualName)) {
+        flags = ' -W';
+      }
     } else if (pm === 'bun') {
       if (name === 'audit') actualName = 'pm audit';
+    } else if (pm === 'pnpm') {
+      // pnpm needs -w for root commands in workspace
+      if (isPnpmWorkspace && ['add', 'install', 'remove', 'update'].includes(actualName)) {
+        flags = ' -w';
+      }
     }
   }
 
-  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${actualName}`;
+  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${actualName}${flags}`;
 
   return {
     label: name,
     description,
     ignoreUnknownFlags: true,
+    requestArgs,
     run: async (r, ctx) => {
       const pm = getPackageManager(cwd);
+      // Ensure we have args if requested (handled by executeLeaf logic now)
       const args =
         ctx.extraArgs.length > 0
           ? type === 'run'
             ? ` -- ${ctx.extraArgs.join(' ')}`
             : ` ${ctx.extraArgs.join(' ')}`
           : '';
-      const cmd = type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${args}`;
+      const cmd =
+        type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${flags}${args}`;
       await r.exec(cmd, { interactive: true, cwd });
     },
   };
@@ -503,6 +632,76 @@ function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | 
   }
 
   return undefined;
+}
+
+/**
+ * Discover all workspace packages and return a map of name -> path
+ */
+async function buildWorkspaceMap(projectRoot: string, runtime: any): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const patterns: string[] = [];
+
+  // 1. Try pnpm-workspace.yaml
+  try {
+    const pnpmPath = path.join(projectRoot, 'pnpm-workspace.yaml');
+    const content = await runtime.readFile(pnpmPath);
+    // Simple YAML array extraction (handles 'packages/*' and "packages/*")
+    const matches = content.matchAll(/-\s+['"]?([^'"\n]+)['"]?/g);
+    for (const m of matches) patterns.push(m[1]);
+  } catch {
+    // Ignore
+  }
+
+  // 2. Try package.json workspaces
+  try {
+    const pkgPath = path.join(projectRoot, 'package.json');
+    const content = await runtime.readFile(pkgPath);
+    const pkg = JSON.parse(content);
+    if (Array.isArray(pkg.workspaces)) {
+      patterns.push(...pkg.workspaces);
+    } else if (pkg.workspaces && Array.isArray(pkg.workspaces.packages)) {
+      patterns.push(...pkg.workspaces.packages);
+    }
+  } catch {
+    // Ignore
+  }
+
+  // Default fallback if no patterns found
+  if (patterns.length === 0) {
+    patterns.push('packages/*', 'apps/*');
+  }
+
+  // 3. Scan directories
+  for (const pattern of patterns) {
+    // Convert dir glob to package.json glob
+    let globPattern = pattern;
+    if (!pattern.endsWith('package.json')) {
+      globPattern = pattern.endsWith('/') ? `${pattern}package.json` : `${pattern}/package.json`;
+    }
+
+    try {
+      for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
+        if (pkgPath === 'package.json') continue; // Skip root
+
+        const absPath = path.join(projectRoot, pkgPath);
+        const pkgDir = path.dirname(absPath);
+
+        try {
+          const content = await runtime.readFile(absPath);
+          const pkg = JSON.parse(content);
+          if (pkg.name) {
+            map.set(pkg.name, pkgDir);
+          }
+        } catch {
+          // Skip invalid package.json
+        }
+      }
+    } catch {
+      // Ignore glob errors
+    }
+  }
+
+  return map;
 }
 
 /**
@@ -801,6 +1000,29 @@ type ExecuteLeafOptions = {
 };
 
 /**
+ * Ensure arguments are provided if the command requests them.
+ * Prompts the user if arguments are missing and interaction is allowed.
+ */
+async function ensureArgs(
+  args: string[],
+  config: CommandConfig,
+  prompter: Prompter,
+  allowPrompt: boolean
+): Promise<string[]> {
+  if (config.requestArgs && args.length === 0 && allowPrompt) {
+    const input = await prompter.text({
+      message: `Enter arguments for "${config.label}":`,
+      placeholder: 'e.g. build --filter...',
+    });
+
+    if (typeof input === 'string' && input.trim()) {
+      return input.trim().split(/\s+/);
+    }
+  }
+  return args;
+}
+
+/**
  * Execute a leaf command (one with a run function)
  *
  * @param node - The command node to execute
@@ -860,9 +1082,10 @@ async function executeLeaf(
   }
 
   // Build hook context
+  const extraArgs = await ensureArgs(parsed.rest, config, prompter, allowPrompt);
   const hookCtx = {
     ...resolvedContext,
-    extraArgs: parsed.rest,
+    extraArgs,
     cwd: projectRoot,
   };
 
@@ -874,7 +1097,7 @@ async function executeLeaf(
   // Build run context
   const runCtx = {
     context: resolvedContext,
-    extraArgs: parsed.rest,
+    extraArgs,
     cwd: projectRoot,
   };
 
@@ -883,7 +1106,7 @@ async function executeLeaf(
     const runner = createRunner({
       cwd: projectRoot,
       context: resolvedContext,
-      extraArgs: parsed.rest,
+      extraArgs,
       timeout: config.timeout,
       quiet,
       signal,
@@ -1112,10 +1335,14 @@ async function executeLeafWithContext(
     throw new AbortError();
   }
 
+  // Ensure arguments are provided if requested
+  const allowPrompt = !ctx.config.noTty;
+  const finalArgs = await ensureArgs(extraArgs, config, prompter, allowPrompt);
+
   // Build hook context
   const hookCtx = {
     ...resolvedContext,
-    extraArgs,
+    extraArgs: finalArgs,
     cwd: projectRoot,
   };
 
@@ -1127,7 +1354,7 @@ async function executeLeafWithContext(
   // Build run context
   const runCtx = {
     context: resolvedContext,
-    extraArgs,
+    extraArgs: finalArgs,
     cwd: projectRoot,
   };
 
@@ -1136,7 +1363,7 @@ async function executeLeafWithContext(
     const runner = createRunner({
       cwd: projectRoot,
       context: resolvedContext,
-      extraArgs,
+      extraArgs: finalArgs,
       timeout: config.timeout,
       quiet,
       signal,

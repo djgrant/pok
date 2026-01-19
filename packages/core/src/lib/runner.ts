@@ -29,7 +29,7 @@ export type ExecOptions = {
    * Use this when the command needs user input (e.g., browser auth, OTP prompts).
    * Output won't be captured - it goes directly to the terminal.
    */
-   interactive?: boolean;
+  interactive?: boolean;
   /**
    * Working directory for this command.
    * If not specified, uses the runner's default CWD.
@@ -561,6 +561,12 @@ export function createRunner<TContext extends Record<string, unknown>>(
         result[key] = value;
       }
     }
+
+    // Scrub problematic npm config variables that confuse sub-processes
+    // Specifically npm_config_recursive which makes pnpm think it's in recursive mode
+    delete result.npm_config_recursive;
+    delete result.npm_config_argv;
+
     Object.assign(result, additionalEnv);
     return result;
   };
@@ -670,7 +676,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
         // Wait for exit code, racing against abort signal
         const exitResult = abortPromise
-          ? await Promise.race([proc.exited.then((code) => ({ type: 'exit' as const, code })), abortPromise])
+          ? await Promise.race([
+              proc.exited.then((code) => ({ type: 'exit' as const, code })),
+              abortPromise,
+            ])
           : { type: 'exit' as const, code: await proc.exited };
 
         runnerProcesses.delete(proc);
@@ -697,8 +706,14 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
         if (exitCode !== 0 && exitCode !== null) {
           const decoder = new TextDecoder();
-          const stdout = stdoutChunks.map((c) => decoder.decode(c)).join('').trim();
-          const stderr = stderrChunks.map((c) => decoder.decode(c)).join('').trim();
+          const stdout = stdoutChunks
+            .map((c) => decoder.decode(c))
+            .join('')
+            .trim();
+          const stderr = stderrChunks
+            .map((c) => decoder.decode(c))
+            .join('')
+            .trim();
           const output = [stdout, stderr].filter(Boolean).join('\n');
           throw new CommandError(`Command failed: ${cmdLabel}`, output);
         }
@@ -786,7 +801,10 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
           // Wait for exit code, racing against abort signal
           const exitResult = abortPromise
-            ? await Promise.race([proc.exited.then((code) => ({ type: 'exit' as const, code })), abortPromise])
+            ? await Promise.race([
+                proc.exited.then((code) => ({ type: 'exit' as const, code })),
+                abortPromise,
+              ])
             : { type: 'exit' as const, code: await proc.exited };
 
           runnerProcesses.delete(proc);
@@ -813,8 +831,14 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
           if (exitCode !== 0 && exitCode !== null) {
             const decoder = new TextDecoder();
-            const stdout = stdoutChunks.map((c) => decoder.decode(c)).join('').trim();
-            const stderr = stderrChunks.map((c) => decoder.decode(c)).join('').trim();
+            const stdout = stdoutChunks
+              .map((c) => decoder.decode(c))
+              .join('')
+              .trim();
+            const stderr = stderrChunks
+              .map((c) => decoder.decode(c))
+              .join('')
+              .trim();
             const output = [stdout, stderr].filter(Boolean).join('\n');
             throw new CommandError(`Command failed: ${finalCmd}`, output);
           }
@@ -853,7 +877,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
 
-           await executeWithRetry(
+          await executeWithRetry(
             () =>
               executeCmd(cmd, {
                 cwd: opts?.cwd || cwd,
@@ -886,7 +910,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
   ): Promise<void> => {
     if (isCommand(item)) {
       const retryConfig = item.opts?.retry;
-       await executeWithRetry(
+      await executeWithRetry(
         () =>
           executeCmd(item.cmd, {
             cwd: item.opts?.cwd || cwd,
@@ -1101,12 +1125,12 @@ export function createRunner<TContext extends Record<string, unknown>>(
             executeCmd(cmd, {
               cwd,
               env: mergeEnv(allEnv),
-                quiet,
-                signal: runSignal,
-              }),
-            task.retry,
-            runSignal,
-            (attempt, max) => {
+              quiet,
+              signal: runSignal,
+            }),
+          task.retry,
+          runSignal,
+          (attempt, max) => {
             reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
           }
         );
