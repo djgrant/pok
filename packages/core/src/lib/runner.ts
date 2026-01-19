@@ -35,6 +35,11 @@ export type ExecOptions = {
    * If not specified, uses the runner's default CWD.
    */
   cwd?: string;
+  /**
+   * Environment variables to set for this command.
+   * Set a value to `undefined` to unset it from the inherited environment.
+   */
+  env?: Record<string, string | undefined>;
 };
 
 /**
@@ -553,8 +558,11 @@ export function createRunner<TContext extends Record<string, unknown>>(
   /**
    * Merge process.env with additional env vars, filtering out undefined values.
    * This is needed because process.env has type Record<string, string | undefined>.
+   * 
+   * Also handles unsetting variables: if additionalEnv has a key with value undefined,
+   * it will be removed from the result.
    */
-  const mergeEnv = (additionalEnv: Record<string, string>): Record<string, string> => {
+  const mergeEnv = (additionalEnv: Record<string, string | undefined>): Record<string, string> => {
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined) {
@@ -562,7 +570,13 @@ export function createRunner<TContext extends Record<string, unknown>>(
       }
     }
 
-    Object.assign(result, additionalEnv);
+    for (const [key, value] of Object.entries(additionalEnv)) {
+      if (value === undefined) {
+        delete result[key];
+      } else {
+        result[key] = value;
+      }
+    }
     return result;
   };
 
@@ -871,12 +885,13 @@ export function createRunner<TContext extends Record<string, unknown>>(
       then(onFulfilled, onRejected) {
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
+          const mergedEnv = { ...allEnv, ...opts?.env };
 
           await executeWithRetry(
             () =>
               executeCmd(cmd, {
                 cwd: opts?.cwd || cwd,
-                env: mergeEnv(allEnv),
+                env: mergeEnv(mergedEnv),
                 quiet,
                 signal,
                 interactive: opts?.interactive,

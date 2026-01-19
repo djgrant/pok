@@ -256,7 +256,7 @@ describe('Package Manager Integration', () => {
         expect(spawnCalls[0].join(' ')).not.toContain('run install');
 
         await run(['add', 'zod'], config);
-        expect(spawnCalls[1].join(' ')).toContain('add zod');
+        expect(spawnCalls[1].join(' ')).toContain('install zod');
       } finally {
         runtime.spawn = originalSpawn;
         cleanup();
@@ -360,15 +360,15 @@ describe('Package Manager Integration', () => {
       try {
         await run(['add', 'zod'], config);
         expect(spawnCalls[0].cwd).toBe(projectRoot);
-        expect(spawnCalls[0].cmd).toContain('add zod');
+        expect(spawnCalls[0].cmd).toContain('install zod');
 
         await run(['pkg-a', 'add', 'zod'], config);
         expect(spawnCalls[1].cwd).toBe(path.join(projectRoot, 'packages/pkg-a'));
-        expect(spawnCalls[1].cmd).toContain('add zod');
+        expect(spawnCalls[1].cmd).toContain('install zod');
 
         await run(['pkg-b', 'add', 'zod'], config);
         expect(spawnCalls[2].cwd).toBe(path.join(projectRoot, 'packages/pkg-b'));
-        expect(spawnCalls[2].cmd).toContain('add zod');
+        expect(spawnCalls[2].cmd).toContain('install zod');
       } finally {
         runtime.readFile = originalReadFile;
         runtime.glob = originalGlob;
