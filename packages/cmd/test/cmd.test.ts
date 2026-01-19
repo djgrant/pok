@@ -96,23 +96,12 @@ export const command = defineCommand({
     });
   });
 
-  describe('when no config file exists', () => {
+  describe('when no config file exists and no package.json exists', () => {
     let tempDir: string;
 
     beforeAll(() => {
-      // Create a temp directory without pok.config.ts
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-'));
-      fs.writeFileSync(
-        path.join(tempDir, 'package.json'),
-        JSON.stringify({ name: 'test-project', type: 'module' })
-      );
-
-      // Link core so it can be imported
-      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
-      fs.mkdirSync(nodeModulesDir, { recursive: true });
-
-      const packagesDir = path.resolve(import.meta.dir, '../..');
-      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      // Create a truly empty temp directory
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-empty-'));
     });
 
     afterAll(() => {
@@ -129,8 +118,58 @@ export const command = defineCommand({
       const stderr = await new Response(proc.stderr).text();
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('No pok configuration found');
-      expect(stderr).toContain('pok init');
+      expect(stderr).toContain('No pok configuration or package.json found');
+    });
+  });
+
+  describe('when no config file exists but package.json exists', () => {
+    let tempDir: string;
+
+    beforeAll(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-fallback-'));
+      fs.writeFileSync(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({
+          name: 'fallback-project',
+          scripts: {
+            hello: 'echo hello world',
+          },
+        })
+      );
+
+      // Link packages so fallback mode can load them
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
+      fs.mkdirSync(nodeModulesDir, { recursive: true });
+
+      const packagesDir = path.resolve(import.meta.dir, '../..');
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(
+        path.join(packagesDir, 'reporter-clack'),
+        path.join(nodeModulesDir, 'reporter-clack')
+      );
+      fs.symlinkSync(
+        path.join(packagesDir, 'prompter-clack'),
+        path.join(nodeModulesDir, 'prompter-clack')
+      );
+    });
+
+    afterAll(() => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('runs in fallback mode and shows scripts', async () => {
+      // Use --help to avoid interactive menu
+      const proc = spawn(['bun', CMD_BIN, '--help'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('hello');
+      expect(stdout).toContain('init');
     });
   });
 

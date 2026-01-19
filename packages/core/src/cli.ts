@@ -40,25 +40,31 @@ export type RunCliConfig = {
   prompter: Prompter;
   /** Optional tabs adapter (instantiated) */
   tabs?: TabsAdapter;
-   /** Optional version string for --version flag */
-   version?: string;
-    /**
-     * Package manager scripts to include as commands.
-     * - true: Include all scripts from root package.json
-     * - string[]: List of script names, glob patterns (e.g. 'test:*'),
-     *   or package discovery paths (e.g. 'packages/*')
-     */
-    pmScripts?: boolean | string[];
+  /** Optional version string for --version flag */
+  version?: string;
+  /**
+   * Package manager scripts to include as commands.
+   * - true: Include all scripts from root package.json
+   * - string[]: List of script names, glob patterns (e.g. 'test:*'),
+   *   or package discovery paths (e.g. 'packages/*')
+   */
+  pmScripts?: boolean | string[];
 
-    /**
-     * Native package manager commands to include (e.g. 'install', 'add', 'run').
-     * - true: Include standard lifecycle commands
-     * - string[]: List of specific commands to include
-     */
-    pmCommands?: boolean | string[];
- };
- 
- /**
+  /**
+   * Native package manager commands to include (e.g. 'install', 'add', 'run').
+   * - true: Include standard lifecycle commands
+   * - string[]: List of specific commands to include
+   */
+  pmCommands?: boolean | string[];
+
+  /**
+   * Extra commands to inject into the tree manually.
+   * Useful for dynamically generated commands or internal tooling.
+   */
+  extraCommands?: Record<string, import('./lib/command').CommandConfig>;
+};
+
+/**
 
  * Extract detailed error information from process execution errors
  */
@@ -68,19 +74,19 @@ function getErrorDetails(error: unknown): string {
   }
 
   const err = error as Record<string, unknown>;
-  
+
   // Check for tinyexec-style output property
   if (err.output && typeof err.output === 'object') {
     const output = err.output as Record<string, unknown>;
     const parts: string[] = [];
-    
+
     if (output.stderr) {
       parts.push(String(output.stderr).trim());
     }
     if (output.stdout) {
       parts.push(String(output.stdout).trim());
     }
-    
+
     if (parts.length > 0) {
       return parts.filter(Boolean).join('\n');
     }
@@ -111,21 +117,21 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
   // Get app name (default to directory name)
   const appName = config.appName ?? path.basename(projectRoot);
 
-   try {
-     await run(remainingArgs, {
-       commandsDir,
-       projectRoot,
-       appName,
-       version,
-       reporterAdapter,
-       prompter,
-       tabs,
-       noTty,
-       pmScripts: config.pmScripts,
-       pmCommands: config.pmCommands,
-     });
-   } catch (error) {
-
+  try {
+    await run(remainingArgs, {
+      commandsDir,
+      projectRoot,
+      appName,
+      version,
+      reporterAdapter,
+      prompter,
+      tabs,
+      noTty,
+      pmScripts: config.pmScripts,
+      pmCommands: config.pmCommands,
+      extraCommands: config.extraCommands,
+    });
+  } catch (error) {
     if (error instanceof RouterError) {
       process.exit(error.exitCode);
     }
