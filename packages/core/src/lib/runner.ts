@@ -562,11 +562,6 @@ export function createRunner<TContext extends Record<string, unknown>>(
       }
     }
 
-    // Scrub problematic npm config variables that confuse sub-processes
-    // Specifically npm_config_recursive which makes pnpm think it's in recursive mode
-    delete result.npm_config_recursive;
-    delete result.npm_config_argv;
-
     Object.assign(result, additionalEnv);
     return result;
   };
