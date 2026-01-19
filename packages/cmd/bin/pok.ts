@@ -94,12 +94,91 @@ async function resolveModule(name: string, configDir: string) {
 }
 
 /**
+ * Detect the package manager used in the project (simple version for launcher).
+ */
+function getPackageManagerSimple(projectRoot: string): 'npm' | 'pnpm' | 'yarn' | 'bun' {
+  if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (
+    fs.existsSync(path.join(projectRoot, 'bun.lockb')) ||
+    fs.existsSync(path.join(projectRoot, 'bun.lock'))
+  )
+    return 'bun';
+  if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) return 'yarn';
+  return 'npm';
+}
+
+/**
+ * Simple dependency-free Yes/No prompt.
+ */
+async function askYesNo(question: string): Promise<boolean> {
+  if (!process.stdout.isTTY) return false;
+
+  process.stdout.write(`${question} (Y/n) `);
+  for await (const line of console) {
+    const input = line.trim().toLowerCase();
+    if (input === '' || input === 'y' || input === 'yes') return true;
+    if (input === 'n' || input === 'no') return false;
+    process.stdout.write('Please enter y or n: ');
+  }
+  return false;
+}
+
+/**
+ * Ensure required pok modules are installed in the project.
+ */
+async function ensureModulesInstalled(pkgDir: string, moduleNames: string[]): Promise<boolean> {
+  const pm = getPackageManagerSimple(pkgDir);
+  const installCmd =
+    pm === 'npm'
+      ? `npm install --save-dev ${moduleNames.join(' ')}`
+      : pm === 'pnpm'
+        ? `pnpm add -D ${moduleNames.join(' ')}`
+        : pm === 'yarn'
+          ? `yarn add -D ${moduleNames.join(' ')}`
+          : `bun add -d ${moduleNames.join(' ')}`;
+
+  const confirmed = await askYesNo(
+    `Required pok modules (${moduleNames.join(', ')}) are missing locally. Install them with ${pm}?`
+  );
+
+  if (!confirmed) return false;
+
+  console.log(`\nInstalling modules: ${installCmd}...\n`);
+
+  try {
+    const { $ } = await import('bun');
+    await $`${{ raw: installCmd }}`.cwd(pkgDir);
+    console.log('\nModules installed successfully!\n');
+    return true;
+  } catch (err) {
+    console.error(
+      `\nFailed to install modules: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return false;
+  }
+}
+
+/**
  * Run pok in fallback mode when no config is found but package.json exists.
  */
 async function runInFallbackMode(pkgDir: string) {
-  const core = await resolveModule('@pokit/core', pkgDir);
-  const reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
-  const prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+  let core = await resolveModule('@pokit/core', pkgDir);
+  let reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
+  let prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+
+  if (!core || !reporter || !prompter) {
+    const missing = [];
+    if (!core) missing.push('@pokit/core');
+    if (!reporter) missing.push('@pokit/reporter-clack');
+    if (!prompter) missing.push('@pokit/prompter-clack');
+
+    if (await ensureModulesInstalled(pkgDir, missing)) {
+      // Retry resolution after installation
+      core = await resolveModule('@pokit/core', pkgDir);
+      reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
+      prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+    }
+  }
 
   if (!core || !reporter || !prompter) {
     console.error(
@@ -160,7 +239,13 @@ Run \`pok init\` to create a pok.config.ts file.
   const { configPath, configDir } = configResult;
 
   // Step 2: Dynamically resolve @pokit/core from the project directory
-  const configModule = await resolveModule('@pokit/core', configDir);
+  let configModule = await resolveModule('@pokit/core', configDir);
+
+  if (!configModule) {
+    if (await ensureModulesInstalled(configDir, ['@pokit/core'])) {
+      configModule = await resolveModule('@pokit/core', configDir);
+    }
+  }
 
   if (!configModule) {
     console.error(
