@@ -94,17 +94,65 @@ async function resolveModule(name: string, configDir: string) {
 }
 
 /**
- * Detect the package manager used in the project (simple version for launcher).
+ * Detect the package manager and workspace status.
  */
-function getPackageManagerSimple(projectRoot: string): 'npm' | 'pnpm' | 'yarn' | 'bun' {
-  if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) return 'pnpm';
-  if (
+function getPMInfo(projectRoot: string): {
+  name: 'npm' | 'pnpm' | 'yarn' | 'bun';
+  isWorkspaceRoot: boolean;
+} {
+  let name: 'npm' | 'pnpm' | 'yarn' | 'bun' = 'npm';
+  let isWorkspaceRoot = false;
+
+  if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) {
+    name = 'pnpm';
+    if (fs.existsSync(path.join(projectRoot, 'pnpm-workspace.yaml'))) {
+      isWorkspaceRoot = true;
+    }
+  } else if (
     fs.existsSync(path.join(projectRoot, 'bun.lockb')) ||
     fs.existsSync(path.join(projectRoot, 'bun.lock'))
-  )
-    return 'bun';
-  if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) return 'yarn';
-  return 'npm';
+  ) {
+    name = 'bun';
+    // Bun doesn't strictly require a flag for root, but we can detect it
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
+      if (pkg.workspaces) isWorkspaceRoot = true;
+    } catch {}
+  } else if (fs.existsSync(path.join(projectRoot, 'yarn.lock'))) {
+    name = 'yarn';
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
+      if (pkg.workspaces) isWorkspaceRoot = true;
+    } catch {}
+  } else {
+    name = 'npm';
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
+      if (pkg.workspaces) isWorkspaceRoot = true;
+    } catch {}
+  }
+
+  return { name, isWorkspaceRoot };
+}
+
+/**
+ * Generate the appropriate installation command for the detected PM.
+ */
+function getInstallCommand(pkgDir: string, moduleNames: string[]): string {
+  const { name, isWorkspaceRoot } = getPMInfo(pkgDir);
+  const modules = moduleNames.join(' ');
+
+  switch (name) {
+    case 'pnpm':
+      return `pnpm add -D ${modules}${isWorkspaceRoot ? ' -w' : ''}`;
+    case 'yarn':
+      return `yarn add -D ${modules}${isWorkspaceRoot ? ' -W' : ''}`;
+    case 'bun':
+      return `bun add -d ${modules}`;
+    case 'npm':
+    default:
+      return `npm install --save-dev ${modules}`;
+  }
 }
 
 /**
@@ -127,15 +175,8 @@ async function askYesNo(question: string): Promise<boolean> {
  * Ensure required pok modules are installed in the project.
  */
 async function ensureModulesInstalled(pkgDir: string, moduleNames: string[]): Promise<boolean> {
-  const pm = getPackageManagerSimple(pkgDir);
-  const installCmd =
-    pm === 'npm'
-      ? `npm install --save-dev ${moduleNames.join(' ')}`
-      : pm === 'pnpm'
-        ? `pnpm add -D ${moduleNames.join(' ')}`
-        : pm === 'yarn'
-          ? `yarn add -D ${moduleNames.join(' ')}`
-          : `bun add -d ${moduleNames.join(' ')}`;
+  const { name: pm } = getPMInfo(pkgDir);
+  const installCmd = getInstallCommand(pkgDir, moduleNames);
 
   const confirmed = await askYesNo(
     `Required pok modules (${moduleNames.join(', ')}) are missing locally. Install them with ${pm}?`
@@ -181,10 +222,15 @@ async function runInFallbackMode(pkgDir: string) {
   }
 
   if (!core || !reporter || !prompter) {
+    const installCmd = getInstallCommand(pkgDir, [
+      '@pokit/core',
+      '@pokit/reporter-clack',
+      '@pokit/prompter-clack',
+    ]);
     console.error(
       `Error: Required pok modules not found.\n\n` +
         `Install them in your project to enable the fallback menu:\n` +
-        `  bun add -d @pokit/core @pokit/reporter-clack @pokit/prompter-clack\n\n` +
+        `  ${installCmd}\n\n` +
         `Or run \`pok init\` to bootstrap a configuration.`
     );
     process.exit(1);
@@ -248,10 +294,11 @@ Run \`pok init\` to create a pok.config.ts file.
   }
 
   if (!configModule) {
+    const installCmd = getInstallCommand(configDir, ['@pokit/core']);
     console.error(
       `Error: @pokit/core is not installed in ${configDir}\n\n` +
         'Install it with:\n' +
-        '  bun add @pokit/core\n'
+        `  ${installCmd}\n`
     );
     process.exit(1);
   }
