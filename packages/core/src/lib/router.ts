@@ -121,6 +121,250 @@ export type RouterContext = {
   tabs?: TabsAdapter;
 };
 
+type ScriptInfo = {
+  scriptName: string;
+  cwd: string;
+  scriptContent: string;
+  requestArgs: boolean;
+};
+
+type ParsedPmCommand = {
+  pm: 'pnpm' | 'bun' | 'npm' | 'yarn';
+  targetName?: string;
+  targetPath?: string;
+  commandToken?: string | null;
+  scriptToken?: string | null;
+};
+
+function tokenizeCommand(input: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i]!;
+
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+function parsePmCommand(scriptContent: string): ParsedPmCommand | null {
+  const tokens = tokenizeCommand(scriptContent);
+  if (tokens.length === 0) return null;
+
+  const pm = tokens[0];
+  if (pm !== 'pnpm' && pm !== 'bun' && pm !== 'npm' && pm !== 'yarn') return null;
+
+  if (pm === 'yarn' && tokens[1] === 'workspace') {
+    const targetName = tokens[2];
+    if (!targetName) return null;
+    const commandToken = tokens[3] ?? null;
+    return {
+      pm,
+      targetName,
+      commandToken,
+      scriptToken: commandToken,
+    };
+  }
+
+  let filterValue: string | undefined;
+  let workspaceValue: string | undefined;
+  let commandPathValue: string | undefined;
+  const nonFlagTokens: string[] = [];
+
+  for (let i = 1; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    if (token === '--') break;
+
+    if (token.startsWith('--filter=')) {
+      filterValue = token.slice('--filter='.length);
+      continue;
+    }
+    if (token === '--filter') {
+      filterValue = tokens[i + 1];
+      i++;
+      continue;
+    }
+    if (token.startsWith('--command=')) {
+      commandPathValue = token.slice('--command='.length);
+      continue;
+    }
+    if (token === '--command') {
+      commandPathValue = tokens[i + 1];
+      i++;
+      continue;
+    }
+    if (token.startsWith('--workspace=')) {
+      workspaceValue = token.slice('--workspace='.length);
+      continue;
+    }
+    if (token === '--workspace') {
+      workspaceValue = tokens[i + 1];
+      i++;
+      continue;
+    }
+
+    if (token.startsWith('-F')) {
+      filterValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
+      if (token.length === 2) i++;
+      continue;
+    }
+    if (token.startsWith('-C')) {
+      commandPathValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
+      if (token.length === 2) i++;
+      continue;
+    }
+    if (token.startsWith('-w')) {
+      workspaceValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
+      if (token.length === 2) i++;
+      continue;
+    }
+
+    if (token.startsWith('-')) continue;
+
+    nonFlagTokens.push(token);
+  }
+
+  let commandToken: string | null = null;
+  let scriptToken: string | null = null;
+  if (nonFlagTokens.length > 0) {
+    if (nonFlagTokens[0] === 'run' || nonFlagTokens[0] === 'run-script') {
+      commandToken = nonFlagTokens[0];
+      scriptToken = nonFlagTokens[1] ?? null;
+    } else {
+      commandToken = nonFlagTokens[0];
+      scriptToken = nonFlagTokens[0];
+    }
+  }
+
+  if (pm === 'pnpm' || pm === 'bun') {
+    return {
+      pm,
+      targetName: commandPathValue ? undefined : filterValue,
+      targetPath: commandPathValue,
+      commandToken,
+      scriptToken,
+    };
+  }
+
+  if (pm === 'npm') {
+    return {
+      pm,
+      targetName: workspaceValue,
+      targetPath: commandPathValue,
+      commandToken,
+      scriptToken,
+    };
+  }
+
+  return {
+    pm,
+    targetName: workspaceValue,
+    targetPath: commandPathValue,
+    commandToken,
+    scriptToken,
+  };
+}
+
+async function loadPackageInfo(
+  pkgDir: string,
+  runtime: any
+): Promise<{ name: string | null; scripts: Record<string, unknown> } | null> {
+  try {
+    const content = await runtime.readFile(path.join(pkgDir, 'package.json'));
+    const pkg = JSON.parse(content);
+    return {
+      name: typeof pkg.name === 'string' ? pkg.name : null,
+      scripts: pkg.scripts || {},
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function resolveWorkspaceTarget(
+  parsed: ParsedPmCommand,
+  infoCwd: string,
+  projectRoot: string,
+  runtime: any,
+  workspaceMap: Map<string, string> | null
+): Promise<{
+  targetDir: string;
+  targetName: string | null;
+  scripts: Record<string, unknown>;
+  workspaceMap: Map<string, string> | null;
+} | null> {
+  if (parsed.targetPath) {
+    const absPath = path.isAbsolute(parsed.targetPath)
+      ? parsed.targetPath
+      : path.resolve(infoCwd, parsed.targetPath);
+    const pkgDir = absPath.endsWith('package.json') ? path.dirname(absPath) : absPath;
+    const pkgInfo = await loadPackageInfo(pkgDir, runtime);
+    if (!pkgInfo) return null;
+    return {
+      targetDir: pkgDir,
+      targetName: pkgInfo.name || path.basename(pkgDir),
+      scripts: pkgInfo.scripts,
+      workspaceMap,
+    };
+  }
+
+  if (parsed.targetName) {
+    if (!workspaceMap) {
+      workspaceMap = await buildWorkspaceMap(projectRoot, runtime);
+    }
+    const targetDir = workspaceMap.get(parsed.targetName);
+    if (!targetDir) return null;
+    const pkgInfo = await loadPackageInfo(targetDir, runtime);
+    if (!pkgInfo) return null;
+    return {
+      targetDir,
+      targetName: pkgInfo.name || parsed.targetName,
+      scripts: pkgInfo.scripts,
+      workspaceMap,
+    };
+  }
+
+  return null;
+}
+
 /**
  * Validate that there are no alias conflicts within a command tree level.
  *
@@ -184,10 +428,7 @@ export async function buildCommandTree(
     try {
       const patterns = Array.isArray(scriptsConfig) ? scriptsConfig : [true];
 
-      const allScripts = new Map<
-        string,
-        { scriptName: string; cwd: string; scriptContent: string; requestArgs: boolean }
-      >();
+      const allScripts = new Map<string, ScriptInfo>();
 
       for (const pattern of patterns) {
         if (typeof pattern === 'boolean') {
@@ -287,57 +528,49 @@ export async function buildCommandTree(
         }
       }
 
-      // Build workspace map if any script looks like a filter command
       let workspaceMap: Map<string, string> | null = null;
-      const hasFilterScript = Array.from(allScripts.values()).some((i) =>
-        i.scriptContent.match(/(?:pnpm|bun)\s+(?:--filter|-F)\s+([^\s]+)/)
-      );
-
-      if (hasFilterScript) {
-        workspaceMap = await buildWorkspaceMap(projectRoot, runtime);
-      }
 
       for (const [commandPath, info] of allScripts) {
-        // Check for pnpm/bun filter script
-        const filterMatch = info.scriptContent.match(/(?:pnpm|bun)\s+(?:--filter|-F)\s+([^\s]+)/);
+        const parsed = parsePmCommand(info.scriptContent);
+        if (parsed) {
+          const resolved = await resolveWorkspaceTarget(
+            parsed,
+            info.cwd,
+            projectRoot,
+            runtime,
+            workspaceMap
+          );
+          if (resolved) {
+            workspaceMap = resolved.workspaceMap;
+            const targetScripts = resolved.scripts || {};
+            const scriptNames = Object.keys(targetScripts);
 
-        if (filterMatch && info.scriptContent.trim().endsWith(' --') && workspaceMap) {
-          const targetPkgName = filterMatch[1];
-          const targetPkgDir = workspaceMap.get(targetPkgName);
+            const hasCommand = parsed.commandToken !== null && parsed.commandToken !== undefined;
+            const isRunCommand =
+              parsed.commandToken === 'run' || parsed.commandToken === 'run-script';
+            const hasExplicitScript = parsed.scriptToken !== null && parsed.scriptToken !== undefined;
 
-          if (targetPkgDir) {
-            // Found target package - create submenu
-            try {
-              const content = await runtime.readFile(path.join(targetPkgDir, 'package.json'));
-              const pkg = JSON.parse(content);
-              const targetScripts = pkg.scripts || {};
+            const shouldCreateSubmenu =
+              scriptNames.length > 0 && (!hasCommand || (isRunCommand && !hasExplicitScript));
 
-              // 1. Create parent node (representing the proxy command)
-              // We do this by inserting children directly under this path
+            if (shouldCreateSubmenu) {
               const segments = commandPath.split(/[:.]/);
-
-              // Add description for the parent
               const parentConfig: CommandConfig = {
                 label: info.scriptName,
-                description: `Proxy to ${targetPkgName} scripts`,
+                description: `Proxy to ${resolved.targetName} scripts`,
               };
-              // We need to ensure the parent node exists or is created with this config.
-              // insertIntoTree handles creating nodes. We can just insert children.
+              insertIntoTree(tree, segments, parentConfig);
 
               let addedChild = false;
               for (const [childName, childScript] of Object.entries(targetScripts)) {
-                // Child command: originalScript + ' ' + childName (+ args)
                 const childSegments = [...segments, childName];
-                const pm = getPackageManager(targetPkgDir); // Usually same as root but safe to check
 
                 const childConfig: CommandConfig = {
                   label: childName,
                   description: typeof childScript === 'string' ? childScript : `Run ${childName}`,
                   ignoreUnknownFlags: true,
                   run: async (r, ctx) => {
-                    // Construct full command: original script + child name + args
                     const args = ctx.extraArgs.length > 0 ? ` ${ctx.extraArgs.join(' ')}` : '';
-                    // The original script already has " --", so we just append
                     const fullCmd = `${info.scriptContent} ${childName}${args}`;
                     await r.exec(fullCmd, {
                       interactive: true,
@@ -353,12 +586,8 @@ export async function buildCommandTree(
               }
 
               if (addedChild) {
-                // If we successfully added children, we don't need to add the leaf node for the proxy itself
-                // effectively turning it into a folder.
                 continue;
               }
-            } catch {
-              // Failed to read target package or scripts, fall back to leaf
             }
           }
         }

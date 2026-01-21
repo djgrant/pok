@@ -8,6 +8,8 @@ import {
 } from '../src';
 import * as path from 'path';
 import { getRuntime } from '../src/runtime';
+import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
+import * as os from 'os';
 
 async function setupPmIntegrationTest(
   pkgJsonContent: string,
@@ -55,6 +57,75 @@ async function setupPmIntegrationTest(
       runtime.readFile = originalReadFile;
       runtime.glob = originalGlob;
     }
+  };
+}
+
+type WorkspaceFixture = {
+  projectRoot: string;
+  commandsDir: string;
+  cleanup: () => Promise<void>;
+};
+
+async function setupWorkspaceFixture(options: {
+  pm: 'pnpm' | 'bun' | 'npm' | 'yarn';
+  scripts: Record<string, string>;
+  workspaceName: string;
+  workspaceScripts: Record<string, string>;
+}): Promise<WorkspaceFixture> {
+  const { pm, scripts, workspaceName, workspaceScripts } = options;
+  const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'pok-pm-'));
+  const commandsDir = path.join(projectRoot, 'commands');
+  const workspaceDir = path.join(projectRoot, 'packages', workspaceName);
+
+  await mkdir(commandsDir, { recursive: true });
+  await mkdir(workspaceDir, { recursive: true });
+
+  await writeFile(
+    path.join(projectRoot, 'package.json'),
+    JSON.stringify(
+      {
+        name: 'root',
+        private: true,
+        workspaces: ['packages/*'],
+        scripts,
+      },
+      null,
+      2
+    )
+  );
+
+  await writeFile(
+    path.join(workspaceDir, 'package.json'),
+    JSON.stringify(
+      {
+        name: workspaceName,
+        scripts: workspaceScripts,
+      },
+      null,
+      2
+    )
+  );
+
+  if (pm === 'pnpm') {
+    await writeFile(
+      path.join(projectRoot, 'pnpm-workspace.yaml'),
+      ['packages:', '  - "packages/*"'].join('\n')
+    );
+    await writeFile(path.join(projectRoot, 'pnpm-lock.yaml'), '');
+  } else if (pm === 'bun') {
+    await writeFile(path.join(projectRoot, 'bun.lockb'), '');
+  } else if (pm === 'yarn') {
+    await writeFile(path.join(projectRoot, 'yarn.lock'), '');
+  } else if (pm === 'npm') {
+    await writeFile(path.join(projectRoot, 'package-lock.json'), '{}');
+  }
+
+  return {
+    projectRoot,
+    commandsDir,
+    cleanup: async () => {
+      await rm(projectRoot, { recursive: true, force: true });
+    },
   };
 }
 
@@ -373,6 +444,244 @@ describe('Package Manager Integration', () => {
         runtime.readFile = originalReadFile;
         runtime.glob = originalGlob;
         runtime.spawn = originalSpawn;
+      }
+    });
+  });
+
+  describe('workspace proxy scripts', () => {
+    it('creates submenu for pnpm -F workspace scripts', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'pnpm',
+        scripts: {
+          web: 'pnpm -F web',
+          'web-dev': 'pnpm -F web dev',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev', test: 'echo test' },
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('pnpm -F web dev');
+
+        await run(['web-dev', 'test'], config);
+        expect(spawnCalls[1].cmd).toContain('pnpm run web-dev -- test');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
+      }
+    });
+
+    it('creates submenu for pnpm -C workspace scripts', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'pnpm',
+        scripts: {
+          web: 'pnpm -C packages/web',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev' },
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('pnpm -C packages/web dev');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
+      }
+    });
+
+    it('creates submenu for npm workspaces', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'npm',
+        scripts: {
+          web: 'npm -w web run',
+          'web-dev': 'npm -w web run dev',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev', test: 'echo test' },
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('npm -w web run dev');
+
+        await run(['web-dev', 'test'], config);
+        expect(spawnCalls[1].cmd).toContain('npm run web-dev -- test');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
+      }
+    });
+
+    it('creates submenu for yarn workspaces', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'yarn',
+        scripts: {
+          web: 'yarn workspace web',
+          'web-dev': 'yarn workspace web dev',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev', test: 'echo test' },
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('yarn workspace web dev');
+
+        await run(['web-dev', 'test'], config);
+        expect(spawnCalls[1].cmd).toContain('yarn run web-dev -- test');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
+      }
+    });
+
+    it('creates submenu for bun workspaces', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'bun',
+        scripts: {
+          web: 'bun -F web',
+          'web-dev': 'bun -F web dev',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev', test: 'echo test' },
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('bun -F web dev');
+
+        await run(['web-dev', 'test'], config);
+        expect(spawnCalls[1].cmd).toContain('bun run web-dev -- test');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
       }
     });
   });
