@@ -1,6 +1,6 @@
 {
   "name": "@pokit/reporter-clack",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Clack-based event reporter for pok CLI applications",
   "keywords": [
     "cli",
