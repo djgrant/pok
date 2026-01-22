@@ -71,8 +71,9 @@ async function setupWorkspaceFixture(options: {
   scripts: Record<string, string>;
   workspaceName: string;
   workspaceScripts: Record<string, string>;
+  withPokitConfig?: boolean;
 }): Promise<WorkspaceFixture> {
-  const { pm, scripts, workspaceName, workspaceScripts } = options;
+  const { pm, scripts, workspaceName, workspaceScripts, withPokitConfig = true } = options;
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'pok-pm-'));
   const commandsDir = path.join(projectRoot, 'commands');
   const workspaceDir = path.join(projectRoot, 'packages', workspaceName);
@@ -118,6 +119,10 @@ async function setupWorkspaceFixture(options: {
     await writeFile(path.join(projectRoot, 'yarn.lock'), '');
   } else if (pm === 'npm') {
     await writeFile(path.join(projectRoot, 'package-lock.json'), '{}');
+  }
+
+  if (withPokitConfig) {
+    await writeFile(path.join(projectRoot, 'pokit.config.ts'), 'export default {};\n');
   }
 
   return {
