@@ -137,13 +137,7 @@ type ParsedPmCommand = {
 };
 
 function hasPokitConfig(projectRoot: string): boolean {
-  const configFiles = [
-    'pokit.config.ts',
-    'pokit.config.js',
-    'pokit.config.mjs',
-    'pokit.config.cjs',
-  ];
-  return configFiles.some((file) => fs.existsSync(path.join(projectRoot, file)));
+  return fs.existsSync(path.join(projectRoot, 'pok.config.ts'));
 }
 
 function tokenizeCommand(input: string): string[] {
