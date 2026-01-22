@@ -136,6 +136,16 @@ type ParsedPmCommand = {
   scriptToken?: string | null;
 };
 
+function hasPokitConfig(projectRoot: string): boolean {
+  const configFiles = [
+    'pokit.config.ts',
+    'pokit.config.js',
+    'pokit.config.mjs',
+    'pokit.config.cjs',
+  ];
+  return configFiles.some((file) => fs.existsSync(path.join(projectRoot, file)));
+}
+
 function tokenizeCommand(input: string): string[] {
   const tokens: string[] = [];
   let current = '';
@@ -424,6 +434,7 @@ export async function buildCommandTree(
   if (scriptsConfig) {
     const projectRoot = ctx.projectRoot;
     const { reporter } = ctx;
+    const enableWorkspaceSubmenus = hasPokitConfig(projectRoot);
 
     try {
       const patterns = Array.isArray(scriptsConfig) ? scriptsConfig : [true];
@@ -531,7 +542,7 @@ export async function buildCommandTree(
       let workspaceMap: Map<string, string> | null = null;
 
       for (const [commandPath, info] of allScripts) {
-        const parsed = parsePmCommand(info.scriptContent);
+        const parsed = enableWorkspaceSubmenus ? parsePmCommand(info.scriptContent) : null;
         if (parsed) {
           const resolved = await resolveWorkspaceTarget(
             parsed,
