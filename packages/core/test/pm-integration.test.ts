@@ -122,7 +122,7 @@ async function setupWorkspaceFixture(options: {
   }
 
   if (withPokitConfig) {
-    await writeFile(path.join(projectRoot, 'pokit.config.ts'), 'export default {};\n');
+    await writeFile(path.join(projectRoot, 'pok.config.ts'), 'export default {};\n');
   }
 
   return {
