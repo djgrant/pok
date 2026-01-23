@@ -14,7 +14,7 @@ type TabbedViewProps = {
   tabs: TabProcess[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
-  onQuit: () => void;
+  onQuit: (reason: 'user' | 'interrupt') => void;
   onQuitRequest: () => void;
   onRestart: (index: number) => void;
   onKill: (index: number) => void;

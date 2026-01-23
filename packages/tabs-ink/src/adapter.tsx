@@ -103,8 +103,11 @@ export function createTabsAdapter(): TabsAdapter {
             <TabsApp
               items={items}
               options={options}
-              onExit={() => {
+              onExit={(code) => {
                 cleanup();
+                if (code === 130) {
+                  process.exit(130);
+                }
               }}
             />
           </TabsErrorBoundary>,
@@ -204,6 +207,9 @@ export function createEventAdapter(
   const handleExit = (code: number) => {
     cleanup();
     options.onExit?.(code);
+    if (code === 130) {
+      process.exit(130);
+    }
   };
 
   // Handle fatal errors from error boundary

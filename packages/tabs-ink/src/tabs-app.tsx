@@ -251,10 +251,13 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
     setQuitConfirmPending((prev) => !prev);
   }, []);
 
-  const handleQuit = useCallback(() => {
-    killAll();
-    onExit(0);
-  }, [killAll, onExit]);
+  const handleQuit = useCallback(
+    (reason: 'user' | 'interrupt') => {
+      killAll();
+      onExit(reason === 'interrupt' ? 130 : 0);
+    },
+    [killAll, onExit]
+  );
 
   const handleEnterFocusMode = useCallback(() => {
     const proc = processesRef.current[activeIndex];

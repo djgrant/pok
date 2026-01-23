@@ -33,7 +33,7 @@ export type TabProcess = BaseTabProcess & {
  */
 export type TabbedViewProps = {
   tabs: TabProcess[];
-  onQuit: () => void;
+  onQuit: (reason: 'user' | 'interrupt') => void;
   onQuitRequest: () => void;
   quitConfirmPending: boolean;
 };

@@ -11,8 +11,10 @@ import { KEY_SEQUENCES, ctrlKeyToSequence } from '../constants/keyboard.js';
 /**
  * Callbacks for keyboard actions in the tabbed view.
  */
+export type QuitReason = 'user' | 'interrupt';
+
 export type KeyboardCallbacks = {
-  onQuit: () => void;
+  onQuit: (reason: QuitReason) => void;
   onQuitRequest: () => void;
   onRestart: (index: number) => void;
   onKill: (index: number) => void;
@@ -59,7 +61,7 @@ export type KeyboardAction =
   | { type: 'close-help' }
   | { type: 'exit-focus-mode' }
   | { type: 'send-input'; data: string }
-  | { type: 'quit' }
+  | { type: 'quit'; reason: QuitReason }
   | { type: 'quit-request' }
   | { type: 'cancel-quit' }
   | { type: 'enter-focus-mode' }
@@ -118,7 +120,7 @@ export function processKeyEvent(
   // Quit confirmation handling
   if (quitConfirmPending) {
     if (char === 'q' || name === 'q') {
-      return { type: 'quit' };
+      return { type: 'quit', reason: 'user' };
     }
     return { type: 'cancel-quit' };
   }
@@ -130,7 +132,7 @@ export function processKeyEvent(
 
   // Ctrl+C for instant quit
   if ((char === 'c' || name === 'c') && ctrl) {
-    return { type: 'quit' };
+    return { type: 'quit', reason: 'interrupt' };
   }
 
   // Enter focus/input mode
@@ -284,7 +286,7 @@ export function executeKeyboardAction(
       refs.onSendInputRef.current(action.data);
       break;
     case 'quit':
-      refs.onQuitRef.current();
+      refs.onQuitRef.current(action.reason);
       break;
     case 'quit-request':
     case 'cancel-quit':
