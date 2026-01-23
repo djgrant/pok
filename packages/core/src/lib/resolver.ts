@@ -125,10 +125,10 @@ export function validateResolverKeys<TAvailableVars extends string>(
  * ```
  */
 export function defineEnvResolver<
-  TContext extends z.ZodRawShape,
-  const TAvailableVars extends string,
+  TContext extends z.ZodRawShape = {},
+  const TAvailableVars extends string = string,
 >(config: {
-  requiredContext: z.ZodObject<TContext>;
+  requiredContext?: z.ZodObject<TContext>;
   availableVars: readonly TAvailableVars[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
@@ -139,20 +139,23 @@ export function defineEnvResolver<
     context: z.infer<z.ZodObject<TContext>>
   ) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
+  // Default to empty context if not provided
+  const requiredContext = config.requiredContext ?? (z.object({}) as unknown as z.ZodObject<TContext>);
+
   // Wrap the config to ensure it conforms to TypedEnvResolver interface
   // The context is widened to unknown for generic composition
   return {
-    requiredContext: config.requiredContext as z.ZodObject<z.ZodRawShape>,
+    requiredContext: requiredContext as z.ZodObject<z.ZodRawShape>,
     availableVars: config.availableVars as readonly EnvVarKey<TAvailableVars>[],
     resolve: (keys, context) => {
       // Validate context against the schema before resolving
-      const validatedContext = config.requiredContext.parse(context);
+      const validatedContext = requiredContext.parse(context);
       return config.resolve(keys, validatedContext);
     },
     write: config.write
       ? (values, context) => {
           // Validate context against the schema before writing
-          const validatedContext = config.requiredContext.parse(context);
+          const validatedContext = requiredContext.parse(context);
           return config.write!(values, validatedContext);
         }
       : undefined,
