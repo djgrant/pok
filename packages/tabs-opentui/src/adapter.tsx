@@ -107,8 +107,11 @@ export function createTabsAdapter(): TabsAdapter {
           cleanup();
         };
 
-        const handleExit = () => {
+        const handleExit = (code: number) => {
           cleanup();
+          if (code === 130) {
+            process.exit(130);
+          }
         };
 
         // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
@@ -219,6 +222,9 @@ export function createEventAdapter(
     const handleExit = (code: number) => {
       cleanup();
       options.onExit?.(code);
+      if (code === 130) {
+        process.exit(130);
+      }
     };
 
     // Handle fatal errors from error boundary
