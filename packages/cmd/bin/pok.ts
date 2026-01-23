@@ -25,6 +25,97 @@ if (args[0] === 'init') {
   process.exit(0);
 }
 
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+
+async function main() {
+  const processCwd = process.cwd();
+
+  // Step 1: Find config file using simple inline search
+  const configResult = findConfigFileSimple(processCwd);
+
+  if (!configResult) {
+    // Look for package.json
+    const pkgJsonResult = findPackageJsonSimple(processCwd);
+    if (pkgJsonResult) {
+      await runInFallbackMode(pkgJsonResult.pkgDir);
+      return;
+    }
+
+    console.error(`Error: No pok configuration or package.json found.
+
+Run \`pok init\` to create a pok.config.ts file.
+`);
+    process.exit(1);
+  }
+
+  const { configPath, configDir } = configResult;
+
+  // Step 2: Dynamically resolve @pokit/core from the project directory
+  let configModule = await resolveModule('@pokit/core', configDir);
+
+  if (!configModule) {
+    if (await ensureModulesInstalled(configDir, ['@pokit/core'])) {
+      configModule = await resolveModule('@pokit/core', configDir);
+    }
+  }
+
+  if (!configModule) {
+    const installCmd = getInstallCommand(configDir, ['@pokit/core']);
+    console.error(
+      `Error: @pokit/core is not installed in ${configDir}\n\n` +
+        'Install it with:\n' +
+        `  ${installCmd}\n`
+    );
+    process.exit(1);
+  }
+
+  // Step 3: Load and validate config using the dynamically imported module
+  let config: LauncherSkeleton;
+  try {
+    const rawConfig = await import(configPath);
+    config = configModule.validateConfig(rawConfig.default, configPath);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Error: Failed to load config from ${configPath}\n`);
+    console.error(errorMessage);
+    process.exit(1);
+  }
+
+  // Step 4: Resolve paths relative to config file location
+  // appDir is relative to configDir, commandsDir is relative to appDir
+  const appDir = path.resolve(configDir, config.appDir);
+  const commandsDir = path.resolve(appDir, config.commandsDir);
+  const cwd = path.resolve(configDir, config.cwd);
+
+  // Verify commands directory exists
+  if (!fs.existsSync(commandsDir)) {
+    console.error(`Error: Commands directory not found: ${commandsDir}\n`);
+    console.error(
+      `The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`
+    );
+    process.exit(1);
+  }
+
+  // Step 5: Import core and call runCli with config adapters
+  // (In merged architecture, configModule and core are the same package)
+  const { runCli } = configModule as any;
+
+  await runCli(process.argv.slice(2), {
+    commandsDir,
+    projectRoot: cwd, // core uses projectRoot, config uses cwd
+    appName: config.appName,
+    version: config.version,
+    reporterAdapter: config.reporter,
+    prompter: config.prompter,
+    tabs: config.tabs,
+    pmScripts: config.pmScripts,
+    pmCommands: config.pmCommands,
+  });
+}
+
 /**
  * Simple inline config file search (no external dependencies).
  * Searches for pok.config.ts starting from startDir, walking up the tree.
@@ -260,94 +351,3 @@ async function runInFallbackMode(pkgDir: string) {
     },
   });
 }
-
-async function main() {
-  const processCwd = process.cwd();
-
-  // Step 1: Find config file using simple inline search
-  const configResult = findConfigFileSimple(processCwd);
-
-  if (!configResult) {
-    // Look for package.json
-    const pkgJsonResult = findPackageJsonSimple(processCwd);
-    if (pkgJsonResult) {
-      await runInFallbackMode(pkgJsonResult.pkgDir);
-      return;
-    }
-
-    console.error(`Error: No pok configuration or package.json found.
-
-Run \`pok init\` to create a pok.config.ts file.
-`);
-    process.exit(1);
-  }
-
-  const { configPath, configDir } = configResult;
-
-  // Step 2: Dynamically resolve @pokit/core from the project directory
-  let configModule = await resolveModule('@pokit/core', configDir);
-
-  if (!configModule) {
-    if (await ensureModulesInstalled(configDir, ['@pokit/core'])) {
-      configModule = await resolveModule('@pokit/core', configDir);
-    }
-  }
-
-  if (!configModule) {
-    const installCmd = getInstallCommand(configDir, ['@pokit/core']);
-    console.error(
-      `Error: @pokit/core is not installed in ${configDir}\n\n` +
-        'Install it with:\n' +
-        `  ${installCmd}\n`
-    );
-    process.exit(1);
-  }
-
-  // Step 3: Load and validate config using the dynamically imported module
-  let config: LauncherSkeleton;
-  try {
-    const rawConfig = await import(configPath);
-    config = configModule.validateConfig(rawConfig.default, configPath);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error(`Error: Failed to load config from ${configPath}\n`);
-    console.error(errorMessage);
-    process.exit(1);
-  }
-
-  // Step 4: Resolve paths relative to config file location
-  // appDir is relative to configDir, commandsDir is relative to appDir
-  const appDir = path.resolve(configDir, config.appDir);
-  const commandsDir = path.resolve(appDir, config.commandsDir);
-  const cwd = path.resolve(configDir, config.cwd);
-
-  // Verify commands directory exists
-  if (!fs.existsSync(commandsDir)) {
-    console.error(`Error: Commands directory not found: ${commandsDir}\n`);
-    console.error(
-      `The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`
-    );
-    process.exit(1);
-  }
-
-  // Step 5: Import core and call runCli with config adapters
-  // (In merged architecture, configModule and core are the same package)
-  const { runCli } = configModule as any;
-
-  await runCli(process.argv.slice(2), {
-    commandsDir,
-    projectRoot: cwd, // core uses projectRoot, config uses cwd
-    appName: config.appName,
-    version: config.version,
-    reporterAdapter: config.reporter,
-    prompter: config.prompter,
-    tabs: config.tabs,
-    pmScripts: config.pmScripts,
-    pmCommands: config.pmCommands,
-  });
-}
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
