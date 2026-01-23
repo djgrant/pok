@@ -66,6 +66,7 @@ export function createTabsAdapter(): TabsAdapter {
           resolved = true;
 
           // Remove signal handlers
+          process.removeListener('SIGINT', handleSignal);
           process.removeListener('SIGTERM', handleSignal);
           process.removeListener('SIGQUIT', handleSignal);
           process.removeListener('uncaughtException', handleUncaughtException);
@@ -96,6 +97,7 @@ export function createTabsAdapter(): TabsAdapter {
         };
 
         // Register signal handlers
+        process.on('SIGINT', handleSignal);
         process.on('SIGTERM', handleSignal);
         process.on('SIGQUIT', handleSignal);
         process.on('uncaughtException', handleUncaughtException);
@@ -157,6 +159,7 @@ export function createEventAdapter(
     isCleanedUp = true;
 
     // Remove signal handlers
+    process.removeListener('SIGINT', handleSignal);
     process.removeListener('SIGTERM', handleSignal);
     process.removeListener('SIGQUIT', handleSignal);
     process.removeListener('uncaughtException', handleUncaughtException);
@@ -186,6 +189,7 @@ export function createEventAdapter(
   };
 
   // Register signal handlers
+  process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
   process.on('SIGQUIT', handleSignal);
   process.on('uncaughtException', handleUncaughtException);
