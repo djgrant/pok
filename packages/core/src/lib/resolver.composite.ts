@@ -108,14 +108,22 @@ export function defineCompositeResolver<const TResolvers extends readonly AnyTyp
         }
       }
 
-      // Log warnings for unresolved keys if there were errors
-      if (remainingKeys.size > 0 && errors.length > 0 && process.env.DEBUG) {
-        console.warn(
-          `[composite-resolver] Failed to resolve keys [${[...remainingKeys].join(', ')}]. Errors encountered:`
+      if (remainingKeys.size > 0) {
+        const unresolved = [...remainingKeys].join(', ');
+        const details =
+          errors.length > 0
+            ? [
+                `Errors encountered:`,
+                ...errors.map(
+                  ({ resolver, keys, error }) =>
+                    `  - ${resolver} (keys: ${keys.join(', ')}): ${error}`
+                ),
+              ].join('\n')
+            : 'No resolver could satisfy required context for these keys.';
+
+        throw new Error(
+          `[composite-resolver] Failed to resolve keys [${unresolved}]. ${details}`
         );
-        for (const { resolver, keys, error } of errors) {
-          console.warn(`  - ${resolver} (keys: ${keys.join(', ')}): ${error}`);
-        }
       }
 
       return result;

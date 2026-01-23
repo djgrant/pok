@@ -312,7 +312,7 @@ describe('defineCompositeResolver', () => {
       expect(composite.requiredContext.safeParse({}).success).toBe(true);
     });
 
-    it('individual resolvers validate their own context', async () => {
+    it('throws when required context is missing for unresolved keys', async () => {
       let resolver1Called = false;
       let resolver2Called = false;
 
@@ -343,7 +343,9 @@ describe('defineCompositeResolver', () => {
       });
 
       // Call with only env - resolver1 should be called, resolver2 should be skipped
-      await composite.resolve(['VAR_A', 'VAR_B'], { env: 'dev' });
+      await expect(composite.resolve(['VAR_A', 'VAR_B'], { env: 'dev' })).rejects.toThrow(
+        '[composite-resolver] Failed to resolve keys [VAR_B]'
+      );
 
       expect(resolver1Called).toBe(true);
       // resolver2 is skipped because context doesn't have 'region'
