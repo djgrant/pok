@@ -546,6 +546,51 @@ describe('Package Manager Integration', () => {
       }
     });
 
+    it('creates submenu for pnpm -C workspace scripts without pok config', async () => {
+      const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
+        pm: 'pnpm',
+        scripts: {
+          web: 'pnpm -C packages/web',
+        },
+        workspaceName: 'web',
+        workspaceScripts: { dev: 'echo dev' },
+        withPokitConfig: false,
+      });
+
+      const runtime = await getRuntime();
+      const originalSpawn = runtime.spawn;
+      const spawnCalls: { cmd: string; cwd: string }[] = [];
+
+      runtime.spawn = ((cmd: string[], options: any) => {
+        spawnCalls.push({ cmd: cmd.join(' '), cwd: options.cwd });
+        return {
+          exitCode: 0,
+          killed: false,
+          kill: () => {},
+          exited: Promise.resolve(0),
+          stdout: null,
+          stderr: null,
+        };
+      }) as any;
+
+      const config = {
+        commandsDir,
+        projectRoot,
+        appName: 'test-cli',
+        reporterAdapter: createRawReporterAdapter({ onEvent: () => {} }),
+        prompter: createRawPrompter({}),
+        pmScripts: true,
+      };
+
+      try {
+        await run(['web', 'dev'], config);
+        expect(spawnCalls[0].cmd).toContain('pnpm -C packages/web dev');
+      } finally {
+        runtime.spawn = originalSpawn;
+        await cleanup();
+      }
+    });
+
     it('creates submenu for npm workspaces', async () => {
       const { projectRoot, commandsDir, cleanup } = await setupWorkspaceFixture({
         pm: 'npm',
