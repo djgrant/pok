@@ -24,6 +24,7 @@ function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandC
 | `pre`                  | `CheckConfig \| CheckConfig[] \| HookFn` | Pre-execution checks                                    |
 | `timeout`              | `number`                                 | Default timeout for exec calls (ms). Default: 300000    |
 | `run`                  | `RunFn<C>`                               | Main execution function                                 |
+| `mount`                | `MountableLike`                          | Mount a dynamic subcommand tree                         |
 | `enableRunAllChildren` | `'sequential' \| 'parallel'`             | Enable "run all" for parent commands                    |
 | `quietRunAll`          | `boolean`                                | Capture output when running all children. Default: true |
 
@@ -159,21 +160,20 @@ export const command = defineCommand({
   label: 'Database operations',
   enableRunAllChildren: 'sequential', // Adds "all" option to menu
 });
+```
 
-// commands/db.migrate.ts
-export const command = defineCommand({
-  label: 'Run migrations',
-  run: async (r) => {
-    await r.exec('prisma migrate deploy');
-  },
-});
+### Mounting Sub-apps
 
-// commands/db.seed.ts
+You can mount entire command trees from other directories or sources using `mount`:
+
+```typescript
+import { defineCommand } from '@pokit/core';
+import { mountFrom } from '@pokit/core/plugins';
+
 export const command = defineCommand({
-  label: 'Seed database',
-  run: async (r) => {
-    await r.exec('prisma db seed');
-  },
+  label: 'Admin',
+  // Mounts ./admin/*.ts(x) under the admin namespace
+  mount: mountFrom(import.meta.url, './admin'),
 });
 ```
 
