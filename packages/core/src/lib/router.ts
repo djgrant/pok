@@ -253,6 +253,10 @@ async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<str
       try {
         const result = await resolveMountable(node.config.mount, childContext);
 
+        if (!result.mountSourceId) {
+            throw new Error(`Mount result missing mountSourceId at path "${node.path}"`);
+        }
+
         if (visited.has(result.mountSourceId)) {
           ctx.reporter.warn(`Cycle detected in mount source: ${result.mountSourceId}. Skipping.`);
           continue;
