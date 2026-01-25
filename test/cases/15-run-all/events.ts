@@ -31,7 +31,7 @@ export const events: CLIEvent[] = [
     type: 'activity:start',
     id: 'activity-0',
     parentId: 'group-1',
-    label: 'Task B',
+    label: 'Task A',
   },
   {
     type: 'activity:success',
@@ -41,7 +41,7 @@ export const events: CLIEvent[] = [
     type: 'activity:start',
     id: 'activity-1',
     parentId: 'group-1',
-    label: 'Task A',
+    label: 'Task B',
   },
   {
     type: 'activity:success',
