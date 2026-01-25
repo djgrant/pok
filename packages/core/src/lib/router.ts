@@ -257,13 +257,15 @@ async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<str
             throw new Error(`Mount result missing mountSourceId at path "${node.path}"`);
         }
 
-        if (visited.has(result.mountSourceId)) {
-          ctx.reporter.warn(`Cycle detected in mount source: ${result.mountSourceId}. Skipping.`);
-          continue;
-        }
+        if (result.mountSourceId) {
+          if (visited.has(result.mountSourceId)) {
+            ctx.reporter.warn(`Cycle detected in mount source: ${result.mountSourceId}. Skipping.`);
+            continue;
+          }
 
-        branchVisited = new Set(visited);
-        branchVisited.add(result.mountSourceId);
+          branchVisited = new Set(visited);
+          branchVisited.add(result.mountSourceId);
+        }
 
         // Merge children
         for (const [childKey, childNode] of result.tree) {

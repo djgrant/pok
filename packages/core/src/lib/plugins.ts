@@ -63,7 +63,9 @@ export function compose(...mountables: MountableLike[]): Mountable {
         // Tag with provenance
         tagNodes(node, result.mountSourceId);
         
-        // TODO: Implement sophisticated merge/conflict strategy
+        if (mergedTree.has(key)) {
+          throw new Error(`Command collision: "${key}" already exists at root composition`);
+        }
         mergedTree.set(key, node);
       }
     }
