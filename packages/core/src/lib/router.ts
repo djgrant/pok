@@ -377,7 +377,10 @@ function getLeafNodes(node: CommandNode): CommandNode[] {
     if (n.config.run) {
       leaves.push(n);
     }
-    for (const child of n.children.values()) {
+    const children = Array.from(n.children.values()).sort((a, b) =>
+      a.segment.localeCompare(b.segment)
+    );
+    for (const child of children) {
       traverse(child);
     }
   };
