@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import { defineEnvResolver, defineCompositeResolver } from '../src';
+import { defineEnvResolver, defineCompositeResolver, createStaticEnvResolver } from '../src';
 
 // =============================================================================
 // defineEnvResolver Tests
@@ -351,5 +351,68 @@ describe('defineCompositeResolver', () => {
       // resolver2 is skipped because context doesn't have 'region'
       expect(resolver2Called).toBe(false);
     });
+  });
+});
+
+// =============================================================================
+// createStaticEnvResolver Tests
+// =============================================================================
+
+describe('createStaticEnvResolver', () => {
+  it('resolves static values', async () => {
+    const resolver = createStaticEnvResolver({
+      vars: {
+        API_URL: 'https://api.example.com',
+        TIMEOUT: '5000',
+      },
+    });
+
+    const result = await resolver.resolve(['API_URL', 'TIMEOUT'], {});
+    expect(result).toEqual({
+      API_URL: 'https://api.example.com',
+      TIMEOUT: '5000',
+    });
+  });
+
+  it('filters requested keys', async () => {
+    const resolver = createStaticEnvResolver({
+      vars: {
+        VAR_A: 'a',
+        VAR_B: 'b',
+      },
+    });
+
+    const result = await resolver.resolve(['VAR_A'], {});
+    expect(result).toEqual({ VAR_A: 'a' });
+    expect(result).not.toHaveProperty('VAR_B');
+  });
+
+  it('exposes available vars', () => {
+    const resolver = createStaticEnvResolver({
+      vars: {
+        VAR_A: 'a',
+        VAR_B: 'b',
+      },
+    });
+
+    expect(resolver.availableVars).toContain('VAR_A');
+    expect(resolver.availableVars).toContain('VAR_B');
+    expect(resolver.availableVars).toHaveLength(2);
+  });
+
+  it('validates context when provided', async () => {
+    const resolver = createStaticEnvResolver({
+      vars: { VAR: 'value' },
+      requiredContext: z.object({
+        env: z.enum(['dev', 'prod']),
+      }),
+    });
+
+    // Valid context
+    const result = await resolver.resolve(['VAR'], { env: 'dev' });
+    expect(result).toEqual({ VAR: 'value' });
+
+    // Invalid context
+    expect(() => resolver.resolve(['VAR'], { env: 'invalid' })).toThrow();
   });
 });

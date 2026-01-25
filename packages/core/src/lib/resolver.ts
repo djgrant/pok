@@ -161,3 +161,43 @@ export function defineEnvResolver<
       : undefined,
   };
 }
+
+/**
+ * Create a static environment resolver that serves fixed values.
+ * Useful for testing or simple configuration scenarios.
+ *
+ * @example
+ * ```ts
+ * const staticResolver = createStaticEnvResolver({
+ *   vars: {
+ *     API_URL: 'https://api.example.com',
+ *     TIMEOUT: '5000',
+ *   },
+ * });
+ * ```
+ */
+export function createStaticEnvResolver<
+  TContext extends z.ZodRawShape = {},
+  const TVars extends Record<string, string> = Record<string, string>,
+>(opts: {
+  vars: TVars;
+  requiredContext?: z.ZodObject<TContext>;
+}): TypedEnvResolver<Extract<keyof TVars, string>> {
+  // We need to cast Object.keys result to make TypeScript happy with the generic TAvailableVars
+  // In usage, TypeScript will infer the keys from the passed object literal
+  const availableVars = Object.keys(opts.vars) as Extract<keyof TVars, string>[];
+
+  return defineEnvResolver({
+    requiredContext: opts.requiredContext,
+    availableVars,
+    resolve: (keys) => {
+      const result: Record<string, string> = {};
+      for (const key of keys) {
+        if (key in opts.vars) {
+          result[key] = opts.vars[key];
+        }
+      }
+      return result as ResolverResult<Extract<keyof TVars, string>>;
+    },
+  });
+}
