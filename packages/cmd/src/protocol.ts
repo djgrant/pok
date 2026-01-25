@@ -37,6 +37,10 @@ export interface LauncherSkeleton {
    * - string[]: List of specific commands to include
    */
   pmCommands?: boolean | string[];
+  /**
+   * Plugins to mount at the root.
+   */
+  plugins?: any[];
 }
 
 /**

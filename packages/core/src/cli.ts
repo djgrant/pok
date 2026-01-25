@@ -62,6 +62,12 @@ export type RunCliConfig = {
    * Useful for dynamically generated commands or internal tooling.
    */
   extraCommands?: Record<string, import('./lib/command').CommandConfig>;
+
+  /**
+   * Plugins to mount at the root.
+   * Allows injecting dynamic command sources.
+   */
+  plugins?: import('./lib/command').MountableLike[];
 };
 
 /**
@@ -130,6 +136,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       pmScripts: config.pmScripts,
       pmCommands: config.pmCommands,
       extraCommands: config.extraCommands,
+      plugins: config.plugins,
     });
   } catch (error) {
     if (error instanceof RouterError) {
