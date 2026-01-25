@@ -39,6 +39,20 @@ describe('Plugin System', () => {
         expect(result.tree.get('b')?.config).toBe(cmd2);
     });
 
+    it('fails fast on root composition collisions', async () => {
+        const cmd1 = defineCommand({ label: 'cmd1', run: () => {} });
+        const cmd2 = defineCommand({ label: 'cmd2', run: () => {} });
+
+        const mountable = compose(
+            fromStatic({ 'dup': cmd1 }),
+            fromStatic({ 'dup': cmd2 })
+        );
+
+        await expect(resolveMountable(mountable, mockContext)).rejects.toThrow(
+            'Command collision: "dup" already exists at root composition'
+        );
+    });
+
     it('tracks provenance in composed tree', async () => {
         const cmd1 = defineCommand({ label: 'cmd1', run: () => {} });
         
@@ -104,6 +118,43 @@ describe('Plugin System', () => {
         expect(rootNode.children.has('sub')).toBe(true);
         
         expect(rootNode.children.get('sub')?.source).toContain('static:');
+    });
+
+    it('does not treat missing mountSourceId as a cycle', async () => {
+        let calls = 0;
+        const mountWithoutId = async () => {
+            calls += 1;
+            return { tree: new Map(), mountSourceId: undefined } as any;
+        };
+
+        const cmdA = defineCommand({ label: 'A', mount: mountWithoutId });
+        const cmdB = defineCommand({ label: 'B', mount: mountWithoutId });
+
+        const ctx = {
+            config: {
+                commandsDir: '/tmp', // dummy
+                projectRoot: '/tmp',
+                reporterAdapter: createRawReporterAdapter(),
+                prompter: createRawPrompter(),
+                extraCommands: {
+                    'a': cmdA,
+                    'b': cmdB
+                }
+            },
+            projectRoot: '/tmp',
+            reporter: {
+                error: () => {},
+                warn: () => {},
+            } as any,
+            prompter: {} as any,
+            adapterController: { stop: () => {} } as any,
+            appName: 'test-app',
+            eventBus: { emit: () => {}, on: () => () => {} } as any,
+        };
+
+        await buildCommandTree('/tmp/dummy', ctx as any);
+
+        expect(calls).toBe(2);
     });
 
     it('mounts plugins from config at root', async () => {
