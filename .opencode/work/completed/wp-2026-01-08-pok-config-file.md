@@ -3,6 +3,7 @@
 ## Goal/Problem
 
 pok currently uses convention-based discovery with hardcoded paths (`commands/` or `cli/commands/`). As a global CLI, there's no way to:
+
 - Customize the commands directory location
 - Configure adapters (reporter, prompter, tabs)
 - Set project-level defaults (app name, version)
@@ -20,6 +21,7 @@ This limits flexibility for projects with non-standard structures, especially mo
 ### Config File Locations
 
 `cmd` searches for config in order (first found wins):
+
 1. `pok.config.ts` in cwd
 2. `.config/pok.config.ts` in cwd
 3. Walk up parent directories, repeat search at each level
@@ -34,22 +36,22 @@ If no config found: **hard error** directing user to run `pok init`.
 export type PokConfig = {
   /** Directory containing command files - REQUIRED */
   commandsDir: string;
-  
+
   /** Project root for running shell commands */
   projectRoot?: string;
-  
+
   /** App name for CLI display */
   appName?: string;
-  
+
   /** Reporter adapter package name, e.g. '@pokit/reporter-clack' */
   reporterAdapter: string;
-  
+
   /** Prompter package name, e.g. '@pokit/prompter-clack' */
   prompter: string;
-  
+
   /** Tabs adapter package name, e.g. '@pokit/tabs-ink' */
   tabs?: string;
-  
+
   /** Version string for --version flag */
   version?: string;
 };
@@ -75,13 +77,13 @@ export function defineConfig(config: PokConfig): PokConfig {
 
 ```ts
 // pok.config.ts
-import { defineConfig } from 'pokit'
+import { defineConfig } from 'pokit';
 
 export default defineConfig({
   commandsDir: './cli/commands',
   reporterAdapter: '@pokit/reporter-clack',
   prompter: '@pokit/prompter-clack',
-})
+});
 ```
 
 ### cmd Wrapper Behavior
@@ -96,6 +98,7 @@ export default defineConfig({
 ### Error Messages
 
 No config found:
+
 ```
 Error: No pok configuration found.
 
@@ -103,6 +106,7 @@ Run `pok init` to create a pok.config.ts file.
 ```
 
 Missing required field:
+
 ```
 Error: commandsDir is required in pok.config.ts
 ```
@@ -124,6 +128,7 @@ Error: commandsDir is required in pok.config.ts
 ## Hypothesis
 
 A required config file with explicit adapter configuration will:
+
 - Eliminate magic/hidden behavior
 - Support monorepo structures cleanly
 - Make dependencies explicit and discoverable
@@ -132,10 +137,12 @@ A required config file with explicit adapter configuration will:
 ## Results
 
 ### Files Created
+
 - `packages/cmd/src/config.ts` - PokConfig type and defineConfig function
 - `pok.config.ts` - Config file for the pok monorepo itself
 
 ### Files Modified
+
 - `packages/cmd/bin/pok.ts` - Complete rewrite for config discovery and loading
 - `packages/cmd/package.json` - Added exports for config module, updated files array
 - `packages/cmd/tsconfig.json` - Added src directory to include
@@ -159,12 +166,14 @@ A required config file with explicit adapter configuration will:
 6. **Deprecated Core Binary**: The `packages/core/bin/pok.ts` binary now shows a deprecation error directing users to use the global `pokit` CLI.
 
 ### Test Results
+
 - All 4 cmd package tests pass
 - TypeScript type checking passes
 
 ## Evaluation
 
 The implementation successfully:
+
 - Eliminates convention-based discovery in favor of explicit configuration
 - Supports monorepo structures (paths relative to config file)
 - Makes adapter dependencies explicit and discoverable

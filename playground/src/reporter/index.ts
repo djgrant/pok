@@ -16,11 +16,7 @@ export interface PlaygroundReporter {
   warningBox(content: string): void;
 
   // Code display - syntax highlighted code in a box
-  codeBlock(
-    filename: string,
-    code: string,
-    options?: { language?: string }
-  ): void;
+  codeBlock(filename: string, code: string, options?: { language?: string }): void;
 
   // Progress - step indicator like "Step 2 of 5: Creating your first command"
   stepIndicator(current: number, total: number, title: string): void;
@@ -40,55 +36,55 @@ export interface PlaygroundReporter {
 
 const ANSI = {
   // Reset
-  reset: "\x1b[0m",
+  reset: '\x1b[0m',
 
   // Styles
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  italic: "\x1b[3m",
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  italic: '\x1b[3m',
 
   // Foreground colors (Tokyo Night compatible)
-  black: "\x1b[30m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
+  black: '\x1b[30m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
 
   // Bright foreground colors
-  brightBlack: "\x1b[90m",
-  brightRed: "\x1b[91m",
-  brightGreen: "\x1b[92m",
-  brightYellow: "\x1b[93m",
-  brightBlue: "\x1b[94m",
-  brightMagenta: "\x1b[95m",
-  brightCyan: "\x1b[96m",
-  brightWhite: "\x1b[97m",
+  brightBlack: '\x1b[90m',
+  brightRed: '\x1b[91m',
+  brightGreen: '\x1b[92m',
+  brightYellow: '\x1b[93m',
+  brightBlue: '\x1b[94m',
+  brightMagenta: '\x1b[95m',
+  brightCyan: '\x1b[96m',
+  brightWhite: '\x1b[97m',
 } as const;
 
 // Box drawing characters (Unicode)
 const BOX = {
-  topLeft: "\u256d",
-  topRight: "\u256e",
-  bottomLeft: "\u2570",
-  bottomRight: "\u256f",
-  horizontal: "\u2500",
-  vertical: "\u2502",
-  leftT: "\u251c",
-  rightT: "\u2524",
-  heavyHorizontal: "\u2501",
+  topLeft: '\u256d',
+  topRight: '\u256e',
+  bottomLeft: '\u2570',
+  bottomRight: '\u256f',
+  horizontal: '\u2500',
+  vertical: '\u2502',
+  leftT: '\u251c',
+  rightT: '\u2524',
+  heavyHorizontal: '\u2501',
 } as const;
 
 // Icons
 const ICONS = {
-  info: "\u2139",
-  tip: "\u2728",
-  warning: "\u26a0",
-  success: "\u2714",
-  error: "\u2718",
-  bullet: "\u25cf",
+  info: '\u2139',
+  tip: '\u2728',
+  warning: '\u26a0',
+  success: '\u2714',
+  error: '\u2718',
+  bullet: '\u25cf',
 } as const;
 
 // ============================================================================
@@ -102,22 +98,22 @@ function wrapText(text: string, maxWidth: number): string[] {
   if (maxWidth <= 0) return [text];
 
   const lines: string[] = [];
-  const paragraphs = text.split("\n");
+  const paragraphs = text.split('\n');
 
   for (const paragraph of paragraphs) {
     if (paragraph.length === 0) {
-      lines.push("");
+      lines.push('');
       continue;
     }
 
-    const words = paragraph.split(" ");
-    let currentLine = "";
+    const words = paragraph.split(' ');
+    let currentLine = '';
 
     for (const word of words) {
       if (currentLine.length === 0) {
         currentLine = word;
       } else if (currentLine.length + 1 + word.length <= maxWidth) {
-        currentLine += " " + word;
+        currentLine += ' ' + word;
       } else {
         lines.push(currentLine);
         currentLine = word;
@@ -138,7 +134,7 @@ function wrapText(text: string, maxWidth: number): string[] {
 function padRight(str: string, width: number): string {
   const visibleLength = stripAnsi(str).length;
   const padding = Math.max(0, width - visibleLength);
-  return str + " ".repeat(padding);
+  return str + ' '.repeat(padding);
 }
 
 /**
@@ -146,7 +142,7 @@ function padRight(str: string, width: number): string {
  */
 function stripAnsi(str: string): string {
   // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, "");
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 /**
@@ -171,15 +167,11 @@ interface BoxOptions {
 /**
  * Render a box with optional title
  */
-function renderBox(
-  title: string | null,
-  content: string,
-  options: BoxOptions = {}
-): string[] {
+function renderBox(title: string | null, content: string, options: BoxOptions = {}): string[] {
   const width = options.width ?? 60;
   const borderColor = options.borderColor ?? ANSI.dim;
   const titleColor = options.titleColor ?? ANSI.white;
-  const icon = options.icon ?? "";
+  const icon = options.icon ?? '';
   const iconColor = options.iconColor ?? titleColor;
 
   const innerWidth = width - 4; // Account for "| " and " |"
@@ -187,7 +179,7 @@ function renderBox(
 
   // Top border
   if (title) {
-    const iconPart = icon ? `${iconColor}${icon}${ANSI.reset}  ` : "";
+    const iconPart = icon ? `${iconColor}${icon}${ANSI.reset}  ` : '';
     const titlePart = `${titleColor}${ANSI.bold}${title}${ANSI.reset}`;
     const headerContent = `  ${iconPart}${titlePart}`;
     const headerVisibleLen = stripAnsi(headerContent).length;
@@ -197,11 +189,9 @@ function renderBox(
       `${borderColor}${BOX.topLeft}${horizontalLine(width - 2)}${BOX.topRight}${ANSI.reset}`
     );
     lines.push(
-      `${borderColor}${BOX.vertical}${ANSI.reset}${headerContent}${" ".repeat(remainingWidth)}${borderColor}${BOX.vertical}${ANSI.reset}`
+      `${borderColor}${BOX.vertical}${ANSI.reset}${headerContent}${' '.repeat(remainingWidth)}${borderColor}${BOX.vertical}${ANSI.reset}`
     );
-    lines.push(
-      `${borderColor}${BOX.leftT}${horizontalLine(width - 2)}${BOX.rightT}${ANSI.reset}`
-    );
+    lines.push(`${borderColor}${BOX.leftT}${horizontalLine(width - 2)}${BOX.rightT}${ANSI.reset}`);
   } else {
     lines.push(
       `${borderColor}${BOX.topLeft}${horizontalLine(width - 2)}${BOX.topRight}${ANSI.reset}`
@@ -238,7 +228,7 @@ function renderCodeBlock(
   const lines: string[] = [];
 
   // Parse code into lines
-  const codeLines = code.split("\n");
+  const codeLines = code.split('\n');
   const lineNumWidth = String(codeLines.length).length;
   const contentWidth = width - 4 - lineNumWidth - 3; // borders + padding + line num + separator
 
@@ -252,12 +242,12 @@ function renderCodeBlock(
 
   // Code lines
   for (let i = 0; i < codeLines.length; i++) {
-    const lineNum = String(i + 1).padStart(lineNumWidth, " ");
+    const lineNum = String(i + 1).padStart(lineNumWidth, ' ');
     let codeLine = codeLines[i];
 
     // Truncate if too long
     if (codeLine.length > contentWidth) {
-      codeLine = codeLine.substring(0, contentWidth - 1) + "\u2026";
+      codeLine = codeLine.substring(0, contentWidth - 1) + '\u2026';
     }
 
     const paddedCode = padRight(codeLine, contentWidth);
@@ -328,7 +318,7 @@ export function createPlaygroundReporter(
     },
 
     tipBox(content: string): void {
-      const lines = renderBox("Tip", content, {
+      const lines = renderBox('Tip', content, {
         width,
         borderColor: ANSI.green,
         titleColor: ANSI.brightGreen,
@@ -339,7 +329,7 @@ export function createPlaygroundReporter(
     },
 
     warningBox(content: string): void {
-      const lines = renderBox("Warning", content, {
+      const lines = renderBox('Warning', content, {
         width,
         borderColor: ANSI.yellow,
         titleColor: ANSI.brightYellow,
@@ -349,11 +339,7 @@ export function createPlaygroundReporter(
       writeLines(lines);
     },
 
-    codeBlock(
-      filename: string,
-      code: string,
-      codeOptions?: { language?: string }
-    ): void {
+    codeBlock(filename: string, code: string, codeOptions?: { language?: string }): void {
       const lines = renderCodeBlock(filename, code, {
         width,
         language: codeOptions?.language,
@@ -379,7 +365,7 @@ export function createPlaygroundReporter(
     },
 
     newline(): void {
-      writeLine("");
+      writeLine('');
     },
   };
 }

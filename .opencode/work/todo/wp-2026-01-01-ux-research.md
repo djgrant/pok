@@ -7,6 +7,7 @@ pok is "the TanStack of command line apps" and needs a polished, professional te
 ## Scope
 
 Packages examined:
+
 - `packages/reporter-clack/` - Terminal output rendering
 - `packages/prompter-clack/` - Interactive prompts
 - `packages/tabs-ink/` - Ink-based tabbed UI
@@ -18,6 +19,7 @@ Packages examined:
 ## Approach
 
 Thorough code review of all UX-related components, examining:
+
 1. Visual design patterns and consistency
 2. Interactive prompt implementations
 3. Progress and status reporting
@@ -30,6 +32,7 @@ Thorough code review of all UX-related components, examining:
 ## Hypothesis
 
 The current UX implementation is functional but has opportunities for improvement in:
+
 - Visual polish and consistency
 - Accessibility features
 - Interactive feedback
@@ -43,6 +46,7 @@ The current UX implementation is functional but has opportunities for improvemen
 ### 1. Visual Design Assessment
 
 #### Current Strengths
+
 - **Unicode symbols**: Well-chosen set (◇, ■, ▲, ●, ✔, ✘) with ASCII fallbacks
 - **Box drawing**: Clean group boundaries with ┌, └, │ characters
 - **Color scheme**: Semantic colors (green=success, red=error, yellow=warning, cyan=info)
@@ -52,6 +56,7 @@ The current UX implementation is functional but has opportunities for improvemen
 
 **A. Symbol Consistency Issue**
 The symbols file (`symbols.ts`) shows inconsistent icon choices:
+
 - Success uses ◇ (diamond) but Done uses ✔ (checkmark)
 - This creates visual confusion between "completed activity" vs "group done"
 
@@ -66,6 +71,7 @@ done: '\u2714',    // ✔
 ```
 
 **B. Status Indicator Inconsistency Across Packages**
+
 - `tabs-ink` uses different colors than `tabs-opentui`
 - `tabs-ink` uses Ink's named colors (`cyan`, `green`)
 - `tabs-opentui` uses hex colors (`#00FFFF`, `#00FF00`)
@@ -73,6 +79,7 @@ done: '\u2714',    // ✔
 
 **C. No Theming System**
 Currently colors are hardcoded. A theme system would allow:
+
 - User customization
 - High-contrast mode
 - Colorblind-friendly palettes
@@ -80,6 +87,7 @@ Currently colors are hardcoded. A theme system would allow:
 ### 2. Interactive Prompts Assessment
 
 #### Current Strengths
+
 - Clean wrapper around @clack/prompts
 - Proper Ctrl+C handling (exits cleanly)
 - Supports select, multiselect, confirm, and text prompts
@@ -89,12 +97,14 @@ Currently colors are hardcoded. A theme system would allow:
 
 **A. Limited Prompt Types**
 The Prompter interface only supports 4 prompt types:
+
 - `select` - Single selection
 - `multiselect` - Multiple selection
 - `confirm` - Yes/no
 - `text` - Free text input
 
 Missing commonly-needed prompts:
+
 - `password` - Masked text input
 - `autocomplete` - Fuzzy search selection
 - `number` - Numeric input with validation
@@ -111,6 +121,7 @@ Text validation shows error message but no inline feedback as user types
 ### 3. Progress Reporting Assessment
 
 #### Current Strengths
+
 - Spinners for active tasks via clack
 - Activity updates support progress percentage
 - Log buffering during spinners (prevents interleaving)
@@ -120,6 +131,7 @@ Text validation shows error message but no inline feedback as user types
 
 **A. No Progress Bars**
 Activities only show spinner or percentage text, no visual progress bar:
+
 ```
 Current:    ◓  Installing dependencies... 45%
 Suggested:  ◓  Installing dependencies [████████░░░░░░░░] 45%
@@ -130,13 +142,14 @@ Long-running tasks don't show duration or estimated time remaining
 
 **C. Limited Activity Update Payload**
 `activity:update` only supports `message` and `progress`:
+
 ```typescript
 // Could expand to include:
 type ActivityUpdate = {
   message?: string;
   progress?: number;
-  eta?: number;        // Seconds remaining
-  speed?: string;      // "2.5 MB/s"
+  eta?: number; // Seconds remaining
+  speed?: string; // "2.5 MB/s"
   subActivity?: string; // "Processing file 3 of 10"
 };
 ```
@@ -147,6 +160,7 @@ No way to show "working but unknown completion %" differently from "0% progress"
 ### 4. Error Display Assessment
 
 #### Current Strengths
+
 - Errors marked with ■ symbol in red
 - Error messages displayed after spinner stop
 - Remediation steps supported (with - bullet points)
@@ -156,6 +170,7 @@ No way to show "working but unknown completion %" differently from "0% progress"
 
 **A. Error Formatting Could Be Richer**
 Current remediation display:
+
 ```
 │
 │     To fix:
@@ -164,6 +179,7 @@ Current remediation display:
 ```
 
 Could be improved with:
+
 - Box around remediation section
 - Numbered steps instead of bullets
 - Syntax highlighting for commands
@@ -171,12 +187,14 @@ Could be improved with:
 
 **B. No Error Categorization**
 All errors look the same. Could differentiate:
+
 - User errors (fixable)
 - System errors (report to admin)
 - Network errors (retry)
 
 **C. No Stack Trace Formatting**
 Stack traces render as plain text. Could:
+
 - Collapse to one line with expand option
 - Highlight source files vs node_modules
 - Link to source files (in supported terminals)
@@ -184,6 +202,7 @@ Stack traces render as plain text. Could:
 ### 5. Color Usage and Accessibility
 
 #### Current Strengths
+
 - NO_COLOR env var support (https://no-color.org)
 - `--no-color` and `--plain` CLI flags
 - FORCE_COLOR support for CI
@@ -196,12 +215,14 @@ Red/green colorblindness (deuteranopia) affects 8% of men.
 Current success (green) and error (red) may be indistinguishable.
 
 Suggested additions:
+
 - Shape differentiation (already have ✔ vs ✘, but need consistency)
 - Alternative palette: blue for success, orange for error
 - `--colorblind` flag or `POK_COLORBLIND=1` env var
 
 **B. No High-Contrast Mode**
 For users with low vision, brighter colors could help:
+
 - `--high-contrast` flag
 - Uses bright versions of all colors
 
@@ -211,6 +232,7 @@ For users with low vision, brighter colors could help:
 ### 6. Terminal Compatibility Assessment
 
 #### Current Strengths
+
 - TTY detection for both stdout and stdin
 - CI environment detection
 - TERM=dumb detection
@@ -221,15 +243,18 @@ For users with low vision, brighter colors could help:
 
 **A. No Terminal Capability Detection**
 Currently guesses based on TERM variable. Could use:
+
 - `supports-color` npm package for accurate color detection
 - Unicode test character to check rendering
 - Terminal feature detection (256 color, true color, hyperlinks)
 
 **B. Missing Hyperlink Support**
 Modern terminals (iTerm2, Warp, Windows Terminal) support clickable links:
+
 ```
 \x1b]8;;https://example.com\x1b\\Link Text\x1b]8;;\x1b\\
 ```
+
 Could use for documentation URLs and file paths.
 
 **C. No tmux/screen Detection**
@@ -237,12 +262,14 @@ Multiplexer environments may have different capabilities
 
 **D. Windows Console Limitations**
 No specific handling for legacy Windows console (cmd.exe)
+
 - Unicode may require `chcp 65001`
 - Colors may need `FORCE_COLOR`
 
 ### 7. Responsive Design Assessment
 
 #### Current Strengths
+
 - Tabs UI calculates view height from terminal rows
 - Output truncation with `wrap="truncate"`
 - Status bar adapts to space
@@ -255,6 +282,7 @@ Spinner messages may overflow on narrow terminals.
 
 **B. Tabs Minimum Size Not Enforced**
 Docs recommend 100x30 but UI doesn't enforce or warn:
+
 ```
 Current:    UI renders badly on 40x20
 Suggested:  Show warning or simplified view
@@ -262,12 +290,14 @@ Suggested:  Show warning or simplified view
 
 **C. No Responsive Breakpoints**
 Could adapt layout based on width:
+
 - < 60 cols: Minimal mode (no box borders)
 - 60-80 cols: Standard mode
 - > 80 cols: Rich mode (full progress bars)
 
 **D. Long Label Truncation**
 Activity labels can overflow:
+
 ```
 Current:    ◓  Installing @very-long-scoped-package/some-very-long-name-here...
 Suggested:  ◓  Installing @very-long.../some-very-l...
@@ -276,6 +306,7 @@ Suggested:  ◓  Installing @very-long.../some-very-l...
 ### 8. Tabbed Interface Assessment
 
 #### Current Strengths
+
 - Two implementations: Ink and OpenTUI
 - Shared logic in tabs-core (DRY)
 - Comprehensive keyboard shortcuts
@@ -301,6 +332,7 @@ Cannot rename tabs at runtime
 
 **D. Limited Tab Bar**
 With many tabs, bar wraps but doesn't scroll:
+
 ```
 Current:    [1] dev ● [2] api ● [3] db ● [4] redis ●
             [5] worker ● [6] scheduler ●
@@ -328,17 +360,17 @@ Could show CPU/memory usage per tab (if available)
 
 ### Summary of Key Findings
 
-| Area | Current State | Priority | Effort |
-|------|--------------|----------|--------|
-| Visual Consistency | Symbols inconsistent | High | Low |
-| Progress Bars | Not implemented | Medium | Medium |
-| Colorblind Support | Not implemented | High | Low |
-| Terminal Links | Not implemented | Low | Low |
-| Prompt Types | Limited to 4 | Medium | Medium |
-| Error Formatting | Basic | Medium | Medium |
-| Resize Handling | Partial | Medium | Medium |
-| Tab Search | Not implemented | Low | High |
-| Tab Metrics | Not implemented | Low | High |
+| Area               | Current State        | Priority | Effort |
+| ------------------ | -------------------- | -------- | ------ |
+| Visual Consistency | Symbols inconsistent | High     | Low    |
+| Progress Bars      | Not implemented      | Medium   | Medium |
+| Colorblind Support | Not implemented      | High     | Low    |
+| Terminal Links     | Not implemented      | Low      | Low    |
+| Prompt Types       | Limited to 4         | Medium   | Medium |
+| Error Formatting   | Basic                | Medium   | Medium |
+| Resize Handling    | Partial              | Medium   | Medium |
+| Tab Search         | Not implemented      | Low      | High   |
+| Tab Metrics        | Not implemented      | Low      | High   |
 
 ### Prioritized Recommendations
 
@@ -364,6 +396,7 @@ Could show CPU/memory usage per tab (if available)
 ### Architecture Observations
 
 The UX architecture is well-designed:
+
 - Clean separation: Core defines interfaces, adapters implement
 - Shared logic in tabs-core prevents duplication
 - Event-based reporter allows multiple output targets
@@ -373,15 +406,15 @@ The main weakness is inconsistency between packages (e.g., colors defined differ
 
 ### Comparison to Best-in-Class
 
-| Feature | pok | Ink | Clack | Inquirer |
-|---------|-----|-----|-------|----------|
-| Spinners | ✓ | ✓ | ✓ | ✓ |
-| Progress bars | ✗ | ✓ | ✗ | ✓ |
-| Colorblind mode | ✗ | ✗ | ✗ | ✗ |
-| Password prompt | ✗ | ✓ | ✓ | ✓ |
-| Autocomplete | ✗ | ✓ | ✗ | ✓ |
-| Theming | ✗ | ✓ | ✗ | ✓ |
-| Hyperlinks | ✗ | ✗ | ✗ | ✗ |
+| Feature         | pok | Ink | Clack | Inquirer |
+| --------------- | --- | --- | ----- | -------- |
+| Spinners        | ✓   | ✓   | ✓     | ✓        |
+| Progress bars   | ✗   | ✓   | ✗     | ✓        |
+| Colorblind mode | ✗   | ✗   | ✗     | ✗        |
+| Password prompt | ✗   | ✓   | ✓     | ✓        |
+| Autocomplete    | ✗   | ✓   | ✗     | ✓        |
+| Theming         | ✗   | ✓   | ✗     | ✓        |
+| Hyperlinks      | ✗   | ✗   | ✗     | ✗        |
 
 pok is on par with clack (which it wraps) but behind Ink and Inquirer in features.
 However, pok's event-driven architecture and tabs system are unique strengths.

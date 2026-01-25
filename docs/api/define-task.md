@@ -51,16 +51,17 @@ function defineTask<TEnv, TParams, TEnvWriter, TReturn>(config: {
 
 ```typescript
 type RetryConfig = {
-  maxAttempts: number;  // Retry attempts (not including initial)
-  delay?: number;       // Base delay in ms (default: 1000)
-  backoff?: BackoffStrategy;  // Default: 'fixed'
-  maxDelay?: number;    // Cap for backoff growth
+  maxAttempts: number; // Retry attempts (not including initial)
+  delay?: number; // Base delay in ms (default: 1000)
+  backoff?: BackoffStrategy; // Default: 'fixed'
+  maxDelay?: number; // Cap for backoff growth
 };
 
 type BackoffStrategy = 'fixed' | 'linear' | 'exponential';
 ```
 
 Backoff strategies:
+
 - `fixed`: Same delay between each retry
 - `linear`: Delay increases linearly (`delay * attempt`)
 - `exponential`: Delay doubles each attempt (`delay * 2^attempt`)

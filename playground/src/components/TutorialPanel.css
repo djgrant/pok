@@ -240,13 +240,13 @@
   transition: all var(--duration-normal) var(--ease-out);
 }
 
-.tutorial-panel .tutorial-step[data-status="active"] {
+.tutorial-panel .tutorial-step[data-status='active'] {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-muted);
   animation: stepFadeIn var(--duration-slow) var(--ease-out);
 }
 
-.tutorial-panel .tutorial-step[data-status="complete"] {
+.tutorial-panel .tutorial-step[data-status='complete'] {
   opacity: 0.7;
   border-color: var(--success);
   animation: stepComplete var(--duration-slow) var(--ease-out);
@@ -254,28 +254,28 @@
 
 /* Step completion animation */
 @keyframes stepComplete {
-  0% { 
-    transform: scale(1); 
-    opacity: 1; 
+  0% {
+    transform: scale(1);
+    opacity: 1;
   }
-  50% { 
-    transform: scale(1.01); 
+  50% {
+    transform: scale(1.01);
   }
-  100% { 
-    transform: scale(1); 
-    opacity: 0.7; 
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
   }
 }
 
 /* Fade in new/active steps */
 @keyframes stepFadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(10px); 
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -301,12 +301,12 @@
   border-radius: 50%;
 }
 
-.tutorial-panel .tutorial-step[data-status="active"] .tutorial-step-number {
+.tutorial-panel .tutorial-step[data-status='active'] .tutorial-step-number {
   background: var(--accent);
   color: var(--bg-primary);
 }
 
-.tutorial-panel .tutorial-step[data-status="complete"] .tutorial-step-number {
+.tutorial-panel .tutorial-step[data-status='complete'] .tutorial-step-number {
   background: var(--success);
   color: var(--bg-primary);
 }
@@ -317,7 +317,7 @@
   color: var(--text-secondary);
 }
 
-.tutorial-panel .tutorial-step[data-status="active"] .tutorial-step-title {
+.tutorial-panel .tutorial-step[data-status='active'] .tutorial-step-title {
   color: var(--text-primary);
 }
 
@@ -335,18 +335,18 @@
   color: var(--text-secondary);
 }
 
-.tutorial-panel .content-box[data-variant="info"] {
+.tutorial-panel .content-box[data-variant='info'] {
   color: var(--text-primary);
 }
 
-.tutorial-panel .content-box[data-variant="tip"] {
+.tutorial-panel .content-box[data-variant='tip'] {
   padding: var(--space-2) var(--space-3);
   background: var(--accent-muted);
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--accent);
 }
 
-.tutorial-panel .content-box[data-variant="warning"] {
+.tutorial-panel .content-box[data-variant='warning'] {
   padding: var(--space-2) var(--space-3);
   background: var(--error-muted);
   border-radius: var(--radius-sm);
@@ -440,7 +440,7 @@
 .tutorial-panel .file-preview-action-button:hover:not(:disabled) {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .tutorial-panel .file-preview-action-button:disabled {
@@ -448,18 +448,18 @@
   cursor: not-allowed;
 }
 
-.tutorial-panel .file-preview-action-button[data-status="created"] {
+.tutorial-panel .file-preview-action-button[data-status='created'] {
   background: var(--success);
 }
 
 /* Loading spinner in action buttons */
-.tutorial-panel .file-preview-action-button[data-loading="true"] {
+.tutorial-panel .file-preview-action-button[data-loading='true'] {
   position: relative;
   color: transparent;
 }
 
-.tutorial-panel .file-preview-action-button[data-loading="true"]::after {
-  content: "";
+.tutorial-panel .file-preview-action-button[data-loading='true']::after {
+  content: '';
   position: absolute;
   width: 14px;
   height: 14px;
@@ -470,8 +470,8 @@
 }
 
 @keyframes buttonSpinner {
-  to { 
-    transform: rotate(360deg); 
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -542,7 +542,7 @@
 .tutorial-panel .command-block-action-button:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .tutorial-panel .command-block-action-button:disabled {
@@ -550,18 +550,18 @@
   cursor: not-allowed;
 }
 
-.tutorial-panel .command-block-action-button[data-status="complete"] {
+.tutorial-panel .command-block-action-button[data-status='complete'] {
   background: var(--text-muted);
 }
 
 /* Loading spinner in command buttons */
-.tutorial-panel .command-block-action-button[data-loading="true"] {
+.tutorial-panel .command-block-action-button[data-loading='true'] {
   position: relative;
   color: transparent;
 }
 
-.tutorial-panel .command-block-action-button[data-loading="true"]::after {
-  content: "";
+.tutorial-panel .command-block-action-button[data-loading='true']::after {
+  content: '';
   position: absolute;
   width: 14px;
   height: 14px;
@@ -707,7 +707,8 @@
 }
 
 @keyframes celebrateBounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {

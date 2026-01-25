@@ -78,12 +78,12 @@ Regression avoidance matters more than refactoring quality for the first extract
 
 One reasonable order (not a commitment):
 
-1) Add types (`MountContext`, `MountResult`, `MountableLike`) and `mount?: MountableLike`.
-2) Add composition/merge helper(s) and wire in fast-fail collision checks.
-3) Add provenance tracking.
-4) Implement the built-in mountables (list in Invariants).
-5) Dogfood in the router: root composition + recursive expansion + cycle detection.
-6) Keep `validateAliases(tree)` as the final global pass.
+1. Add types (`MountContext`, `MountResult`, `MountableLike`) and `mount?: MountableLike`.
+2. Add composition/merge helper(s) and wire in fast-fail collision checks.
+3. Add provenance tracking.
+4. Implement the built-in mountables (list in Invariants).
+5. Dogfood in the router: root composition + recursive expansion + cycle detection.
+6. Keep `validateAliases(tree)` as the final global pass.
 
 ## Open Questions
 

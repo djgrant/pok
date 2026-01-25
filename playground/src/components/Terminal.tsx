@@ -90,15 +90,12 @@ const TITLE_REGEX = /\x1b\][02];([^\x07]*)\x07\n?/;
  * Process terminal output data to extract and emit file events.
  * Returns the data with file event markers stripped out.
  */
-function processFileEvents(
-  data: string,
-  eventBus: UseEventBusResult | undefined
-): string {
+function processFileEvents(data: string, eventBus: UseEventBusResult | undefined): string {
   if (!eventBus) return data;
 
   // Reset regex state before using (global regex maintains lastIndex)
   FILE_EVENT_REGEX.lastIndex = 0;
-  
+
   let match;
   while ((match = FILE_EVENT_REGEX.exec(data)) !== null) {
     const [, type, path] = match;
@@ -124,7 +121,17 @@ function extractTitle(data: string): string | null {
 }
 
 const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
-  { webContainer, tabId, command, startDelay = 0, isFocused = false, eventBus, isTask = false, onTitleChange, onTaskComplete },
+  {
+    webContainer,
+    tabId,
+    command,
+    startDelay = 0,
+    isFocused = false,
+    eventBus,
+    isTask = false,
+    onTitleChange,
+    onTaskComplete,
+  },
   ref
 ) {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -209,10 +216,10 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
   // Guard against StrictMode double-mount by checking if process already exists
   useEffect(() => {
     if (!webContainer || !xtermRef.current) return;
-    
+
     // Skip if process already running or setup already started
     if (shellProcessRef.current || processStartingRef.current) return;
-    
+
     // Set flag immediately (synchronously) to prevent race conditions
     processStartingRef.current = true;
 
@@ -232,7 +239,7 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
         const parts = command.split(/\s+/);
         const program = parts[0];
         const args = parts.slice(1);
-        
+
         // Wait for any start delay
         if (startDelay > 0) {
           await new Promise((resolve) => setTimeout(resolve, startDelay));
@@ -253,7 +260,7 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
           },
         });
       }
-      
+
       // Store process reference immediately to prevent duplicate spawns
       shellProcessRef.current = process;
 
@@ -268,7 +275,7 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
             write(data) {
               // Process file events and strip markers from output
               let cleanedData = processFileEvents(data, eventBus);
-              
+
               // Extract title if present and strip from output
               const title = extractTitle(cleanedData);
               if (title && onTitleChange) {
@@ -276,7 +283,7 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
                 // Strip title escape sequence from output (xterm handles it, but let's be safe)
                 cleanedData = cleanedData.replace(TITLE_REGEX, '');
               }
-              
+
               terminal.write(cleanedData);
             },
           }),
@@ -330,9 +337,10 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
           terminal.options.cursorInactiveStyle = 'none';
           // Write a completion message
           terminal.writeln('');
-          terminal.writeln(exitCode === 0 
-            ? '\x1b[32m✓ Task completed\x1b[0m' 
-            : `\x1b[31m✗ Task failed (exit code: ${exitCode})\x1b[0m`
+          terminal.writeln(
+            exitCode === 0
+              ? '\x1b[32m✓ Task completed\x1b[0m'
+              : `\x1b[31m✗ Task failed (exit code: ${exitCode})\x1b[0m`
           );
           if (onTaskComplete) {
             onTaskComplete(exitCode);
@@ -343,13 +351,15 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
 
     setupProcess().catch((err) => {
       console.error('Failed to setup process:', err);
-      xtermRef.current?.writeln(`\r\n\x1b[31mError: Failed to start process: ${err instanceof Error ? err.message : String(err)}\x1b[0m`);
+      xtermRef.current?.writeln(
+        `\r\n\x1b[31mError: Failed to start process: ${err instanceof Error ? err.message : String(err)}\x1b[0m`
+      );
     });
 
     // NOTE: We do NOT clean up the process on unmount because StrictMode
     // will unmount/remount and we want to preserve the terminal session.
     // The process will be cleaned up when the page unloads.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webContainer]);
 
   // Listen for terminal:run events (only for non-task terminals)
@@ -379,8 +389,5 @@ const TerminalInner = forwardRef<TerminalHandle, TerminalProps>(function Termina
 // Only re-render if tabId changes (which would mean a different terminal)
 export const Terminal = memo(TerminalInner, (prevProps, nextProps) => {
   // Only re-render if these key props change
-  return (
-    prevProps.tabId === nextProps.tabId &&
-    prevProps.webContainer === nextProps.webContainer
-  );
+  return prevProps.tabId === nextProps.tabId && prevProps.webContainer === nextProps.webContainer;
 });

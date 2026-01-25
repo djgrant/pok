@@ -9,6 +9,7 @@ The playground needs to demonstrate pok's power through pok itself - "showcase p
 New package: `packages/editor-web/` (or `packages/adapter-web-editor/`)
 
 Touches:
+
 - `packages/core/src/events/` - May need new event types
 - `playground/` - Integration point
 
@@ -17,6 +18,7 @@ Touches:
 pok adapters follow a simple pattern:
 
 ### 1. ReporterAdapter Interface
+
 ```typescript
 interface ReporterAdapter {
   start(bus: EventBus): ReporterAdapterController;
@@ -28,6 +30,7 @@ interface ReporterAdapterController {
 ```
 
 ### 2. Event-Driven Architecture
+
 - Adapters subscribe to an `EventBus` via `bus.on(handler)`
 - They receive `CLIEvent` discriminated unions
 - Events: `root:start/end`, `group:start/end`, `activity:start/update/success/failure`, `log`, `reporter:suspend/resume`
@@ -35,12 +38,15 @@ interface ReporterAdapterController {
 - The `stop()` method unsubscribes and cleans up
 
 ### 3. State Reducer Pattern (tabs-core)
+
 ```typescript
-function reducer(state: EventDrivenState, event: CLIEvent): EventDrivenState
+function reducer(state: EventDrivenState, event: CLIEvent): EventDrivenState;
 ```
+
 Framework-agnostic state tree built from events. Used by both tabs-ink (React/Ink) and tabs-opentui.
 
 ### 4. Prompter Interface (different pattern)
+
 ```typescript
 interface Prompter {
   select<T>(options: SelectOptions<T>): Promise<T>;
@@ -49,6 +55,7 @@ interface Prompter {
   // ...
 }
 ```
+
 Prompters are direct function calls, not event-driven.
 
 ## MVP Scope
@@ -79,7 +86,8 @@ type EditorEvent =
   | { type: 'activity:success' | 'activity:failure'; ... }
 ```
 
-**Key insight**: The adapter needs to know *which file* corresponds to the running command. This requires either:
+**Key insight**: The adapter needs to know _which file_ corresponds to the running command. This requires either:
+
 - A new event type (`file:focus`)
 - Metadata on `activity:start` (e.g., `meta: { sourceFile: 'commands/hello.ts' }`)
 
@@ -113,6 +121,7 @@ Recommendation: Use `meta` field on `activity:start` - no new event types needed
 ### Communication Options
 
 **Option A: Message Passing (Recommended for MVP)**
+
 - pok in WebContainer emits events to EventBus
 - A bridge script posts events to parent window via `postMessage`
 - React playground receives and updates editor state
@@ -128,16 +137,19 @@ bus.on((event) => {
 ```
 
 **Option B: Direct React Integration**
+
 - Requires running React inside WebContainer
 - More complex, not MVP-appropriate
 
 ### Package Structure
 
 For MVP, this might not even need a package. It could be:
+
 1. A bridge script injected into WebContainer
 2. React components in playground that handle the messages
 
 If packaged:
+
 ```
 packages/editor-web/
   src/
@@ -156,7 +168,9 @@ packages/editor-web/
 ## Open Questions
 
 ### 1. How does the adapter know which file is running?
+
 **Options:**
+
 - A. Router adds `sourceFile` to activity meta when running commands
 - B. Editor adapter infers from command name → file path convention
 - C. New event type for file focus
@@ -164,7 +178,9 @@ packages/editor-web/
 **Recommendation**: Option B for MVP (convention-based: `commands/${commandName}.ts`), with A as enhancement.
 
 ### 2. Where does the bridge script run?
+
 **Options:**
+
 - A. As part of pok config (user must opt-in)
 - B. Playground injects it during WebContainer setup
 - C. pok core detects browser environment and auto-enables
@@ -172,7 +188,9 @@ packages/editor-web/
 **Recommendation**: Option B for MVP - playground-specific concern.
 
 ### 3. Should edits trigger re-run?
+
 **Options:**
+
 - A. Manual re-run only (user must exit and run command again)
 - B. Save triggers automatic re-run
 - C. Live reload with file watcher
@@ -180,7 +198,9 @@ packages/editor-web/
 **Recommendation**: Option A for MVP. Keep it simple.
 
 ### 4. What editor component to use?
+
 **Options:**
+
 - A. Plain `<textarea>` with monospace font
 - B. Monaco editor (VS Code's editor)
 - C. CodeMirror
@@ -188,7 +208,9 @@ packages/editor-web/
 **Recommendation**: Option A for MVP. Add syntax highlighting later.
 
 ### 5. Layout: side-by-side or toggle?
+
 **Options:**
+
 - A. Fixed split (50/50 terminal/editor)
 - B. Resizable split
 - C. Toggle button to switch views
@@ -215,6 +237,7 @@ packages/editor-web/
 ## Hypothesis
 
 A minimal "web editor adapter" doesn't need to be a full pok adapter at all for MVP. The convention `commands/${name}.ts` combined with WebContainer filesystem access is sufficient. The real adapter pattern would be valuable later for:
+
 - Showing source for tasks (not just commands)
 - Highlighting which line is executing
 - Showing check definitions

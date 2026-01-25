@@ -14,19 +14,20 @@ When a user runs `pok` without a config file, they get an error. We need a `pok 
 ### Behavior
 
 `pok init` should:
+
 1. Check if `pok.config.ts` already exists (error if so)
 2. Write a starter config file to cwd
 
 ### Generated Config
 
 ```ts
-import { defineConfig } from 'pokit'
+import { defineConfig } from 'pokit';
 
 export default defineConfig({
   commandsDir: './commands',
   reporterAdapter: '@pokit/reporter-clack',
   prompter: '@pokit/prompter-clack',
-})
+});
 ```
 
 ### Special Handling in cmd

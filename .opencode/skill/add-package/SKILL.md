@@ -59,9 +59,7 @@ packages/<name>/
     "rootDir": "./src"
   },
   "include": ["src"],
-  "references": [
-    { "path": "../core" }
-  ]
+  "references": [{ "path": "../core" }]
 }
 ```
 
@@ -78,12 +76,12 @@ packages/<name>/
 
 ## Package Types
 
-| Pattern | Purpose | TTY Dependencies |
-|---------|---------|------------------|
-| `core` | Core framework | None (UI-agnostic) |
-| `*-clack` | Clack-based adapters | Yes |
-| `tabs-*` | Tab UI implementations | Yes |
-| `op` | 1Password integration | External CLI |
+| Pattern   | Purpose                | TTY Dependencies   |
+| --------- | ---------------------- | ------------------ |
+| `core`    | Core framework         | None (UI-agnostic) |
+| `*-clack` | Clack-based adapters   | Yes                |
+| `tabs-*`  | Tab UI implementations | Yes                |
+| `op`      | 1Password integration  | External CLI       |
 
 ## Workspace Dependencies
 

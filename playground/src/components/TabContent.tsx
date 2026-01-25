@@ -53,18 +53,24 @@ function TabContentInner({
   }, [isActive, tab.type]);
 
   // Callbacks that include tabId
-  const handleTitleChange = useCallback((title: string) => {
-    onTitleChange?.(tab.id, title);
-  }, [tab.id, onTitleChange]);
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      onTitleChange?.(tab.id, title);
+    },
+    [tab.id, onTitleChange]
+  );
 
-  const handleTaskComplete = useCallback((exitCode: number) => {
-    onTaskComplete?.(tab.id, exitCode);
-  }, [tab.id, onTaskComplete]);
+  const handleTaskComplete = useCallback(
+    (exitCode: number) => {
+      onTaskComplete?.(tab.id, exitCode);
+    },
+    [tab.id, onTaskComplete]
+  );
 
   if (tab.type === 'terminal') {
     // Determine if this is a task (has a command) vs interactive shell
     const isTask = Boolean(tab.command);
-    
+
     return (
       <div className={`tab-content ${isActive ? 'tab-content-active' : 'tab-content-hidden'}`}>
         <Terminal
@@ -86,11 +92,7 @@ function TabContentInner({
   if (tab.type === 'file' && tab.filePath && webContainer) {
     return (
       <div className={`tab-content ${isActive ? 'tab-content-active' : 'tab-content-hidden'}`}>
-        <FileViewer
-          filePath={tab.filePath}
-          webcontainer={webContainer}
-          eventBus={eventBus}
-        />
+        <FileViewer filePath={tab.filePath} webcontainer={webContainer} eventBus={eventBus} />
       </div>
     );
   }

@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import {
-  generateHelp,
-  generateRootHelp,
-  hasHelpFlag,
-  formatFlagLine,
-} from '../src/lib/help';
+import { generateHelp, generateRootHelp, hasHelpFlag, formatFlagLine } from '../src/lib/help';
 import { getSchemaInfo } from '../src/lib/args';
 import type { CommandConfig, CommandNode, ContextDef } from '../src';
 

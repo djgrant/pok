@@ -103,7 +103,7 @@ run: async (r) => {
 
   // With retry on failure
   await r.exec('curl https://flaky-api.com', {
-    retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' }
+    retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' },
   });
 
   // Array form (no shell interpolation, safe for dynamic input)
@@ -164,16 +164,10 @@ run: async (r) => {
   await r.parallel([r.exec('npm run dev'), r.exec('npm run watch')]);
 
   // Fail-fast mode - all must succeed, abort on first failure
-  await r.parallel(
-    [r.run(buildTask), r.run(testTask), r.run(lintTask)],
-    { mode: 'fail-fast' }
-  );
+  await r.parallel([r.run(buildTask), r.run(testTask), r.run(lintTask)], { mode: 'fail-fast' });
 
   // All-settled mode - run all, collect failures
-  await r.parallel(
-    [r.run(deploy1), r.run(deploy2), r.run(deploy3)],
-    { mode: 'all-settled' }
-  );
+  await r.parallel([r.run(deploy1), r.run(deploy2), r.run(deploy3)], { mode: 'all-settled' });
 };
 ```
 
@@ -181,7 +175,7 @@ run: async (r) => {
 
 Tasks with retry configuration will exhaust all retries before the parallel mode rules apply:
 
-```typescript
+````typescript
 const flakyTask = defineTask({
   label: 'Flaky API call',
   retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' },
@@ -202,7 +196,7 @@ tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>
 type TabsRunnerOptions = {
   name?: string;  // Console name (e.g., "Development")
 };
-```
+````
 
 Requires a tabs adapter (e.g., `@pokit/tabs-ink`):
 

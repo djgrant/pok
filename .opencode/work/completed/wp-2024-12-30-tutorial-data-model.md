@@ -1,15 +1,18 @@
 # Tutorial Data Model
 
 ## Problem
+
 The current playground tutorial (learn.ts) outputs ANSI terminal content directly. We need to migrate to a structured data model that separates content from rendering. This enables the tutorial to be rendered as React components while keeping content maintainable and testable.
 
 ## Scope
+
 - `playground/src/tutorial/` (new directory)
 - `playground/src/tutorial/types.ts` - Tutorial step type definitions
 - `playground/src/tutorial/content.ts` - Actual tutorial content as data
 - `playground/src/tutorial/engine.ts` - Tutorial progression logic
 
 ## Approach
+
 1. Create tutorial directory in playground/src
 2. Define TypeScript types in types.ts:
    - `TutorialStep` discriminated union: info, file-create, command-run, tip, choice
@@ -28,9 +31,11 @@ The current playground tutorial (learn.ts) outputs ANSI terminal content directl
 5. Export tutorial instance and engine factory
 
 ## Hypothesis
+
 Separating tutorial content into a data model will make updates trivial (change data, not code) and enable testing the tutorial flow without rendering. The engine pattern will cleanly encapsulate progression logic, making it easy to add features like persistence or analytics later.
 
 ## Acceptance Criteria
+
 - [x] Tutorial content migrated from learn.ts ANSI output to structured data
 - [x] Engine tracks progress and handles auto-progression
 - [x] 600ms pause before auto-scrolling to next step
@@ -38,6 +43,7 @@ Separating tutorial content into a data model will make updates trivial (change 
 - [x] Types are clean and well-documented
 
 ## Dependencies
+
 None (can run in parallel with Phase 2)
 
 ## Results

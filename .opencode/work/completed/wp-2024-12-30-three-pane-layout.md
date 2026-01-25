@@ -1,15 +1,18 @@
 # Three-Pane Layout
 
 ## Problem
+
 The playground needs to transform from its current layout to a three-column layout: Explorer | Tutorial | Editor. This is a significant structural change that affects multiple components and requires careful CSS grid implementation to avoid layout jank.
 
 ## Scope
+
 - `playground/src/App.tsx` - Layout restructure
 - `playground/src/index.css` - Layout CSS updates
 - `playground/src/components/Sidebar.tsx` - Simplify to explorer only
 - `playground/src/hooks/useWorkspace.ts` - Update tab model
 
 ## Approach
+
 1. Update App.tsx layout structure:
    - Change from 2-pane to 3-pane grid
    - Left: Explorer (file tree only, no tabs)
@@ -42,9 +45,11 @@ The playground needs to transform from its current layout to a three-column layo
    - Stable during async operations
 
 ## Hypothesis
+
 CSS Grid with explicit column widths will provide a stable layout. Separating the tutorial panel from the editor area will create clear visual hierarchy. The tabbed editor area will feel familiar to developers used to VS Code-style interfaces.
 
 ## Acceptance Criteria
+
 - [ ] Three-column layout renders correctly
 - [ ] Explorer shows file tree only
 - [ ] Tutorial panel is center column
@@ -55,9 +60,11 @@ CSS Grid with explicit column widths will provide a stable layout. Separating th
 - [ ] Layout is stable (no jank on interactions)
 
 ## Dependencies
+
 Phase 4 (tutorial panel) - need the TutorialPanel component to integrate
 
 ## Results
+
 Implemented three-pane layout successfully:
 
 1. **useWorkspace.ts**: Simplified initial tabs to just `shell` terminal (removed `learn` tab since tutorial is now a panel)
@@ -66,15 +73,18 @@ Implemented three-pane layout successfully:
 4. **App.tsx**: Added TutorialPanel between Sidebar and editor-area, with stub callbacks for `onCreateFile`, `onRunCommand`, and `onOpenFile`
 
 Layout structure:
+
 - Left: Explorer (sidebar with file tree only)
 - Center: TutorialPanel (380px fixed width)
 - Right: Editor area (TabBar + terminal/file tabs)
 
 Verification:
+
 - `bun tsc --noEmit` passes
 - `bun run build` succeeds
 
 ## Evaluation
+
 - [x] Three-column layout renders correctly
 - [x] Explorer shows file tree only
 - [x] Tutorial panel is center column

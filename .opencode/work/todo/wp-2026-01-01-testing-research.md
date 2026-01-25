@@ -27,6 +27,7 @@ The testing infrastructure has solid foundations with good integration test patt
 #### What's Tested
 
 **Core Package (`packages/core/test/`)**
+
 - 21+ test files covering major functionality:
   - `runner.test.ts` - 600+ lines, comprehensive coverage of exec, run, parallel, group, retry functionality
   - `router.test.ts` - Command tree building, help, error handling, alias support
@@ -49,6 +50,7 @@ The testing infrastructure has solid foundations with good integration test patt
   - `resolver.test.ts` - Environment resolver tests
 
 **Reporter Clack (`packages/reporter-clack/test/`)**
+
 - `adapter.test.ts` - 670+ lines, comprehensive visual output testing
 - Virtual terminal snapshot testing pattern
 - Tests for sequential groups, parallel groups, log buffering, suspend/resume
@@ -56,19 +58,23 @@ The testing infrastructure has solid foundations with good integration test patt
 - Remediation display testing
 
 **Tabs Core (`packages/tabs-core/test/`)**
+
 - `state-reducer.test.ts` - 616 lines, thorough reducer testing
 - `process-manager.test.ts` - Process lifecycle management
 - `ring-buffer.test.ts` - Ring buffer data structure
 
 **Create Package (`packages/create/test/`)**
+
 - `create.test.ts` - 320 lines, template generation tests
 - `e2e.test.ts` - End-to-end scaffolding tests
 
 **Op Package (`packages/op/test/`)**
+
 - `resolver.test.ts` - 1Password resolver structure tests
 - `op.test.ts` - Op integration tests
 
 **Other Packages**
+
 - `packages/prompter-clack/test/prompter.test.ts` - Prompter tests
 - `packages/tabs-ink/test/adapter.test.ts` - Ink adapter tests
 - `packages/tabs-opentui/test/adapter.test.ts` - OpenTUI adapter tests
@@ -76,6 +82,7 @@ The testing infrastructure has solid foundations with good integration test patt
 - `packages/cmd/test/cmd.test.ts` - Global launcher tests
 
 **Integration Tests (`test/`)**
+
 - 19 test cases covering various command scenarios
 - Each case has `command.ts`, `events.ts`, and `output.ts` files
 - Tests include: simple commands, context, pre-checks, tasks, env tasks, reporters, log levels, activity failures, nested groups, parent-child relationships, run-all patterns, menu navigation, and remediation
@@ -137,14 +144,16 @@ The testing infrastructure has solid foundations with good integration test patt
 ### 4. CI/CD Assessment
 
 **Current Pipeline (`.github/workflows/ci.yml`)**
+
 ```yaml
 - Check types
-- Check formatting  
+- Check formatting
 - Run tests
 - Build
 ```
 
 **Gaps:**
+
 1. No test coverage reporting
 2. No parallel test execution
 3. No test artifact publishing
@@ -155,12 +164,14 @@ The testing infrastructure has solid foundations with good integration test patt
 ### 5. Test Ergonomics for Users
 
 **Strengths:**
+
 - `createRawPrompter` - Excellent mock interface
 - `createRawReporterAdapter` - Clean event capture
 - `@pokit/test-utils` package - Reusable utilities
 - Good documentation in `docs/testing.md`
 
 **Gaps:**
+
 1. No test helper for command definition testing
 2. No snapshot helpers for event sequences
 3. No debug mode for test failures
@@ -171,12 +182,11 @@ The testing infrastructure has solid foundations with good integration test patt
 ### Priority 1: Critical Coverage
 
 1. **Add TimeoutError tests**
+
    ```typescript
    it('throws TimeoutError when command exceeds timeout', async () => {
      const runner = createTestRunner({ quiet: true });
-     await expect(
-       runner.exec('sleep 10', { timeout: 100 })
-     ).rejects.toBeInstanceOf(TimeoutError);
+     await expect(runner.exec('sleep 10', { timeout: 100 })).rejects.toBeInstanceOf(TimeoutError);
    });
    ```
 
@@ -193,6 +203,7 @@ The testing infrastructure has solid foundations with good integration test patt
 ### Priority 2: CI/CD Improvements
 
 1. **Add coverage reporting**
+
    ```yaml
    - name: Run tests with coverage
      run: bun test --coverage
@@ -201,6 +212,7 @@ The testing infrastructure has solid foundations with good integration test patt
    ```
 
 2. **Add matrix testing**
+
    ```yaml
    strategy:
      matrix:
@@ -222,9 +234,10 @@ The testing infrastructure has solid foundations with good integration test patt
 ### Priority 3: User Testing Ergonomics
 
 1. **Add `createTestCommand` helper**
+
    ```typescript
    import { createTestCommand } from '@pokit/core/testing';
-   
+
    const { run, events, error } = await createTestCommand({
      command: myCommand,
      args: ['--env', 'dev'],
@@ -232,12 +245,13 @@ The testing infrastructure has solid foundations with good integration test patt
    ```
 
 2. **Add event assertion helpers**
+
    ```typescript
    expect(events).toHaveEventSequence([
      'group:start',
      'activity:start',
      'activity:success',
-     'group:end'
+     'group:end',
    ]);
    ```
 
@@ -248,6 +262,7 @@ The testing infrastructure has solid foundations with good integration test patt
 ### Priority 4: Developer Experience
 
 1. **Add `--watch` mode documentation**
+
    ```bash
    pok test -- --watch
    ```
@@ -265,11 +280,13 @@ The testing infrastructure has solid foundations with good integration test patt
 ## Evaluation
 
 The hypothesis was confirmed. pok has a solid testing foundation with:
+
 - Comprehensive integration tests for core flows
 - Good patterns for event capture and mocking
 - Well-documented testing utilities
 
 Key gaps identified:
+
 1. Missing unit tests for some core modules (composite resolver, runtime)
 2. Insufficient edge case and stress testing
 3. CI pipeline lacks coverage reporting and matrix testing

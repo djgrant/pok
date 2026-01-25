@@ -77,62 +77,62 @@ export type PokConfig = {
   /** Version string for --version flag */
   version?: string;
 
-   /**
-    * Package manager scripts to include as commands.
-    * - true: Include all scripts from root package.json
-    * - string[]: List of script names, glob patterns (e.g. 'test:*'),
-    *   or package discovery paths (e.g. 'packages/*')
-    */
-   pmScripts?: boolean | string[];
+  /**
+   * Package manager scripts to include as commands.
+   * - true: Include all scripts from root package.json
+   * - string[]: List of script names, glob patterns (e.g. 'test:*'),
+   *   or package discovery paths (e.g. 'packages/*')
+   */
+  pmScripts?: boolean | string[];
 
-   /**
-    * Native package manager commands to include (e.g. 'install', 'add', 'run').
-    * - true: Include standard lifecycle commands
-    * - string[]: List of specific commands to include
-    */
-   pmCommands?: boolean | string[];
+  /**
+   * Native package manager commands to include (e.g. 'install', 'add', 'run').
+   * - true: Include standard lifecycle commands
+   * - string[]: List of specific commands to include
+   */
+  pmCommands?: boolean | string[];
 
-   /**
-    * Plugins to mount at the root.
-    * Allows injecting dynamic command sources.
-    */
-   plugins?: MountableLike[];
- };
+  /**
+   * Plugins to mount at the root.
+   * Allows injecting dynamic command sources.
+   */
+  plugins?: MountableLike[];
+};
 
- /**
-  * pok configuration schema
-  */
- export const PokConfigSchema = z.object({
-   appDir: z.string().optional(),
-   cwd: z.string().optional(),
-   commandsDir: z.string().optional(),
-   appName: z.string().optional(),
-   reporter: z.any(),
-   prompter: z.any(),
-   tabs: z.any().optional(),
-   version: z.string().optional(),
-   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
-   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
-   plugins: z.array(z.any()).optional(),
- });
+/**
+ * pok configuration schema
+ */
+export const PokConfigSchema = z.object({
+  appDir: z.string().optional(),
+  cwd: z.string().optional(),
+  commandsDir: z.string().optional(),
+  appName: z.string().optional(),
+  reporter: z.any(),
+  prompter: z.any(),
+  tabs: z.any().optional(),
+  version: z.string().optional(),
+  pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
+  pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
+  plugins: z.array(z.any()).optional(),
+});
 
- /**
-  * Resolved configuration with all defaults applied.
-  * This MUST satisfy the LauncherSkeleton defined in the pokit launcher.
-  */
- export interface ResolvedPokConfig extends LauncherSkeleton {
-   appDir: string;
-   cwd: string;
-   commandsDir: string;
-   appName?: string;
-   version?: string;
-   reporter: ReporterAdapter;
-   prompter: Prompter;
-   tabs?: TabsAdapter;
-   pmScripts?: boolean | string[];
-   pmCommands?: boolean | string[];
-   plugins?: MountableLike[];
- }
+/**
+ * Resolved configuration with all defaults applied.
+ * This MUST satisfy the LauncherSkeleton defined in the pokit launcher.
+ */
+export interface ResolvedPokConfig extends LauncherSkeleton {
+  appDir: string;
+  cwd: string;
+  commandsDir: string;
+  appName?: string;
+  version?: string;
+  reporter: ReporterAdapter;
+  prompter: Prompter;
+  tabs?: TabsAdapter;
+  pmScripts?: boolean | string[];
+  pmCommands?: boolean | string[];
+  plugins?: MountableLike[];
+}
 
 /**
  * Identity function for type inference in config files

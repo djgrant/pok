@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import {
-  run,
-  createEventBus,
-  createRawReporterAdapter,
-  createRawPrompter,
-} from '../src';
+import { run, createEventBus, createRawReporterAdapter, createRawPrompter } from '../src';
 import * as path from 'path';
 import { getRuntime } from '../src/runtime';
 import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
@@ -17,9 +12,9 @@ async function setupPmIntegrationTest(
 ) {
   const projectRoot = path.join(process.cwd(), 'temp-pm-test');
   const commandsDir = path.join(projectRoot, 'commands');
-  
+
   const runtime = await getRuntime();
-  
+
   const originalReadFile = runtime.readFile;
   runtime.readFile = async (p: string) => {
     if (p.endsWith('package.json')) {
@@ -50,13 +45,13 @@ async function setupPmIntegrationTest(
     ...extraConfig,
   };
 
-  return { 
-    config, 
-    runtime, 
+  return {
+    config,
+    runtime,
     cleanup: () => {
       runtime.readFile = originalReadFile;
       runtime.glob = originalGlob;
-    }
+    },
   };
 }
 
@@ -139,16 +134,16 @@ describe('Package Manager Integration', () => {
     it('forwards extra arguments and unknown flags', async () => {
       const pkgJson = JSON.stringify({
         scripts: {
-          hello: 'echo hello'
-        }
+          hello: 'echo hello',
+        },
       });
 
       const { config, cleanup } = await setupPmIntegrationTest(pkgJson, { pmScripts: true });
-      
+
       const runtime = await getRuntime();
       const originalSpawn = runtime.spawn;
       const spawnCalls: string[][] = [];
-      
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       runtime.spawn = ((cmd: string[], options: any) => {
         spawnCalls.push(cmd);
@@ -164,7 +159,7 @@ describe('Package Manager Integration', () => {
 
       try {
         await run(['hello', 'foo', '--bar=baz'], config);
-        
+
         expect(spawnCalls.length).toBe(1);
         const fullCmd = spawnCalls[0].join(' ');
         expect(fullCmd).toContain('run hello -- foo --bar=baz');
@@ -179,17 +174,19 @@ describe('Package Manager Integration', () => {
         scripts: {
           'test:unit': 'echo unit',
           'test:e2e': 'echo e2e',
-          'build': 'echo build',
-          'lint': 'echo lint'
-        }
+          build: 'echo build',
+          lint: 'echo lint',
+        },
       });
 
-      const { config, cleanup } = await setupPmIntegrationTest(pkgJson, { pmScripts: ['test:*', 'build'] });
-      
+      const { config, cleanup } = await setupPmIntegrationTest(pkgJson, {
+        pmScripts: ['test:*', 'build'],
+      });
+
       const runtime = await getRuntime();
       const originalSpawn = runtime.spawn;
       const spawnCalls: string[][] = [];
-      
+
       runtime.spawn = ((cmd: string[]) => {
         spawnCalls.push(cmd);
         return {
@@ -226,25 +223,25 @@ describe('Package Manager Integration', () => {
 
     it('supports monorepo discovery with path globs', async () => {
       const rootPkgJson = JSON.stringify({
-        scripts: { 'root-script': 'echo root' }
+        scripts: { 'root-script': 'echo root' },
       });
       const pkgAPkgJson = JSON.stringify({
         name: 'pkg-a',
-        scripts: { 'test': 'echo test-a' }
+        scripts: { test: 'echo test-a' },
       });
       const pkgBPkgJson = JSON.stringify({
         name: 'pkg-b',
-        scripts: { 'test': 'echo test-b' }
+        scripts: { test: 'echo test-b' },
       });
 
       const projectRoot = path.join(process.cwd(), 'temp-monorepo-test');
       const commandsDir = path.join(projectRoot, 'commands');
-      
+
       const runtime = await getRuntime();
       const originalReadFile = runtime.readFile;
       const originalGlob = runtime.glob;
       const originalSpawn = runtime.spawn;
-      
+
       runtime.readFile = async (p: string) => {
         if (p === path.join(projectRoot, 'package.json')) return rootPkgJson;
         if (p === path.join(projectRoot, 'packages/pkg-a/package.json')) return pkgAPkgJson;
@@ -309,11 +306,11 @@ describe('Package Manager Integration', () => {
     it('supports built-in commands when true', async () => {
       const pkgJson = JSON.stringify({});
       const { config, cleanup } = await setupPmIntegrationTest(pkgJson, { pmCommands: true });
-      
+
       const runtime = await getRuntime();
       const originalSpawn = runtime.spawn;
       const spawnCalls: string[][] = [];
-      
+
       runtime.spawn = ((cmd: string[]) => {
         spawnCalls.push(cmd);
         return {
@@ -342,11 +339,11 @@ describe('Package Manager Integration', () => {
     it('supports specific commands when array', async () => {
       const pkgJson = JSON.stringify({});
       const { config, cleanup } = await setupPmIntegrationTest(pkgJson, { pmCommands: ['audit'] });
-      
+
       const runtime = await getRuntime();
       const originalSpawn = runtime.spawn;
       const spawnCalls: string[][] = [];
-      
+
       runtime.spawn = ((cmd: string[]) => {
         spawnCalls.push(cmd);
         return {
@@ -382,12 +379,12 @@ describe('Package Manager Integration', () => {
 
       const projectRoot = path.join(process.cwd(), 'temp-monorepo-cmd-test');
       const commandsDir = path.join(projectRoot, 'commands');
-      
+
       const runtime = await getRuntime();
       const originalReadFile = runtime.readFile;
       const originalGlob = runtime.glob;
       const originalSpawn = runtime.spawn;
-      
+
       runtime.readFile = async (p: string) => {
         if (p === path.join(projectRoot, 'package.json')) return rootPkgJson;
         if (p === path.join(projectRoot, 'packages/pkg-a/package.json')) return pkgAPkgJson;
@@ -739,20 +736,20 @@ describe('Package Manager Integration', () => {
   describe('ignoreUnknownFlags', () => {
     it('allows unknown flags when enabled', async () => {
       const { parseContext } = await import('../src/lib/args');
-      
+
       const contextDef = {
         known: {
           from: 'flag' as const,
           schema: z.string().default('default'),
-        }
+        },
       };
-  
+
       expect(() => parseContext(['--unknown'], contextDef)).toThrow(/Unknown flag/);
-  
+
       const result = parseContext(['--unknown', 'val', '--known', 'yes'], contextDef, {
-        ignoreUnknownFlags: true
+        ignoreUnknownFlags: true,
       });
-  
+
       expect(result.context.known).toBe('yes');
       expect(result.rest).toContain('--unknown');
       expect(result.rest).toContain('val');

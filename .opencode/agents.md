@@ -38,12 +38,11 @@ test/               # Integration tests
 - Zod v4 for all validation
 - Prefer inference over explicit types
 
-
 ## Design Principles
 
-1. *Schema is destiny*. Define intent once. Derive validation, types, UI, and everything else automatically.
-2. *Convention over configuration*. Wiring code is intellectual waste. Structure is contract.
-3. *Vertically-integrated abstractions*. Separate concerns, but couple features.
-4. *Ceremony-free interfaces*. Don't make humans think about _how_ to do something. pok should bridge the gap between intent and execution.
-5. *The principle of least API*. Provide the minimal API to balance extensibility with constraints.
-6. *Falling into the pit of success*. Developers are lazy. Make it easy to do the right things (e.g. security), and hard to circumvent them.
+1. _Schema is destiny_. Define intent once. Derive validation, types, UI, and everything else automatically.
+2. _Convention over configuration_. Wiring code is intellectual waste. Structure is contract.
+3. _Vertically-integrated abstractions_. Separate concerns, but couple features.
+4. _Ceremony-free interfaces_. Don't make humans think about _how_ to do something. pok should bridge the gap between intent and execution.
+5. _The principle of least API_. Provide the minimal API to balance extensibility with constraints.
+6. _Falling into the pit of success_. Developers are lazy. Make it easy to do the right things (e.g. security), and hard to circumvent them.

@@ -71,10 +71,7 @@ function debounce<T extends (...args: any[]) => any>(
 /**
  * Client-side filter for options
  */
-function filterOptionsClientSide<T>(
-  options: SelectOption<T>[],
-  filter: string
-): SelectOption<T>[] {
+function filterOptionsClientSide<T>(options: SelectOption<T>[], filter: string): SelectOption<T>[] {
   const lowerFilter = filter.toLowerCase();
   return options.filter(
     (opt) =>
@@ -124,9 +121,7 @@ async function showErrorRecovery(errorMessage: string): Promise<ErrorAction> {
 /**
  * Handle dynamic select with pagination, filtering, and error recovery
  */
-async function handleDynamicSelect<T>(
-  dynamicOptions: DynamicSelectOptions<T>
-): Promise<T> {
+async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): Promise<T> {
   const controller = new AbortController();
   const provider = dynamicOptions.provider;
   const capabilities = provider.capabilities;
@@ -266,8 +261,7 @@ async function handleDynamicSelect<T>(
         continue;
       } catch (error) {
         loadMoreSpinner.stop('Failed to load more');
-        const errorMessage =
-          error instanceof Error ? error.message : 'Failed to load more options';
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load more options';
 
         // Show error recovery
         const action = await showErrorRecovery(errorMessage);
@@ -403,9 +397,7 @@ async function handleDynamicSelectWithTypeahead<T>(
         if (nextPage.totalCount !== undefined) {
           totalCount = nextPage.totalCount;
         }
-        loadMoreSpinner.stop(
-          `Loaded ${allOptions.length}${totalCount ? ` of ${totalCount}` : ''}`
-        );
+        loadMoreSpinner.stop(`Loaded ${allOptions.length}${totalCount ? ` of ${totalCount}` : ''}`);
         continue;
       } catch (error) {
         loadMoreSpinner.stop('Failed to load more');

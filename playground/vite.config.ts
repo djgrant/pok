@@ -84,15 +84,20 @@ export { runCli } from '${coreDir}/src/cli.ts';
       // Convert: await import("module") -> require("module")
       // Convert: import("module") -> Promise.resolve(require("module"))
       // Convert: await import(variable) -> require(variable)
-      return code
-        // Handle await import("...") pattern with string literals
-        .replace(/await\s+import\s*\(\s*["']([^"']+)["']\s*\)/g, 'require("$1")')
-        // Handle await import(variable) pattern with variables
-        .replace(/await\s+import\s*\(\s*([^)"']+)\s*\)/g, 'require($1)')
-        // Handle bare import("...") that returns a promise (without await)
-        .replace(/(?<!await\s+)import\s*\(\s*["']([^"']+)["']\s*\)/g, 'Promise.resolve(require("$1"))')
-        // Handle bare import(variable) that returns a promise (without await)
-        .replace(/(?<!await\s+)import\s*\(\s*([^)"']+)\s*\)/g, 'Promise.resolve(require($1))');
+      return (
+        code
+          // Handle await import("...") pattern with string literals
+          .replace(/await\s+import\s*\(\s*["']([^"']+)["']\s*\)/g, 'require("$1")')
+          // Handle await import(variable) pattern with variables
+          .replace(/await\s+import\s*\(\s*([^)"']+)\s*\)/g, 'require($1)')
+          // Handle bare import("...") that returns a promise (without await)
+          .replace(
+            /(?<!await\s+)import\s*\(\s*["']([^"']+)["']\s*\)/g,
+            'Promise.resolve(require("$1"))'
+          )
+          // Handle bare import(variable) that returns a promise (without await)
+          .replace(/(?<!await\s+)import\s*\(\s*([^)"']+)\s*\)/g, 'Promise.resolve(require($1))')
+      );
     }
 
     // Read and post-process all bundled files

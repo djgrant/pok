@@ -558,7 +558,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
   /**
    * Merge process.env with additional env vars, filtering out undefined values.
    * This is needed because process.env has type Record<string, string | undefined>.
-   * 
+   *
    * Also handles unsetting variables: if additionalEnv has a key with value undefined,
    * it will be removed from the result.
    */

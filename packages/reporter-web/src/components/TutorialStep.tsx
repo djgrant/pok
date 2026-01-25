@@ -27,12 +27,7 @@ export type TutorialStepProps = {
   children: React.ReactNode;
 };
 
-export function TutorialStep({
-  number,
-  title,
-  status,
-  children,
-}: TutorialStepProps) {
+export function TutorialStep({ number, title, status, children }: TutorialStepProps) {
   return (
     <div className="tutorial-step" data-status={status}>
       <div className="tutorial-step-header">

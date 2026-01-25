@@ -16,12 +16,14 @@ pok states goals of "enforcing security on developer machines" and "falling into
 ### 1. Input Validation ✅ Strengths
 
 **What's good:**
+
 - All command arguments are validated through Zod schemas (`packages/core/src/lib/args.ts`)
 - Context definitions enforce type validation at runtime
 - Unknown flags are rejected with helpful error messages
 - Typo detection suggests valid alternatives
 
 **Evidence:**
+
 ```typescript
 // From args.ts:396-404
 const result = fieldDef.schema.safeParse(value);
@@ -29,7 +31,8 @@ if (!result.success) {
   const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
   throw createError(
     `Invalid value for --${flagName}: ${value}.${choicesMsg}`,
-    contextDef, errorContext
+    contextDef,
+    errorContext
   );
 }
 ```
@@ -43,8 +46,8 @@ if (!result.success) {
    // runner.ts:625-654
    const proc = runtime.spawn(['sh', '-c', finalCmd], {...});
    ```
-   
 2. **Array form** (safe): Bypasses shell entirely
+
    ```typescript
    // runner.ts:599-623
    const proc = runtime.spawn(cmd, {...});  // No shell interpolation
@@ -55,6 +58,7 @@ if (!result.success) {
 **Issue:** String form is the most convenient but most dangerous. Documentation exists in comments but users may not realize the injection risk.
 
 **Shell escaping exists but is opt-in:**
+
 ```typescript
 // runtime/node.ts:134-136
 const escapeShell = (str: string): string => {
@@ -65,6 +69,7 @@ const escapeShell = (str: string): string => {
 ### 3. Environment Variables & Secrets ✅ Good
 
 **1Password integration provides secure secret management:**
+
 - Secrets are fetched on-demand, not stored in environment files
 - Vault references use validated identifier patterns (`op.ts:11`)
 - Input validation rejects shell metacharacters
@@ -75,6 +80,7 @@ const VALID_IDENTIFIER_PATTERN = /^[a-zA-Z0-9 _.-]+$/;
 ```
 
 **Environment variable handling:**
+
 - Env vars are cached in memory during task execution
 - Variables are resolved through typed resolvers with Zod validation
 - Write operations validate against declared variables only
@@ -84,6 +90,7 @@ const VALID_IDENTIFIER_PATTERN = /^[a-zA-Z0-9 _.-]+$/;
 ### 4. File System Access ❌ No Controls
 
 **Current state:**
+
 - No file system sandboxing
 - Commands can access any file the process can access
 - No allowlist/denylist for paths
@@ -92,6 +99,7 @@ const VALID_IDENTIFIER_PATTERN = /^[a-zA-Z0-9 _.-]+$/;
 ### 5. Permission/Capability Model ❌ Not Implemented
 
 **Current state:**
+
 - No permission model for commands
 - No capability restrictions
 - All commands have equal privileges
@@ -100,12 +108,14 @@ const VALID_IDENTIFIER_PATTERN = /^[a-zA-Z0-9 _.-]+$/;
 ### 6. Audit Logging ❌ Not Implemented
 
 **Current state:**
+
 - Event system exists but is for UI rendering only
 - No security-focused logging
 - No record of executed commands or accessed secrets
 - No audit trail capability
 
 **Event types available (events/types.ts):**
+
 - `root:start`, `root:end`
 - `group:start`, `group:end`
 - `activity:start`, `activity:success`, `activity:failure`
@@ -116,6 +126,7 @@ These are purely for UI feedback, not security auditing.
 ### 7. Dependency Security ❌ No Formal Process
 
 **Current state:**
+
 - No security audit policy documented
 - No automated vulnerability scanning (no Dependabot, Snyk, etc.)
 - No lockfile integrity checking beyond pnpm
@@ -126,6 +137,7 @@ These are purely for UI feedback, not security auditing.
 ### 8. Dry Run Mode ✅ Good Foundation
 
 **What exists:**
+
 - `dryRunContext` helper for adding --dry-run flag
 - `createDryRunReporter` for dry-run output
 - Pattern for "show what would happen"
@@ -185,17 +197,18 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
 3. **Provide safer helpers**
    ```typescript
    // Instead of r.exec(`git checkout ${branch}`)
-   r.git.checkout(branch);  // Type-safe, pre-escaped
+   r.git.checkout(branch); // Type-safe, pre-escaped
    ```
 
 #### Priority 2: Add Command Permission Model (Medium Term)
 
 1. **Define permission levels**
+
    ```typescript
    defineCommand({
      label: 'Deploy to production',
      permissions: {
-       level: 'destructive',  // 'read-only' | 'write' | 'destructive'
+       level: 'destructive', // 'read-only' | 'write' | 'destructive'
        requiresConfirmation: true,
        environments: ['prod'],
      },
@@ -213,12 +226,14 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
 #### Priority 3: Secret Protection (Medium Term)
 
 1. **Secret redaction in output**
+
    ```typescript
    // Automatically redact resolved secrets in logs
-   reporter.info(message);  // Secrets replaced with ***
+   reporter.info(message); // Secrets replaced with ***
    ```
 
 2. **Secure string wrapper**
+
    ```typescript
    type SecureString = { toString: () => '[REDACTED]'; value: () => string };
    ```
@@ -232,6 +247,7 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
 #### Priority 4: Audit Logging (Medium Term)
 
 1. **Add security event types**
+
    ```typescript
    type SecurityEvent =
      | { type: 'security:command-start'; command: string; user: string }
@@ -241,6 +257,7 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
    ```
 
 2. **Audit adapter interface**
+
    ```typescript
    interface AuditAdapter {
      log(event: SecurityEvent): void | Promise<void>;
@@ -254,11 +271,12 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
 #### Priority 5: File System Boundaries (Long Term)
 
 1. **Project root enforcement**
+
    ```typescript
    defineCommand({
      sandbox: {
-       root: 'project',  // Can only access project files
-       allowlist: ['/tmp'],  // Additional allowed paths
+       root: 'project', // Can only access project files
+       allowlist: ['/tmp'], // Additional allowed paths
      },
    });
    ```
@@ -285,6 +303,7 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
    - Best practices for secret handling
 
 2. **Add warning in string exec**
+
    ```typescript
    if (typeof cmd === 'string' && cmd.includes('$')) {
      reporter.warn('Using string exec with variables may be unsafe. Consider array form.');
@@ -294,29 +313,30 @@ pok has good foundations (Zod validation, 1Password integration) but lacks secur
 3. **Export safe exec helper**
    ```typescript
    export function safeExec(cmd: string, args: string[]): ExecInput {
-     return [cmd, ...args];  // Forces array form
+     return [cmd, ...args]; // Forces array form
    }
    ```
 
 ### Security Feature Comparison
 
-| Feature | Current | Recommended |
-|---------|---------|-------------|
-| Input Validation | ✅ Zod schemas | Keep |
-| Shell Escaping | ⚠️ Opt-in | Make default |
-| Secret Management | ✅ 1Password | Add leak prevention |
-| Permission Model | ❌ None | Add destructive/readonly |
-| Audit Logging | ❌ None | Add security events |
-| File Sandboxing | ❌ None | Add project boundaries |
-| Dependency Audit | ❌ None | Add to CI |
+| Feature           | Current        | Recommended              |
+| ----------------- | -------------- | ------------------------ |
+| Input Validation  | ✅ Zod schemas | Keep                     |
+| Shell Escaping    | ⚠️ Opt-in      | Make default             |
+| Secret Management | ✅ 1Password   | Add leak prevention      |
+| Permission Model  | ❌ None        | Add destructive/readonly |
+| Audit Logging     | ❌ None        | Add security events      |
+| File Sandboxing   | ❌ None        | Add project boundaries   |
+| Dependency Audit  | ❌ None        | Add to CI                |
 
 ## Evaluation
 
 pok has solid foundations for security but significant gaps remain before it can claim to "enforce security on developer machines." The design principle of "falling into the pit of success" is partially achieved through Zod validation but not for shell execution, which is the most dangerous surface area.
 
 **Recommended implementation order:**
+
 1. Documentation updates (immediate)
-2. Shell injection warnings (immediate)  
+2. Shell injection warnings (immediate)
 3. Command permissions (next release)
 4. Secret redaction (next release)
 5. Audit logging (future)

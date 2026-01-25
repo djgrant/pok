@@ -11,7 +11,14 @@
 import { spawn as nodeSpawn, exec as nodeExec } from 'node:child_process';
 import { readFile as fsReadFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import type { Runtime, SpawnOptions, SpawnResult, ShellOptions, ShellResult, GlobOptions } from './types';
+import type {
+  Runtime,
+  SpawnOptions,
+  SpawnResult,
+  ShellOptions,
+  ShellResult,
+  GlobOptions,
+} from './types';
 
 const execAsync = promisify(nodeExec);
 

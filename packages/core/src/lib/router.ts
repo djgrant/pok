@@ -13,16 +13,23 @@ import * as path from 'path';
 import picomatch from 'picomatch';
 
 import { getRuntime, getPackageManager } from '../runtime';
-import type { CommandConfig, CommandNode, CommandTree, HookContext, MountContext, MountableLike } from './command';
-import { 
-    compose, 
-    fromDirectory, 
-    fromPackageScripts, 
-    fromPackageCommands, 
-    fromStatic, 
-    noop, 
-    resolveMountable,
-    tagNodes 
+import type {
+  CommandConfig,
+  CommandNode,
+  CommandTree,
+  HookContext,
+  MountContext,
+  MountableLike,
+} from './command';
+import {
+  compose,
+  fromDirectory,
+  fromPackageScripts,
+  fromPackageCommands,
+  fromStatic,
+  noop,
+  resolveMountable,
+  tagNodes,
 } from './plugins';
 
 import type { CheckConfig } from './check';
@@ -137,12 +144,6 @@ export type RouterContext = {
   tabs?: TabsAdapter;
 };
 
-
-
-
-
-
-
 /**
  * Validate that there are no alias conflicts within a command tree level.
  *
@@ -199,26 +200,22 @@ export async function buildCommandTree(
   const rootMountable = compose(
     // 1. Package Manager Scripts
     config.pmScripts ? fromPackageScripts(config.pmScripts, projectRoot) : noop(),
-    
+
     // 2. Package Manager Commands
     config.pmCommands ? fromPackageCommands(config.pmCommands, projectRoot) : noop(),
-    
+
     // 3. Extra Commands
     config.extraCommands ? fromStatic(config.extraCommands) : noop(),
 
     // 4. Plugins (Root Mountables)
     ...(config.plugins || []),
-    
+
     // 5. File-based commands (legacy/standard way)
     fromDirectory(commandsDir)
   );
 
   const mountCtx: MountContext = {
-    projectRoot,
-    reporter,
-    prompter,
     path: [],
-    config: ctx.config,
     ...ctx,
   };
 
@@ -240,7 +237,11 @@ export async function buildCommandTree(
   }
 }
 
-async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<string>): Promise<void> {
+async function expandTree(
+  tree: CommandTree,
+  ctx: MountContext,
+  visited: Set<string>
+): Promise<void> {
   for (const node of tree.values()) {
     let branchVisited = visited;
 
@@ -254,7 +255,7 @@ async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<str
         const result = await resolveMountable(node.config.mount, childContext);
 
         if (!result.mountSourceId) {
-            throw new Error(`Mount result missing mountSourceId at path "${node.path}"`);
+          throw new Error(`Mount result missing mountSourceId at path "${node.path}"`);
         }
 
         if (result.mountSourceId) {
@@ -269,30 +270,28 @@ async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<str
 
         // Merge children
         for (const [childKey, childNode] of result.tree) {
-           if (node.children.has(childKey)) {
-              // Collision policy: fail fast
-              throw new Error(`Command collision: "${childKey}" already exists in "${node.path}"`);
-           }
-           
-           // Tag with provenance
-           tagNodes(childNode, result.mountSourceId);
-           
-           node.children.set(childKey, childNode);
+          if (node.children.has(childKey)) {
+            // Collision policy: fail fast
+            throw new Error(`Command collision: "${childKey}" already exists in "${node.path}"`);
+          }
+
+          // Tag with provenance
+          tagNodes(childNode, result.mountSourceId);
+
+          node.children.set(childKey, childNode);
         }
       } catch (e) {
-          ctx.reporter.error(`Failed to mount plugin at ${node.path}: ${e instanceof Error ? e.message : String(e)}`);
+        ctx.reporter.error(
+          `Failed to mount plugin at ${node.path}: ${e instanceof Error ? e.message : String(e)}`
+        );
       }
     }
 
     if (node.children.size > 0) {
-       await expandTree(node.children, { ...ctx, path: [...ctx.path, node.segment] }, branchVisited);
+      await expandTree(node.children, { ...ctx, path: [...ctx.path, node.segment] }, branchVisited);
     }
   }
 }
-
-
-
-
 
 /**
  * Find a node in a tree level by name or alias.
@@ -320,8 +319,6 @@ function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | 
 
   return undefined;
 }
-
-
 
 /**
  * Find a node in the tree by path segments.

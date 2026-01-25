@@ -160,9 +160,7 @@ export type SelectOptions<T> = StaticSelectOptions<T> | DynamicSelectOptions<T>;
 /**
  * Type guard for dynamic options
  */
-export function isDynamicOptions<T>(
-  options: SelectOptions<T>
-): options is DynamicSelectOptions<T> {
+export function isDynamicOptions<T>(options: SelectOptions<T>): options is DynamicSelectOptions<T> {
   return 'provider' in options;
 }
 

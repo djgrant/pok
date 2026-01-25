@@ -14,7 +14,7 @@ export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProp
         {tabs.map((tab) => {
           // Use dynamic title if available, otherwise fall back to static label
           const displayLabel = tab.dynamicTitle || tab.label;
-          
+
           return (
             <div
               key={tab.id}

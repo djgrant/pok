@@ -140,7 +140,8 @@ export function defineEnvResolver<
   ) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
   // Default to empty context if not provided
-  const requiredContext = config.requiredContext ?? (z.object({}) as unknown as z.ZodObject<TContext>);
+  const requiredContext =
+    config.requiredContext ?? (z.object({}) as unknown as z.ZodObject<TContext>);
 
   // Wrap the config to ensure it conforms to TypedEnvResolver interface
   // The context is widened to unknown for generic composition

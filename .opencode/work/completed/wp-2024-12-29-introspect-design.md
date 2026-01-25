@@ -3,6 +3,7 @@
 ## Problem
 
 The new pok playground needs a side-by-side view:
+
 - **Left terminal**: `pok learn` (interactive guide that creates/modifies files)
 - **Right terminal**: `pok introspect` (live file viewer showing what changed)
 
@@ -23,16 +24,17 @@ pok introspect [path]
 ```
 
 A read-only TUI that displays:
+
 1. A file tree of the target directory (default: `commands/`)
 2. Syntax-highlighted preview of the selected file
 3. Live updates when files are added/changed/removed
 
 ### Inputs
 
-| Argument | Type | Default | Description |
-|----------|------|---------|-------------|
-| `path` | positional | `commands/` | Directory to watch |
-| `--depth` | flag | `3` | Max depth for file tree |
+| Argument  | Type       | Default     | Description             |
+| --------- | ---------- | ----------- | ----------------------- |
+| `path`    | positional | `commands/` | Directory to watch      |
+| `--depth` | flag       | `3`         | Max depth for file tree |
 
 ### Outputs
 
@@ -42,15 +44,15 @@ A read-only TUI that displays:
 
 ### Keyboard Controls
 
-| Key | Action |
-|-----|--------|
-| `↑`/`k` | Move selection up |
-| `↓`/`j` | Move selection down |
-| `Enter` | Expand/collapse directory |
-| `PageUp` | Scroll preview up |
-| `PageDown` | Scroll preview down |
-| `q` | Quit |
-| `?` | Show help overlay |
+| Key        | Action                    |
+| ---------- | ------------------------- |
+| `↑`/`k`    | Move selection up         |
+| `↓`/`j`    | Move selection down       |
+| `Enter`    | Expand/collapse directory |
+| `PageUp`   | Scroll preview up         |
+| `PageDown` | Scroll preview down       |
+| `q`        | Quit                      |
+| `?`        | Show help overlay         |
 
 ## TUI Layout
 
@@ -76,7 +78,8 @@ A read-only TUI that displays:
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**Rationale**: 
+**Rationale**:
+
 - Better for narrow terminal widths (common in side-by-side playground)
 - File tree can be compact (1-5 lines when shallow)
 - Preview gets most vertical space
@@ -104,6 +107,7 @@ A read-only TUI that displays:
 ### Recommendation
 
 **Use Option A (Vertical Split)** because:
+
 1. The playground terminals may be narrow (50% viewport width)
 2. The `commands/` directory will often have only 1-4 files
 3. Maximizes code preview space
@@ -116,20 +120,22 @@ A read-only TUI that displays:
 **Decision**: Use raw ANSI escape sequences, not Ink/React.
 
 **Rationale**:
+
 - **WebContainer compatibility**: Ink requires Node.js APIs that may behave differently in WebContainer
 - **Bundle size**: Ink + React adds ~150KB; raw ANSI is <10KB
 - **Simplicity**: `pok introspect` is view-only; no complex state
 - **Precedent**: Similar tools (bat, tree) use raw ANSI successfully
 
 **Implementation Pattern**:
+
 ```typescript
 // packages/introspect/src/render.ts
 export function render(state: IntrospectState, stdout: NodeJS.WriteStream) {
   const { rows, columns } = stdout;
-  
+
   // Clear screen and move cursor to top
   stdout.write('\x1b[2J\x1b[H');
-  
+
   // Render each section
   renderHeader(state, stdout, columns);
   renderTree(state, stdout, columns, treeHeight);
@@ -152,11 +158,13 @@ export function render(state: IntrospectState, stdout: NodeJS.WriteStream) {
 | Raw ANSI | 0KB | N/A | Yes | Manual, limited languages |
 
 **Rationale**:
+
 - `cli-highlight` is battle-tested with TypeScript support
 - Reasonable bundle size
 - Good language detection for `.ts` files
 
 **Implementation**:
+
 ```typescript
 import { highlight } from 'cli-highlight';
 
@@ -172,21 +180,23 @@ function highlightCode(content: string, filename: string): string {
 **Decision**: Use native `fs.watch` with polling fallback for WebContainer.
 
 **Rationale**:
+
 - WebContainer supports basic `fs.watch` but events may be unreliable
 - Polling every 500ms provides reliable fallback
 - Minimal overhead for small directory trees
 
 **Implementation**:
+
 ```typescript
 // packages/introspect/src/watcher.ts
 export function createWatcher(
-  dir: string, 
+  dir: string,
   onChange: () => void,
   options: { pollInterval?: number } = {}
 ) {
   const pollInterval = options.pollInterval ?? 500;
   let lastState = new Map<string, number>(); // path -> mtime
-  
+
   // Try native watcher first
   try {
     const watcher = fs.watch(dir, { recursive: true }, () => {
@@ -212,26 +222,28 @@ export function createWatcher(
 **Decision**: Use a plain state object, no Redux/tabs-core patterns.
 
 **Rationale**:
+
 - `pok introspect` is much simpler than `tabs` (no processes, no async state)
 - Single source of truth: file tree + selection + scroll offset
 - Direct mutation is fine for this use case
 
 **State Shape**:
+
 ```typescript
 type IntrospectState = {
   // File tree
   rootDir: string;
   entries: FileEntry[];
   expandedDirs: Set<string>;
-  
+
   // Selection
   selectedIndex: number;
   selectedFile: string | null;
-  
+
   // Preview
   previewContent: string;
   previewScroll: number;
-  
+
   // UI
   terminalSize: { rows: number; cols: number };
   showHelp: boolean;
@@ -249,6 +261,7 @@ type FileEntry = {
 ### 5. Input Handling: Raw Mode Stdin
 
 **Implementation**:
+
 ```typescript
 // packages/introspect/src/input.ts
 export function setupInput(
@@ -266,7 +279,7 @@ export function setupInput(
   stdin.setRawMode(true);
   stdin.resume();
   stdin.setEncoding('utf8');
-  
+
   stdin.on('data', (key: string) => {
     // Arrow keys send escape sequences
     if (key === '\x1b[A' || key === 'k') handlers.onUp();
@@ -325,6 +338,7 @@ packages/core/
 ## Implementation Plan
 
 ### Phase 1: Core Rendering (2-3 hours)
+
 1. Create package skeleton with `package.json`, `tsconfig.json`
 2. Implement `tree.ts` - scan directory, build tree structure
 3. Implement `render.ts` - basic ANSI rendering without highlighting
@@ -332,18 +346,21 @@ packages/core/
 5. Create basic main loop in `introspect.ts`
 
 ### Phase 2: File Preview (1-2 hours)
+
 1. Add `highlight.ts` - integrate cli-highlight
 2. Add file reading to state updates
 3. Add scroll offset for preview pane
 4. Handle large files (truncation, line numbers)
 
 ### Phase 3: Live Updates (1-2 hours)
+
 1. Implement `watcher.ts` - fs.watch + polling
 2. Integrate watcher into main loop
 3. Handle file additions/removals gracefully
 4. Update selection when selected file is deleted
 
 ### Phase 4: Polish (1-2 hours)
+
 1. Add help overlay
 2. Handle terminal resize
 3. Add error handling (permission denied, etc.)
@@ -351,6 +368,7 @@ packages/core/
 5. Add to playground's `pok.config.ts`
 
 ### Phase 5: Integration (1 hour)
+
 1. Create command definition for pok router
 2. Wire up in playground's embedded filesystem
 3. Test side-by-side with `pok learn`
@@ -361,12 +379,14 @@ packages/core/
 ### Q1: Should tree be collapsible?
 
 **Recommendation**: Yes, but start simple.
+
 - V1: Flat list, no expansion
 - V2: Add expand/collapse for directories
 
 ### Q2: How to handle very long files?
 
 **Options**:
+
 1. Truncate at 1000 lines, show "(truncated)"
 2. Virtual scrolling (complex)
 3. Just render visible portion (selected)
@@ -376,6 +396,7 @@ packages/core/
 ### Q3: Should we show file metadata?
 
 **Options**:
+
 1. Just filename
 2. Filename + size
 3. Filename + last modified
@@ -386,19 +407,22 @@ packages/core/
 
 **Risk**: WebContainer's fs.watch may not fire events reliably.
 
-**Mitigation**: 
+**Mitigation**:
+
 - Default to polling (500ms) in WebContainer
 - Use native fs.watch only when `process.env.WEBCONTAINER !== 'true'`
 
 ## Hypothesis
 
 A raw ANSI-based TUI will be:
+
 1. **Lightweight** - <10KB bundle impact
 2. **Compatible** - Works in both Bun and WebContainer
 3. **Responsive** - 60fps rendering is achievable with debounced updates
 4. **Maintainable** - Simple code, no framework abstractions
 
 If this hypothesis is wrong (e.g., WebContainer has issues with raw mode), we can pivot to:
+
 - A simpler `watch` command that just logs changes
 - An Ink-based implementation if bundle size is acceptable
 
@@ -409,6 +433,7 @@ If this hypothesis is wrong (e.g., WebContainer has issues with raw mode), we ca
 The `@pokjs/introspect` package has been created with all planned features:
 
 **Package Structure:**
+
 ```
 packages/introspect/
 ├── src/
@@ -427,6 +452,7 @@ packages/introspect/
 ```
 
 **Features Implemented:**
+
 1. Vertical split layout (file tree on top, preview below)
 2. Syntax highlighting via cli-highlight for TypeScript, JavaScript, JSON, etc.
 3. File tree with folder expand/collapse support
@@ -437,6 +463,7 @@ packages/introspect/
 8. Unicode box-drawing characters for clean borders
 
 **Dependencies:**
+
 - `@pokjs/core: workspace:*`
 - `cli-highlight: ^2.1.11`
 

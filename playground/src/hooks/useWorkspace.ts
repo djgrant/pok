@@ -28,9 +28,7 @@ export type WorkspaceState = {
 };
 
 const initialState: WorkspaceState = {
-  tabs: [
-    { id: 'shell', type: 'terminal', label: 'shell', closeable: false },
-  ],
+  tabs: [{ id: 'shell', type: 'terminal', label: 'shell', closeable: false }],
   activeTabId: 'shell',
   splitTabId: null,
   sidebarCollapsed: false,
@@ -151,9 +149,7 @@ export function useWorkspace(): UseWorkspaceResult {
   const updateTabTitle = useCallback((id: string, title: string) => {
     setState((prev) => ({
       ...prev,
-      tabs: prev.tabs.map((tab) =>
-        tab.id === id ? { ...tab, dynamicTitle: title } : tab
-      ),
+      tabs: prev.tabs.map((tab) => (tab.id === id ? { ...tab, dynamicTitle: title } : tab)),
     }));
   }, []);
 
@@ -162,7 +158,11 @@ export function useWorkspace(): UseWorkspaceResult {
       ...prev,
       tabs: prev.tabs.map((tab) =>
         tab.id === id
-          ? { ...tab, taskStatus: (exitCode === 0 ? 'completed' : 'failed') as TaskStatus, exitCode }
+          ? {
+              ...tab,
+              taskStatus: (exitCode === 0 ? 'completed' : 'failed') as TaskStatus,
+              exitCode,
+            }
           : tab
       ),
     }));
@@ -180,6 +180,16 @@ export function useWorkspace(): UseWorkspaceResult {
       updateTabTitle,
       setTaskComplete,
     }),
-    [state, setActiveTab, setSplitTab, toggleSidebar, openFileTab, closeTab, toggleFolder, updateTabTitle, setTaskComplete]
+    [
+      state,
+      setActiveTab,
+      setSplitTab,
+      toggleSidebar,
+      openFileTab,
+      closeTab,
+      toggleFolder,
+      updateTabTitle,
+      setTaskComplete,
+    ]
   );
 }

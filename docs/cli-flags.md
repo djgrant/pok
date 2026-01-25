@@ -118,11 +118,11 @@ mycli deploy --verbose
 
 Some flags can also be set via environment variables:
 
-| Flag          | Environment Variable |
-| ------------ | -------------------- |
-| `--no-color` | `NO_COLOR=1`         |
-| `--no-unicode` | `NO_UNICODE=1`     |
-| `--no-tty`   | `NO_TTY=1`           |
+| Flag           | Environment Variable |
+| -------------- | -------------------- |
+| `--no-color`   | `NO_COLOR=1`         |
+| `--no-unicode` | `NO_UNICODE=1`       |
+| `--no-tty`     | `NO_TTY=1`           |
 
 Environment variables are overridden by explicit flags.
 

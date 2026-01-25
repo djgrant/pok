@@ -9,6 +9,7 @@
 ## Problem
 
 Comprehensive interactive testing of the pok playground to evaluate:
+
 - Loading experience and transitions
 - Learn command menu interactions
 - Introspect panel functionality
@@ -28,6 +29,7 @@ Comprehensive interactive testing of the pok playground to evaluate:
 ## Testing Methodology
 
 Used browser automation to:
+
 1. Navigate to http://localhost:5173
 2. Capture screenshots at each state
 3. Interact with menu options via keyboard
@@ -44,6 +46,7 @@ Used browser automation to:
 **Rating**: Excellent
 
 **Observations**:
+
 - Clean loading screen with "pok" branding in accent blue
 - Animated loading dots (three bouncing dots)
 - Whimsical rotating messages that add personality:
@@ -63,6 +66,7 @@ Used browser automation to:
 **Rating**: Good with minor issues
 
 **Observations**:
+
 - Left terminal: `pok learn` menu with 4 options
 - Right terminal: `pok introspect` showing file tree and code preview
 - Layout: 50/50 split (currently, spec suggests 1/3-2/3 was being considered)
@@ -70,11 +74,11 @@ Used browser automation to:
 
 **Issues Found**:
 
-| Issue | Severity | Description |
-|-------|----------|-------------|
-| Focus confusion | Medium | Right panel has initial focus, not left |
-| No visual focus indicator | Low | Can't tell which terminal is active |
-| Status bar corruption | Critical | Already documented in wp-2024-12-29-ux-visual-review.md |
+| Issue                     | Severity | Description                                             |
+| ------------------------- | -------- | ------------------------------------------------------- |
+| Focus confusion           | Medium   | Right panel has initial focus, not left                 |
+| No visual focus indicator | Low      | Can't tell which terminal is active                     |
+| Status bar corruption     | Critical | Already documented in wp-2024-12-29-ux-visual-review.md |
 
 **User Impact**: First-time user may try to use arrow keys and wonder why the left menu doesn't respond (keyboard goes to right panel).
 
@@ -87,6 +91,7 @@ Used browser automation to:
 **Rating**: Excellent
 
 **Flow Observed**:
+
 1. Press Enter on menu item
 2. Shows "Creating commands/hello.ts..."
 3. Displays file content in a nice bordered box
@@ -97,6 +102,7 @@ Used browser automation to:
 8. Returns to menu
 
 **Highlights**:
+
 - Real-time file creation visible in introspect panel
 - Clear cause-effect relationship
 - Good educational messaging
@@ -110,6 +116,7 @@ Used browser automation to:
 **Rating**: Excellent
 
 **Flow Observed**:
+
 1. Creates `commands/greet.ts` with Zod schema example
 2. Shows more complex code with context pattern
 3. Introspect panel updates (now shows 4 files)
@@ -118,6 +125,7 @@ Used browser automation to:
 6. Educational message: "Done. Flags become context. Schema validates them."
 
 **Highlights**:
+
 - Progressively builds on first example
 - Demonstrates real validation patterns
 - Clear teaching moment
@@ -131,16 +139,19 @@ Used browser automation to:
 **Rating**: Good
 
 **Flow Observed**:
+
 1. Creates `commands/dev.ts` showing tabs API
 2. Shows `r.tabs([r.exec('npm run server'), r.exec('npm run watch')])` pattern
 3. Provides explanation about tabbed interface
 4. Honest limitation message: "(Can't demo in browser – tabs need a real terminal.)"
 
 **Highlights**:
+
 - Good handling of browser limitation
 - Still teaches the concept without live demo
 
 **Minor Issue**:
+
 - Introspect panel didn't seem to show `dev.ts` in file list (may need investigation)
 
 ---
@@ -150,6 +161,7 @@ Used browser automation to:
 **Rating**: Excellent
 
 **Flow Observed**:
+
 1. Shows helpful summary of what was created
 2. Provides quick reference commands:
    - `pok` - see all commands
@@ -159,6 +171,7 @@ Used browser automation to:
 4. User can now type commands freely
 
 **Highlights**:
+
 - Clean handoff to exploration mode
 - Helpful command reference
 - Full shell access works (tested `pok` command successfully)
@@ -172,6 +185,7 @@ Used browser automation to:
 **Rating**: Good with known issues
 
 **Observations**:
+
 - File tree navigation with arrow keys works correctly
 - Selecting different files updates code preview immediately
 - Syntax highlighting is working:
@@ -182,6 +196,7 @@ Used browser automation to:
 - File selection is highlighted
 
 **Issues** (already documented):
+
 - Status bar text wrapping/corruption at bottom
 - Code truncation with ellipsis (working as designed)
 
@@ -207,7 +222,8 @@ Used browser automation to:
 
 #### 5.3 Page reload
 
-**Behavior**: 
+**Behavior**:
+
 - Shows fresh loading screen with different whimsical message
 - Creates fresh sandbox (only 2 files: introspect.ts, learn.ts)
 - Menu starts fresh
@@ -221,6 +237,7 @@ Used browser automation to:
 **Rating**: Good overall
 
 **Positive**:
+
 - Color scheme is cohesive (Tokyo Night palette)
 - Terminal fonts are legible
 - Code syntax highlighting works well
@@ -250,31 +267,35 @@ Used browser automation to:
 
 ### What Needs Improvement
 
-| Priority | Issue | Recommended Fix |
-|----------|-------|-----------------|
-| Critical | Status bar overflow | Make introspect responsive to narrow widths |
-| Medium | Initial focus on wrong panel | Auto-focus left panel on load |
-| Medium | 50/50 split may be too narrow | Consider 1/3-2/3 or adjustable split |
-| Low | No visual focus indicator | Add subtle border/glow on active panel |
-| Low | `dev.ts` not appearing in file list | Investigate introspect refresh timing |
+| Priority | Issue                               | Recommended Fix                             |
+| -------- | ----------------------------------- | ------------------------------------------- |
+| Critical | Status bar overflow                 | Make introspect responsive to narrow widths |
+| Medium   | Initial focus on wrong panel        | Auto-focus left panel on load               |
+| Medium   | 50/50 split may be too narrow       | Consider 1/3-2/3 or adjustable split        |
+| Low      | No visual focus indicator           | Add subtle border/glow on active panel      |
+| Low      | `dev.ts` not appearing in file list | Investigate introspect refresh timing       |
 
 ---
 
 ## Recommendations
 
 ### Immediate (P0)
+
 1. Fix introspect status bar for narrow terminals (already documented)
 
 ### Short-term (P1)
+
 2. Add auto-focus to left panel (learn terminal) on page load
 3. Add visual indicator for which terminal has focus
 
 ### Medium-term (P2)
+
 4. Consider adjustable panel split (drag handle)
 5. Investigate 1/3-2/3 default split for better introspect readability
 6. Add "Reset" button in header (per original spec)
 
 ### Long-term (P3)
+
 7. Update SPEC.md to reflect current dual-terminal design
 8. Add keyboard shortcut to switch focus between panels
 9. Consider mobile/narrow viewport handling
@@ -284,6 +305,7 @@ Used browser automation to:
 ## Hypothesis
 
 The playground provides an effective learning experience despite some technical issues. The core educational flow is solid - users can:
+
 1. See code being created
 2. See the effect immediately
 3. Understand the patterns through hands-on experience
@@ -301,6 +323,7 @@ Interactive testing completed successfully. All four menu options tested and doc
 ## Evaluation
 
 The playground achieves its goal of teaching pok interactively. The `pok learn` command is well-designed with:
+
 - Progressive disclosure (simple -> complex examples)
 - Immediate feedback (file creation, command execution)
 - Honest limitations (tabs can't demo in browser)

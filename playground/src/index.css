@@ -309,8 +309,9 @@ body {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   flex-shrink: 0;
-  transition: width var(--duration-normal) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
+  transition:
+    width var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
 }
 
 .sidebar-collapsed {
@@ -331,8 +332,12 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .sidebar-header {
@@ -827,11 +832,12 @@ body {
 }
 
 @keyframes errorPulse {
-  0%, 100% { 
+  0%,
+  100% {
     opacity: 0.9;
     transform: scale(1);
   }
-  50% { 
+  50% {
     opacity: 1;
     transform: scale(1.05);
   }
@@ -895,8 +901,9 @@ body {
 .retry-button:focus-visible,
 .browser-link:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--bg-secondary), 
-              0 0 0 4px var(--focus-ring);
+  box-shadow:
+    0 0 0 2px var(--bg-secondary),
+    0 0 0 4px var(--focus-ring);
 }
 
 /* ============================================
@@ -1026,16 +1033,16 @@ body {
 }
 
 /* File highlight animation for newly created files */
-.file-tree-item[data-highlighted="true"] {
+.file-tree-item[data-highlighted='true'] {
   animation: fileHighlight 1.5s ease-out;
 }
 
 @keyframes fileHighlight {
-  0% { 
+  0% {
     background: var(--success-muted);
     transform: scale(1.02);
   }
-  100% { 
+  100% {
     background: transparent;
     transform: scale(1);
   }
@@ -1242,8 +1249,12 @@ a:focus {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .skeleton-text {

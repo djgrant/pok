@@ -275,8 +275,7 @@ export function createTutorialEngine(tutorial: Tutorial): TutorialEngine {
       const lastStepIndex = lastSection.steps.length - 1;
 
       return (
-        state.currentSectionIndex === lastSectionIndex &&
-        state.currentStepIndex === lastStepIndex
+        state.currentSectionIndex === lastSectionIndex && state.currentStepIndex === lastStepIndex
       );
     },
 

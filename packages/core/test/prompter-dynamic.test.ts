@@ -62,10 +62,10 @@ describe('isDynamicOptions', () => {
 
 describe('withCapabilities', () => {
   it('attaches capabilities to provider function', () => {
-    const provider = withCapabilities(
-      async () => ({ options: [{ value: 'a', label: 'A' }] }),
-      { supportsFilter: true, filterDebounceMs: 200 }
-    );
+    const provider = withCapabilities(async () => ({ options: [{ value: 'a', label: 'A' }] }), {
+      supportsFilter: true,
+      filterDebounceMs: 200,
+    });
 
     expect(provider.capabilities).toEqual({
       supportsFilter: true,

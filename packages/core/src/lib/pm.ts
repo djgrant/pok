@@ -204,7 +204,10 @@ export async function loadPackageInfo(
 /**
  * Discover all workspace packages and return a map of name -> path
  */
-export async function buildWorkspaceMap(projectRoot: string, runtime: any): Promise<Map<string, string>> {
+export async function buildWorkspaceMap(
+  projectRoot: string,
+  runtime: any
+): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   const patterns: string[] = [];
 
@@ -334,9 +337,9 @@ export function createPmAction(
 ): CommandConfig {
   const pm = getPackageManager(cwd);
   const isPnpmWorkspace = pm === 'pnpm' && fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml'));
-  const isYarnWorkspace = 
-    pm === 'yarn' && 
-    fs.existsSync(path.join(cwd, 'package.json')) && 
+  const isYarnWorkspace =
+    pm === 'yarn' &&
+    fs.existsSync(path.join(cwd, 'package.json')) &&
     (() => {
       try {
         return !!JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')).workspaces;
