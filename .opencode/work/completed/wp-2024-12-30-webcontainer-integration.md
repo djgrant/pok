@@ -1,14 +1,17 @@
 # WebContainer Integration
 
 ## Problem
+
 Tutorial actions (Create File, Run Command) need to execute real operations in the WebContainer. Currently, the tutorial panel has placeholder callbacks. We need to connect these to the WebContainer API to make the tutorial fully functional.
 
 ## Scope
+
 - `playground/src/hooks/useTutorialActions.ts` (new)
 - `playground/src/hooks/useWebContainer.ts` (updates)
 - Integration between TutorialPanel and WebContainer
 
 ## Approach
+
 1. Create `useTutorialActions` hook with actions interface:
    ```typescript
    type TutorialActions = {
@@ -46,9 +49,11 @@ Tutorial actions (Create File, Run Command) need to execute real operations in t
    - Wire up FilePreview.onAction and CommandBlock.onRun
 
 ## Hypothesis
+
 Connecting to the existing WebContainer infrastructure will be straightforward since the playground already handles file operations and terminal execution. The key challenge is proper error handling and loading states to prevent user confusion during async operations.
 
 ## Acceptance Criteria
+
 - [x] File creation works and updates explorer
 - [x] Command execution works and shows in terminal
 - [x] Errors are handled gracefully (show in tutorial)
@@ -56,6 +61,7 @@ Connecting to the existing WebContainer infrastructure will be straightforward s
 - [x] Loading states shown during async operations
 
 ## Dependencies
+
 Phase 5 (layout) - need the three-pane layout with integrated TutorialPanel
 
 ## Results
@@ -63,9 +69,11 @@ Phase 5 (layout) - need the three-pane layout with integrated TutorialPanel
 ### Implementation Complete (2024-12-30)
 
 **Files Created:**
+
 - `playground/src/hooks/useTutorialActions.ts` - New hook providing WebContainer integration
 
 **Files Modified:**
+
 - `playground/src/App.tsx` - Added useTutorialActions integration, passes real actions to TutorialPanel
 - `playground/src/components/TutorialPanel.tsx` - Added isLoading, error, and onClearError props
 - `playground/src/components/TutorialPanel.css` - Added error banner and loading overlay styles
@@ -94,6 +102,7 @@ Phase 5 (layout) - need the three-pane layout with integrated TutorialPanel
    - TutorialPanel receives real WebContainer-backed actions
 
 **Verification:**
+
 - TypeScript compilation passes (`npx tsc --noEmit`)
 - Production build succeeds (`npm run build`)
 
@@ -102,6 +111,7 @@ Phase 5 (layout) - need the three-pane layout with integrated TutorialPanel
 The hypothesis was correct - integrating with the existing WebContainer infrastructure was straightforward. The existing patterns for file operations (via event bus) and terminal execution (via spawn) were well-established and easy to leverage.
 
 Key design decisions:
+
 1. Used a dedicated hook rather than context to keep the integration explicit and testable
 2. Stream reading uses `getReader()` pattern for output capture rather than pipeTo with WritableStream, which is simpler for collecting output
 3. Error handling surfaces errors to the UI rather than just console logging

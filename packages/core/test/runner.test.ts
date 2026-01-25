@@ -341,10 +341,9 @@ describe('runner.parallel() modes', () => {
     it('waits for all commands when all succeed', async () => {
       const runner = createTestRunner({ quiet: true });
 
-      await runner.parallel(
-        [runner.exec('echo a'), runner.exec('echo b'), runner.exec('echo c')],
-        { mode: 'fail-fast' }
-      );
+      await runner.parallel([runner.exec('echo a'), runner.exec('echo b'), runner.exec('echo c')], {
+        mode: 'fail-fast',
+      });
       // Should complete without error
     });
 
@@ -385,10 +384,9 @@ describe('runner.parallel() modes', () => {
     it('runs all commands to completion', async () => {
       const runner = createTestRunner({ quiet: true });
 
-      await runner.parallel(
-        [runner.exec('echo a'), runner.exec('echo b'), runner.exec('echo c')],
-        { mode: 'all-settled' }
-      );
+      await runner.parallel([runner.exec('echo a'), runner.exec('echo b'), runner.exec('echo c')], {
+        mode: 'all-settled',
+      });
       // Should complete without error
     });
 

@@ -73,12 +73,12 @@ Done. You just saw a command created and executed.
 ```
 
 **Timing:**
+
 - File creation: instant
 - Brief pause (300ms) before running
 - Command execution: instant
 
 **In introspect panel:** User sees `commands/hello.ts` appear in real-time.
-
 
 ### Option 2: "Add arguments"
 
@@ -115,7 +115,6 @@ Done. Flags become context. Schema validates them.
 
 **In introspect panel:** User sees `commands/greet.ts` with the `context` object.
 
-
 ### Option 3: "See tabs"
 
 **What happens:**
@@ -145,7 +144,6 @@ Switch with ← →, quit with q.
 ```
 
 **Why no execution:** Tabs require a TUI which WebContainer can't provide. We show the code and explain the limitation honestly.
-
 
 ### Option 4: "Explore freely"
 
@@ -192,6 +190,7 @@ No syntax highlighting. The simplicity is the point.
 ### Reporter Output
 
 Command output uses the standard reporter:
+
 - `◇` prefix for success (from clack)
 - Standard colors
 
@@ -250,13 +249,13 @@ run: async (r) => {
     });
 
     if (choice === 'exit') break;
-    
+
     await runAction(choice, r);
-    
+
     // Small pause before returning to menu
     await sleep(500);
   }
-}
+};
 ```
 
 ### Output Streaming
@@ -267,15 +266,15 @@ For real-time feel, print output progressively:
 async function printBox(filename: string, code: string, r: Runner) {
   r.reporter.info(`Creating ${filename}...`);
   await sleep(200);
-  
+
   r.reporter.info('');
   r.reporter.info(`┌─ ${filename} ${'─'.repeat(40 - filename.length)}┐`);
-  
+
   for (const line of code.split('\n')) {
     r.reporter.info(`│  ${line.padEnd(38)}│`);
     await sleep(30); // Typewriter effect
   }
-  
+
   r.reporter.info(`└${'─'.repeat(42)}┘`);
   r.reporter.info('');
 }
@@ -336,7 +335,7 @@ function printBox(r: any, filename: string, code: string) {
   const lines = code.trim().split('\n');
   const width = 50;
   const padding = width - filename.length - 4;
-  
+
   r.reporter.info(`┌─ ${filename} ${'─'.repeat(padding)}┐`);
   r.reporter.info('│' + ' '.repeat(width) + '│');
   for (const line of lines) {
@@ -383,26 +382,26 @@ exports.command = defineCommand({
       if (choice === 'create') {
         r.reporter.info('Creating commands/hello.ts...');
         r.reporter.info('');
-        
+
         writeFileSync('commands/hello.ts', HELLO_CODE);
-        
+
         printBox(r, 'commands/hello.ts', HELLO_CODE);
-        
+
         r.reporter.info('');
         r.reporter.info('Running: pok hello');
         r.reporter.info('');
-        
+
         await sleep(300);
-        
+
         try {
-          execSync('node_modules/.bin/pok hello', { 
+          execSync('node_modules/.bin/pok hello', {
             stdio: 'inherit',
             cwd: process.cwd()
           });
         } catch (e) {
           // Command output already shown
         }
-        
+
         r.reporter.info('');
         r.reporter.info('Done. You just saw a command created and executed.');
       }
@@ -410,26 +409,26 @@ exports.command = defineCommand({
       if (choice === 'args') {
         r.reporter.info('Creating commands/greet.ts...');
         r.reporter.info('');
-        
+
         writeFileSync('commands/greet.ts', GREET_CODE);
-        
+
         printBox(r, 'commands/greet.ts', GREET_CODE);
-        
+
         r.reporter.info('');
         r.reporter.info('Running: pok greet --name World');
         r.reporter.info('');
-        
+
         await sleep(300);
-        
+
         try {
-          execSync('node_modules/.bin/pok greet --name World', { 
+          execSync('node_modules/.bin/pok greet --name World', {
             stdio: 'inherit',
             cwd: process.cwd()
           });
         } catch (e) {
           // Command output already shown
         }
-        
+
         r.reporter.info('');
         r.reporter.info('Done. Flags become context. Schema validates them.');
       }
@@ -437,9 +436,9 @@ exports.command = defineCommand({
       if (choice === 'tabs') {
         r.reporter.info('Tabs run multiple processes side by side.');
         r.reporter.info('');
-        
+
         printBox(r, 'commands/dev.ts', DEV_CODE);
-        
+
         r.reporter.info('');
         r.reporter.info('In a real terminal, this opens a tabbed interface.');
         r.reporter.info('Each tab shows its process output.');
@@ -501,6 +500,7 @@ Cause and effect. No explanation needed.
 ## What This Removes
 
 From the current learn command:
+
 - ❌ Welcome text ("Welcome to pok! This interactive tutorial...")
 - ❌ Progress tracking ("Progress: 2/4 lessons completed")
 - ❌ Completion checkmarks ("✓ Your first command")
@@ -533,7 +533,7 @@ Implementation completed on 2024-12-29.
 2. **New behavior:**
    - Four menu options: Create a command, Add arguments, See tabs, Explore freely
    - "Create a command" - instantly creates `commands/hello.ts`, shows code in box, runs `pok hello`
-   - "Add arguments" - creates `commands/greet.ts` with `--name` flag, runs `pok greet --name World`  
+   - "Add arguments" - creates `commands/greet.ts` with `--name` flag, runs `pok greet --name World`
    - "See tabs" - shows code example, explains limitation in browser
    - "Explore freely" - exits with helpful hints
 

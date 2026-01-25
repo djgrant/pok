@@ -123,12 +123,12 @@ If you see boxes (□) instead of symbols:
 
 ## Environment Variables
 
-| Variable       | Effect                          |
-| -------------- | ------------------------------- |
-| `NO_COLOR`     | Disables color output           |
-| `NO_UNICODE`   | Disables Unicode symbols        |
-| `NO_TTY`       | Disables interactive UI         |
-| `CI`           | Enables `--no-tty` behavior     |
-| `FORCE_COLOR`  | Forces color even in non-TTY    |
-| `TERM`         | Terminal type detection         |
-| `TERM_PROGRAM` | Terminal program detection      |
+| Variable       | Effect                       |
+| -------------- | ---------------------------- |
+| `NO_COLOR`     | Disables color output        |
+| `NO_UNICODE`   | Disables Unicode symbols     |
+| `NO_TTY`       | Disables interactive UI      |
+| `CI`           | Enables `--no-tty` behavior  |
+| `FORCE_COLOR`  | Forces color even in non-TTY |
+| `TERM`         | Terminal type detection      |
+| `TERM_PROGRAM` | Terminal program detection   |

@@ -84,7 +84,6 @@ describe('Output Config', () => {
         expect(config.color).toBe(false);
       });
 
-
       it('--no-color overrides FORCE_COLOR', () => {
         setEnv({ NO_COLOR: undefined, FORCE_COLOR: '1', CI: undefined, TERM: undefined });
         setTTY(false);
@@ -123,35 +122,65 @@ describe('Output Config', () => {
 
     describe('unicode detection', () => {
       it('--no-unicode flag disables unicode', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: undefined, CI: undefined, TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: undefined,
+        });
         setTTY(true);
         const config = detectOutputConfig(['--no-unicode']);
         expect(config.unicode).toBe(false);
       });
 
       it('NO_UNICODE environment disables unicode', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: '1', FORCE_COLOR: undefined, CI: undefined, TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: '1',
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: undefined,
+        });
         setTTY(true);
         const config = detectOutputConfig([]);
         expect(config.unicode).toBe(false);
       });
 
       it('TERM=dumb disables unicode', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: undefined, CI: undefined, TERM: 'dumb' });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: 'dumb',
+        });
         setTTY(true);
         const config = detectOutputConfig([]);
         expect(config.unicode).toBe(false);
       });
 
       it('enables unicode by default', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: undefined, CI: undefined, TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: undefined,
+        });
         setTTY(true);
         const config = detectOutputConfig([]);
         expect(config.unicode).toBe(true);
       });
 
       it('--no-color does not disable unicode', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: undefined, CI: undefined, TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: undefined,
+        });
         setTTY(true);
         const config = detectOutputConfig(['--no-color']);
         expect(config.unicode).toBe(true);
@@ -209,7 +238,13 @@ describe('Output Config', () => {
 
     describe('combined scenarios', () => {
       it('CI environment disables interactivity but allows color if FORCE_COLOR is set', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: '1', CI: 'true', TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: '1',
+          CI: 'true',
+          TERM: undefined,
+        });
         setTTY(false);
         const config = detectOutputConfig([]);
         expect(config.color).toBe(true);
@@ -218,7 +253,13 @@ describe('Output Config', () => {
       });
 
       it('--no-color and --no-unicode disable both color and unicode', () => {
-        setEnv({ NO_COLOR: undefined, NO_UNICODE: undefined, FORCE_COLOR: undefined, CI: undefined, TERM: undefined });
+        setEnv({
+          NO_COLOR: undefined,
+          NO_UNICODE: undefined,
+          FORCE_COLOR: undefined,
+          CI: undefined,
+          TERM: undefined,
+        });
         setTTY(true);
         const config = detectOutputConfig(['--no-color', '--no-unicode']);
         expect(config.color).toBe(false);

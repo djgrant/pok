@@ -1,9 +1,11 @@
 # Tutorial Renderer Components
 
 ## Problem
+
 The playground needs headless React components for rendering tutorial content. These components must be styled via CSS variables (not hardcoded styles) and use render props for customizable action buttons. The components will render file previews, command blocks, and tutorial steps in a consistent, data-driven way.
 
 ## Scope
+
 - `packages/reporter-web/src/components/` (new directory)
 - `packages/reporter-web/src/components/TutorialStep.tsx`
 - `packages/reporter-web/src/components/FilePreview.tsx`
@@ -13,6 +15,7 @@ The playground needs headless React components for rendering tutorial content. T
 - `packages/reporter-web/src/components/index.ts` (exports)
 
 ## Approach
+
 1. Create component directory structure in reporter-web package
 2. Implement `TutorialStep` component:
    - Props: number, title, status (active/complete/pending), children
@@ -37,9 +40,11 @@ The playground needs headless React components for rendering tutorial content. T
 9. Create test page or stories for visual verification
 
 ## Hypothesis
+
 The headless component pattern with CSS variables will allow the playground to fully customize styling while the reporter-web package remains reusable. Render props for action buttons will provide flexibility for different interaction patterns (buttons vs links, different labels).
 
 ## Acceptance Criteria
+
 - [x] Components render correctly with data attributes for styling
 - [x] Render props pattern allows custom action buttons
 - [x] Components are unstyled (CSS variables only)
@@ -47,12 +52,15 @@ The headless component pattern with CSS variables will allow the playground to f
 - [x] TypeScript types are clean and exported
 
 ## Dependencies
+
 Phase 1 (store) - for reporter-web package structure
 
 ## Results
+
 ### Iteration 1 (2024-12-30)
 
 **Files Created:**
+
 - `packages/reporter-web/src/components/TutorialStep.tsx` - Step container with number, title, status, children
 - `packages/reporter-web/src/components/FilePreview.tsx` - File content display with path header and action slot
 - `packages/reporter-web/src/components/CommandBlock.tsx` - Shell command display with $ prefix and output
@@ -62,6 +70,7 @@ Phase 1 (store) - for reporter-web package structure
 - Updated `packages/reporter-web/src/index.ts` to export all components and types
 
 **Implementation Details:**
+
 1. All components use `data-*` attributes for styling hooks:
    - `data-status` on TutorialStep, FilePreview, CommandBlock
    - `data-variant` on ContentBox
@@ -82,4 +91,5 @@ Phase 1 (store) - for reporter-web package structure
 **Note:** Visual verification (Storybook/test page) not created as it was not explicitly required in the work package scope. Components are ready for integration with the playground.
 
 ## Evaluation
+
 The hypothesis was validated - headless components with CSS variables and render props provide the flexibility needed for the playground to customize appearance and behavior. The implementation follows patterns seen in existing playground components (FileViewer.tsx, Terminal.tsx) while remaining decoupled from any specific styling or business logic.

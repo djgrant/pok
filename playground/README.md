@@ -43,13 +43,13 @@ The site is configured for Vercel deployment. The `vercel.json` file includes th
 
 ## Browser Support
 
-| Browser | Status |
-|---------|--------|
-| Chrome | Full support |
-| Firefox | Full support |
-| Edge | Full support (Chromium-based) |
-| Safari | Not supported (WebContainer limitation) |
-| Mobile | Shows "best on desktop" message |
+| Browser | Status                                  |
+| ------- | --------------------------------------- |
+| Chrome  | Full support                            |
+| Firefox | Full support                            |
+| Edge    | Full support (Chromium-based)           |
+| Safari  | Not supported (WebContainer limitation) |
+| Mobile  | Shows "best on desktop" message         |
 
 ## Adding Lessons
 
@@ -76,8 +76,8 @@ Create a file:
 ```typescript file="commands/hello.ts"
 export default {
   name: 'hello',
-  run: () => console.log('Hello!')
-}
+  run: () => console.log('Hello!'),
+};
 ```
 
 Run it:

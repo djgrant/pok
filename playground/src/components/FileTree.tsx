@@ -114,7 +114,7 @@ export function FileTree({
       ) {
         loadTree();
       }
-      
+
       // Highlight newly created files
       if (event.type === 'file:created') {
         setHighlightedFiles((prev) => new Set(prev).add(event.path));
@@ -258,7 +258,9 @@ function FileTreeItem({
         data-highlighted={isHighlighted ? 'true' : undefined}
       >
         {node.isDirectory && (
-          <span className="file-tree-chevron">{isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}</span>
+          <span className="file-tree-chevron">
+            {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+          </span>
         )}
         <span className="file-tree-icon">{icon}</span>
         <span className="file-tree-name">{node.name}</span>
@@ -293,7 +295,13 @@ function FolderIcon() {
 
 function FolderOpenIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="icon-folder-open">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      className="icon-folder-open"
+    >
       <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.172a1.5 1.5 0 0 1 1.06.44l.829.828a.5.5 0 0 0 .353.147H13.5A1.5 1.5 0 0 1 15 4.915V5H2.5A1.5 1.5 0 0 0 1 6.5v-3z" />
       <path d="M1.5 6h12.585a1.5 1.5 0 0 1 1.476 1.233l.914 5.022A1.5 1.5 0 0 1 15 14H2.5A1.5 1.5 0 0 1 1 12.5v-6z" />
     </svg>
@@ -334,7 +342,14 @@ function getFileColor(extension: string): string {
 
 function ChevronRightIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <polyline points="6 4 10 8 6 12" />
     </svg>
   );
@@ -342,7 +357,14 @@ function ChevronRightIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <polyline points="4 6 8 10 12 6" />
     </svg>
   );

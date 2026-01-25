@@ -20,18 +20,11 @@
 
 // TutorialStep
 export { TutorialStep } from './TutorialStep';
-export type {
-  TutorialStepProps,
-  TutorialStepStatus,
-} from './TutorialStep';
+export type { TutorialStepProps, TutorialStepStatus } from './TutorialStep';
 
 // FilePreview
 export { FilePreview } from './FilePreview';
-export type {
-  FilePreviewProps,
-  FilePreviewStatus,
-  FilePreviewActionProps,
-} from './FilePreview';
+export type { FilePreviewProps, FilePreviewStatus, FilePreviewActionProps } from './FilePreview';
 
 // CommandBlock
 export { CommandBlock } from './CommandBlock';
@@ -47,7 +40,4 @@ export type { ProgressIndicatorProps } from './ProgressIndicator';
 
 // ContentBox
 export { ContentBox } from './ContentBox';
-export type {
-  ContentBoxProps,
-  ContentBoxVariant,
-} from './ContentBox';
+export type { ContentBoxProps, ContentBoxVariant } from './ContentBox';

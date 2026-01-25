@@ -38,7 +38,8 @@ export async function getNodeMajorVersion(): Promise<number | null> {
  */
 export async function run(cmd: string, args: string[] = []): Promise<{ exitCode: number }> {
   const runtime = await getRuntime();
-  const fullCmd = args.length > 0 ? `${cmd} ${args.map((a) => runtime.escapeShell(a)).join(' ')}` : cmd;
+  const fullCmd =
+    args.length > 0 ? `${cmd} ${args.map((a) => runtime.escapeShell(a)).join(' ')}` : cmd;
   const result = await runtime.shell(fullCmd);
   return { exitCode: result.exitCode };
 }
@@ -48,7 +49,8 @@ export async function run(cmd: string, args: string[] = []): Promise<{ exitCode:
  */
 export async function runQuiet(cmd: string, args: string[] = []): Promise<boolean> {
   const runtime = await getRuntime();
-  const fullCmd = args.length > 0 ? `${cmd} ${args.map((a) => runtime.escapeShell(a)).join(' ')}` : cmd;
+  const fullCmd =
+    args.length > 0 ? `${cmd} ${args.map((a) => runtime.escapeShell(a)).join(' ')}` : cmd;
   const result = await runtime.shell(fullCmd, { quiet: true });
   return result.exitCode === 0;
 }

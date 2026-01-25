@@ -133,4 +133,3 @@ export type Unsubscribe = () => void;
 import type { ReporterAdapter, ReporterAdapterController } from './adapter.js';
 
 export type { EventBus, ReporterAdapter, ReporterAdapterController };
-

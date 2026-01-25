@@ -66,8 +66,8 @@ Manages the workspace UI state:
 
 ```typescript
 type WorkspaceState = {
-  tabs: Tab[];              // Open tabs (terminals + files)
-  activeTabId: string;      // Currently active tab
+  tabs: Tab[]; // Open tabs (terminals + files)
+  activeTabId: string; // Currently active tab
   splitTabId: string | null; // Split view secondary tab (desktop only)
   sidebarCollapsed: boolean; // Sidebar visibility
   expandedFolders: Set<string>; // Expanded folders in file tree
@@ -75,6 +75,7 @@ type WorkspaceState = {
 ```
 
 Actions:
+
 - `setActiveTab(id)` - Switch to a tab
 - `setSplitTab(id | null)` - Toggle split view
 - `toggleSidebar()` - Show/hide sidebar
@@ -101,13 +102,13 @@ to emit file events, which the FileTree subscribes to for live updates.
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Cmd+1, Cmd+2, ... | Switch to tab N |
-| Cmd+B | Toggle sidebar |
-| Cmd+W | Close active tab (file tabs only) |
-| Cmd+K | Clear active terminal |
-| Cmd+\ | Toggle split view (desktop only) |
+| Shortcut          | Action                            |
+| ----------------- | --------------------------------- |
+| Cmd+1, Cmd+2, ... | Switch to tab N                   |
+| Cmd+B             | Toggle sidebar                    |
+| Cmd+W             | Close active tab (file tabs only) |
+| Cmd+K             | Clear active terminal             |
+| Cmd+\             | Toggle split view (desktop only)  |
 
 Note: On Windows/Linux, use Ctrl instead of Cmd.
 
@@ -157,7 +158,7 @@ Located at: `commands/learn.ts` (embedded in WebContainer filesystem)
 ```
 What would you like to learn?
 +-- Your first command
-+-- Arguments and flags  
++-- Arguments and flags
 +-- Tabs (multi-process)
 +-- How was this made?
 +-- Free exploration
@@ -196,25 +197,25 @@ What would you like to learn?
 
 ### Color Palette
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| bg-primary | #1a1b26 | Terminal background |
-| bg-secondary | #24283b | Header/sidebar background |
-| text-primary | #c0caf5 | Main text |
-| text-muted | #565f89 | Secondary text |
-| accent | #7aa2f7 | Branding, links, active states |
-| success | #9ece6a | Success states |
-| error | #f7768e | Error states |
-| warning | #e0af68 | Warning states, folders |
+| Name         | Hex     | Usage                          |
+| ------------ | ------- | ------------------------------ |
+| bg-primary   | #1a1b26 | Terminal background            |
+| bg-secondary | #24283b | Header/sidebar background      |
+| text-primary | #c0caf5 | Main text                      |
+| text-muted   | #565f89 | Secondary text                 |
+| accent       | #7aa2f7 | Branding, links, active states |
+| success      | #9ece6a | Success states                 |
+| error        | #f7768e | Error states                   |
+| warning      | #e0af68 | Warning states, folders        |
 
 ### Animation Tokens
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| duration-fast | 100ms | Hover states |
-| duration-normal | 200ms | Sidebar, tabs |
-| duration-slow | 300ms | Complex transitions |
-| ease-out | cubic-bezier(0.16, 1, 0.3, 1) | Smooth easing |
+| Token           | Value                         | Usage               |
+| --------------- | ----------------------------- | ------------------- |
+| duration-fast   | 100ms                         | Hover states        |
+| duration-normal | 200ms                         | Sidebar, tabs       |
+| duration-slow   | 300ms                         | Complex transitions |
+| ease-out        | cubic-bezier(0.16, 1, 0.3, 1) | Smooth easing       |
 
 ## User Flows
 
@@ -258,11 +259,11 @@ What would you like to learn?
 
 ## Performance Targets
 
-| Metric | Target |
-|--------|--------|
-| Time to interactive | < 10s |
+| Metric                  | Target           |
+| ----------------------- | ---------------- |
+| Time to interactive     | < 10s            |
 | Terminal responsiveness | < 50ms input lag |
-| Memory usage | < 500MB |
+| Memory usage            | < 500MB          |
 
 ## Accessibility
 

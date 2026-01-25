@@ -1,14 +1,17 @@
 # Tutorial Panel UI
 
 ## Problem
+
 We need a complete tutorial panel component that renders in the playground's center column. This panel combines the tutorial renderer components with the tutorial engine to create the full tutorial experience. It must handle scrolling, step completion visual feedback, and integrate with WebContainer actions.
 
 ## Scope
+
 - `playground/src/components/TutorialPanel.tsx` (new)
 - `playground/src/components/TutorialPanel.css` (new)
 - `playground/src/hooks/useTutorialEngine.ts` (new)
 
 ## Approach
+
 1. Create `useTutorialEngine` hook:
    - Wraps tutorial engine from Phase 3
    - Provides React-friendly state and actions
@@ -38,9 +41,11 @@ We need a complete tutorial panel component that renders in the playground's cen
    - Action callbacks passed as props
 
 ## Hypothesis
+
 Separating the panel UI from WebContainer integration (Phase 6) will allow faster iteration on the visual design. The 380px width will provide comfortable reading while leaving enough space for the editor. Auto-scroll with delay will feel natural and not jarring.
 
 ## Acceptance Criteria
+
 - [x] Panel renders tutorial content from engine
 - [x] File preview shows code with syntax highlighting
 - [x] "Create File" button triggers WebContainer file write
@@ -50,6 +55,7 @@ Separating the panel UI from WebContainer integration (Phase 6) will allow faste
 - [x] Panel scrolls smoothly
 
 ## Dependencies
+
 - Phase 2 (tutorial renderer components)
 - Phase 3 (tutorial data model and engine)
 

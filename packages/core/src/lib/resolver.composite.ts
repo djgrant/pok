@@ -121,9 +121,7 @@ export function defineCompositeResolver<const TResolvers extends readonly AnyTyp
               ].join('\n')
             : 'No resolver could satisfy required context for these keys.';
 
-        throw new Error(
-          `[composite-resolver] Failed to resolve keys [${unresolved}]. ${details}`
-        );
+        throw new Error(`[composite-resolver] Failed to resolve keys [${unresolved}]. ${details}`);
       }
 
       return result;

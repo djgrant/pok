@@ -1,20 +1,24 @@
 # Architecture and Extensibility Research
 
 ## Problem
+
 Assess pok's architecture to understand how well it supports extensibility, modularity, and customization. Identify strengths, weaknesses, and opportunities for improvement.
 
 ## Scope
+
 - `packages/core/` - Core framework architecture
 - `packages/reporter-*/` - Reporter implementations
-- `packages/prompter-*/` - Prompter implementations  
+- `packages/prompter-*/` - Prompter implementations
 - `packages/tabs-*/` - Tab implementations
 - `docs/architecture.md` - Architecture documentation
 - Package boundaries and dependency graph
 
 ## Approach
+
 Deep code review of extension points, interfaces, dependency injection patterns, and package coupling.
 
 ## Hypothesis
+
 pok likely has a solid foundation with its event-driven architecture and interface-based adapters, but may have opportunities for additional extension points and clearer plugin boundaries.
 
 ## Results
@@ -25,6 +29,7 @@ pok likely has a solid foundation with its event-driven architecture and interfa
 
 **Event-Driven Core Design** (Excellent)
 The architecture follows a clean separation between event emission and event consumption:
+
 - `EventBus` provides pub/sub mechanism (`createEventBus()`)
 - `Reporter` emits semantic events (activities, groups, logs)
 - `ReporterAdapter` consumes events and renders output
@@ -32,6 +37,7 @@ The architecture follows a clean separation between event emission and event con
 
 **Interface-Based Abstraction** (Excellent)
 Core defines abstract interfaces; implementations are swappable:
+
 - `ReporterAdapter` - output rendering
 - `Prompter` - interactive input
 - `TabsAdapter` - tabbed terminal UI
@@ -39,12 +45,14 @@ Core defines abstract interfaces; implementations are swappable:
 
 **Schema-First Design** (Excellent)
 Zod schemas drive the entire system:
+
 - Command context definitions → type inference → validation
 - Environment resolvers declare required context → type-safe task execution
 - "Schema is destiny" principle is well-implemented
 
 **Runtime Abstraction** (Good)
 Clean runtime detection and abstraction layer:
+
 - `packages/core/src/runtime/` provides unified interface for Bun/Node.js
 - Lazy-loaded implementations prevent bundling unused code
 - `Runtime` interface covers spawn, shell, glob, file reading
@@ -53,14 +61,17 @@ Clean runtime detection and abstraction layer:
 
 **Hardcoded Adapter Dependencies in CLI Entry Point**
 `packages/core/src/cli.ts` lines 86-105 hardcode `@pokit/reporter-clack` and `@pokit/prompter-clack`:
+
 ```typescript
 const reporterModule = await import('@pokit/reporter-clack');
 const prompterModule = await import('@pokit/prompter-clack');
 ```
+
 This limits flexibility - users cannot swap default adapters without modifying core.
 
-**Router is Monolithic** 
+**Router is Monolithic**
 `packages/core/src/lib/router.ts` at 1346 lines is the largest file. It handles:
+
 - Command tree building
 - Navigation/menu logic
 - Pre-check execution
@@ -72,6 +83,7 @@ This could be decomposed for better testability and extensibility.
 
 **No Lifecycle Hooks**
 Commands support `pre` checks, but there's no `post` hook or lifecycle system for:
+
 - Before/after command execution
 - Before/after task execution
 - Global middleware
@@ -80,36 +92,40 @@ Commands support `pre` checks, but there's no `post` hook or lifecycle system fo
 
 #### Current Extension Points
 
-| Extension Point | Interface | How to Extend |
-|----------------|-----------|---------------|
-| Reporter | `ReporterAdapter` | Implement `start(bus) → Controller` |
-| Prompter | `Prompter` | Implement select/multiselect/confirm/text |
-| Tabs | `TabsAdapter` | Implement `run(items, options)` |
-| Env Resolver | `EnvResolver` | Use `defineEnvResolver()` |
-| Checks | `CheckConfig` | Use `defineCheck()` |
-| Tasks | `ExecTaskConfig`/`RunTaskConfig` | Use `defineTask()` |
-| Commands | `CommandConfig` | Use `defineCommand()` |
+| Extension Point | Interface                        | How to Extend                             |
+| --------------- | -------------------------------- | ----------------------------------------- |
+| Reporter        | `ReporterAdapter`                | Implement `start(bus) → Controller`       |
+| Prompter        | `Prompter`                       | Implement select/multiselect/confirm/text |
+| Tabs            | `TabsAdapter`                    | Implement `run(items, options)`           |
+| Env Resolver    | `EnvResolver`                    | Use `defineEnvResolver()`                 |
+| Checks          | `CheckConfig`                    | Use `defineCheck()`                       |
+| Tasks           | `ExecTaskConfig`/`RunTaskConfig` | Use `defineTask()`                        |
+| Commands        | `CommandConfig`                  | Use `defineCommand()`                     |
 
 #### Extension Point Evaluation
 
 **ReporterAdapter** - Well-designed
+
 - Clean interface: `start(bus: EventBus): ReporterAdapterController`
 - Controller pattern with `stop()` for cleanup
 - Idempotency requirements documented
 - Three implementations: clack, web, raw (testing)
 
-**Prompter** - Well-designed  
+**Prompter** - Well-designed
+
 - Four methods: select, multiselect, confirm, text
 - Options types are generic (`SelectOptions<T>`)
 - Two implementations: clack, raw (testing)
 - Contract specifies cancellation behavior
 
 **TabsAdapter** - Simple but effective
+
 - Single method: `run(items, options)`
 - Two implementations: ink, opentui
 - Shared logic in `tabs-core` package
 
 **EnvResolver** - Powerful but complex
+
 - Composite resolvers enable chaining
 - Type-safe with branded `EnvVarKey<T>`
 - Optional `write` capability for persistence
@@ -143,6 +159,7 @@ Commands support `pre` checks, but there's no `post` hook or lifecycle system fo
 #### Boundary Assessment
 
 **Well-Defined Boundaries**
+
 - Core has zero runtime dependencies on other @pokit packages
 - Adapters depend on core via peerDependency (correct pattern)
 - tabs-core provides shared logic for tabs implementations
@@ -164,12 +181,14 @@ Commands support `pre` checks, but there's no `post` hook or lifecycle system fo
 #### Test Infrastructure
 
 **Excellent Testing Support**
+
 - `createRawReporterAdapter()` - Captures events for assertions
 - `createRawPrompter()` - Pre-configured responses for non-interactive testing
 - `createEventBus({ onError: 'throw' })` - Strict error handling in tests
 - `@pokit/test-utils` package for shared test utilities
 
 **Testing Patterns**
+
 - Event-driven architecture enables testing without terminal I/O
 - Runner accepts dependencies via `RunnerOptions`
 - Commands can be tested with mocked adapters
@@ -178,6 +197,7 @@ Commands support `pre` checks, but there's no `post` hook or lifecycle system fo
 
 **Current DI Pattern**
 Dependencies flow through `RouterContext`:
+
 ```typescript
 type RouterContext = {
   config: RouterConfig;
@@ -191,6 +211,7 @@ type RouterContext = {
 ```
 
 `RunnerOptions` receives similar dependencies:
+
 ```typescript
 type RunnerOptions = {
   eventBus: EventBus;
@@ -201,6 +222,7 @@ type RunnerOptions = {
 ```
 
 **Assessment**
+
 - Manual DI works but is verbose
 - No container or service locator pattern
 - Dependencies are passed through function parameters (explicit, testable)
@@ -212,6 +234,7 @@ type RunnerOptions = {
 
 1. **Configurable Default Adapters**
    Make `runCli()` accept adapter factory functions:
+
    ```typescript
    await runCli(args, {
      createReporter: () => createMyReporter(),
@@ -221,6 +244,7 @@ type RunnerOptions = {
 
 2. **Lifecycle Hooks**
    Add command/task lifecycle hooks:
+
    ```typescript
    defineCommand({
      pre: [...],
@@ -236,11 +260,12 @@ type RunnerOptions = {
    - `CommandNavigator` - handles menu navigation
    - `CommandExecutor` - executes commands
    - `CheckRunner` - executes pre-checks
-   
+
 #### Medium Priority
 
 4. **Plugin System**
    Define a plugin API:
+
    ```typescript
    interface PokPlugin {
      name: string;
@@ -255,12 +280,13 @@ type RunnerOptions = {
 
 5. **Event Transformers**
    Allow intercepting/transforming events:
+
    ```typescript
    const bus = createEventBus({
      transform: (event) => {
        // Modify events before consumption
        return event;
-     }
+     },
    });
    ```
 
@@ -286,15 +312,21 @@ type RunnerOptions = {
 
 1. **Command Decorators**
    Enable cross-cutting concerns:
+
    ```typescript
    const withTiming = defineDecorator({
-     before: (ctx) => { ctx.startTime = Date.now(); },
-     after: (ctx) => { reporter.info(`Took ${Date.now() - ctx.startTime}ms`); },
+     before: (ctx) => {
+       ctx.startTime = Date.now();
+     },
+     after: (ctx) => {
+       reporter.info(`Took ${Date.now() - ctx.startTime}ms`);
+     },
    });
    ```
 
 2. **Output Formatters**
    Support structured output:
+
    ```typescript
    defineCommand({
      outputFormat: 'json', // or 'yaml', 'table'
@@ -306,6 +338,7 @@ type RunnerOptions = {
 
 3. **Conditional Commands**
    Hide commands based on context:
+
    ```typescript
    defineCommand({
      visible: async (ctx) => await hasFeatureFlag('new-feature'),
@@ -315,6 +348,7 @@ type RunnerOptions = {
 
 4. **Custom Menu Renderers**
    Allow custom interactive menu UI:
+
    ```typescript
    const customMenu = defineMenuRenderer({
      render: (options) => {
@@ -337,6 +371,7 @@ type RunnerOptions = {
 ### Overall Architecture Score: 8/10
 
 **Strengths:**
+
 - Event-driven design enables excellent separation of concerns
 - Interface-based abstractions make adapters swappable
 - Schema-first approach with Zod provides type safety
@@ -344,6 +379,7 @@ type RunnerOptions = {
 - Testing infrastructure is comprehensive
 
 **Areas for Improvement:**
+
 - Router is monolithic and could be decomposed
 - No formal plugin system limits third-party extensions
 - Hardcoded adapter imports reduce flexibility
@@ -351,6 +387,7 @@ type RunnerOptions = {
 
 **Conclusion:**
 pok's architecture demonstrates solid foundations aligned with its design principles ("vertically-integrated abstractions", "principle of least API"). The event-driven core and interface-based adapters provide good extensibility for the reporter/prompter/tabs concerns. The main opportunities for improvement are:
+
 1. Formalizing a plugin API
 2. Adding lifecycle hooks
 3. Making adapter selection configurable

@@ -60,16 +60,10 @@ export function FilePreview({
   };
 
   return (
-    <div
-      className="file-preview"
-      data-status={status}
-      data-language={language}
-    >
+    <div className="file-preview" data-status={status} data-language={language}>
       <div className="file-preview-header">
         <span className="file-preview-path">{path}</span>
-        {language && (
-          <span className="file-preview-language">{language}</span>
-        )}
+        {language && <span className="file-preview-language">{language}</span>}
       </div>
       <div className="file-preview-content">
         <pre className="file-preview-code">

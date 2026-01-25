@@ -9,6 +9,7 @@
 ## Problem
 
 User reported visual issues with the playground:
+
 - "issues with UI, TUI elements lining up"
 - "legibility of file previews in standard CLI"
 
@@ -28,18 +29,21 @@ This work package documents specific issues found through visual testing.
 **Location**: Right panel (introspect), bottom status bar
 
 **Observed**: The status bar displays garbled text:
+
 ```
 └[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] q
 uitintrospect.ts┘
 ```
 
 **Expected**:
+
 ```
 └[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit        introspect.ts┘
 ```
 
-**Root Cause**: 
+**Root Cause**:
 In `packages/introspect/src/render.ts` line 171:
+
 ```typescript
 const controls = '[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit';
 ```
@@ -53,14 +57,17 @@ The terminal has approximately 70 columns per pane (640px width / ~9px per chara
 **Severity**: Critical - Makes the UI appear broken/buggy
 
 **Recommended Fix**:
+
 1. Shorten the controls string for narrow terminals
 2. Add responsive handling in `renderStatusBar()`:
+
 ```typescript
 function renderStatusBar(state: IntrospectState, cols: number): string {
   // Use abbreviated controls for narrow terminals
-  const controls = cols < 80 
-    ? '[↑↓] nav  [Enter] expand  [?] help  [q] quit'
-    : '[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit';
+  const controls =
+    cols < 80
+      ? '[↑↓] nav  [Enter] expand  [?] help  [q] quit'
+      : '[↑↓/jk] navigate  [Enter] expand  [PgUp/PgDn] scroll  [?] help  [q] quit';
   // ... rest of function
 }
 ```
@@ -84,13 +91,16 @@ function renderStatusBar(state: IntrospectState, cols: number): string {
 **Location**: `playground/src/App.tsx` lines 59-69
 
 **Observed**: The playground shows two terminal panes side-by-side:
+
 - Left: `pok learn` command
 - Right: `pok introspect` command
 
 **Spec Says** (from `playground/SPEC.md` lines 10-11):
+
 > "1. **Terminal is king** - One full-screen terminal. No sidebars, no panels, no split views."
 
-**Impact**: 
+**Impact**:
+
 - Reduces available width per terminal (640px each vs 1280px)
 - Causes the status bar issues documented above
 - Deviates from documented design philosophy
@@ -98,6 +108,7 @@ function renderStatusBar(state: IntrospectState, cols: number): string {
 **Severity**: Medium - Intentional design change that causes downstream issues
 
 **Recommendation**: Either:
+
 1. Return to single-terminal design per spec
 2. Update spec to reflect current dual-terminal design
 3. Make introspect responsive to narrow widths
@@ -111,6 +122,7 @@ function renderStatusBar(state: IntrospectState, cols: number): string {
 **Observed**: Line numbers 1-41 are right-aligned but the code content column has varying indentation
 
 **Code Analysis** (`render.ts` lines 150-161):
+
 ```typescript
 const lineNumWidth = String(contentLines.length).length + 1;
 // ...
@@ -118,6 +130,7 @@ const lineNum = String(lineIndex + 1).padStart(lineNumWidth, ' ');
 ```
 
 This is working correctly - line numbers ARE right-aligned. The visual "misalignment" perception comes from:
+
 1. Variable code indentation (some lines have 0, 2, 4+ spaces)
 2. The `│` separator between line number and code
 
@@ -132,6 +145,7 @@ This is working correctly - line numbers ARE right-aligned. The visual "misalign
 **Observed**: Long lines are truncated with `…` character (e.g., lines 1, 3, 6, 7, 17, 34)
 
 **Code** (`render.ts` lines 158-160):
+
 ```typescript
 const maxCodeWidth = cols - lineNumWidth - 5;
 const truncatedCode =
@@ -160,7 +174,8 @@ const truncatedCode =
 
 **Location**: Both terminal panes
 
-**Observed**: 
+**Observed**:
+
 - Initially, keyboard input goes to the RIGHT panel (introspect)
 - Need to click on LEFT panel to focus `pok learn` menu
 - After clicking, arrow keys work correctly
@@ -176,6 +191,7 @@ const truncatedCode =
 ## Visual Evidence
 
 Screenshots saved to:
+
 - `.opencode/work/in-progress/screenshot-1-main-view.png` - Initial playground view
 - `.opencode/work/in-progress/screenshot-2-status-bar-issue.png` - Status bar corruption detail
 
@@ -183,30 +199,33 @@ Screenshots saved to:
 
 ## Summary of Issues by Severity
 
-| Severity | Issue | Impact |
-|----------|-------|--------|
-| **Critical** | Status bar text wrapping | UI appears broken |
-| **Medium** | Status bar text cutoff | Minor functionality loss |
-| **Medium** | Spec deviation (split view) | Root cause of width issues |
-| **Low** | Panel focus routing | Minor UX friction |
-| **Low** | Code truncation | Reduced readability |
-| **None** | Line numbers, icons | Working correctly |
+| Severity     | Issue                       | Impact                     |
+| ------------ | --------------------------- | -------------------------- |
+| **Critical** | Status bar text wrapping    | UI appears broken          |
+| **Medium**   | Status bar text cutoff      | Minor functionality loss   |
+| **Medium**   | Spec deviation (split view) | Root cause of width issues |
+| **Low**      | Panel focus routing         | Minor UX friction          |
+| **Low**      | Code truncation             | Reduced readability        |
+| **None**     | Line numbers, icons         | Working correctly          |
 
 ---
 
 ## Recommended Actions
 
 ### Immediate Fix (Critical)
+
 1. Update `packages/introspect/src/render.ts` to handle narrow terminals:
    - Shorten status bar text when cols < 80
    - Or remove filename from status bar in narrow mode
 
 ### Short-term
+
 2. Decide on spec vs implementation:
    - Either revert to single terminal per spec
    - Or update spec and make introspect responsive
 
 ### Nice-to-have
+
 3. Add visual focus indicator to terminal panes
 4. Consider horizontal scroll for code preview
 
@@ -218,8 +237,8 @@ The primary visual issues stem from the introspect TUI being designed for standa
 
 ## Results
 
-*To be filled after fixes are implemented*
+_To be filled after fixes are implemented_
 
 ## Evaluation
 
-*To be filled after verification*
+_To be filled after verification_

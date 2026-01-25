@@ -102,10 +102,7 @@ function CodeBlock({ content, language }: CodeBlockProps) {
       <code>
         {lines.map((line, i) => (
           <div key={i} className="code-line">
-            <span
-              className="code-line-number"
-              style={{ minWidth: `${lineNumberWidth + 1}ch` }}
-            >
+            <span className="code-line-number" style={{ minWidth: `${lineNumberWidth + 1}ch` }}>
               {i + 1}
             </span>
             <span className="code-line-content">
@@ -161,11 +158,7 @@ function JsonHighlight({ line }: { line: string }) {
     if (match.index > lastIndex) {
       const before = remaining.slice(lastIndex, match.index);
       // Check for numbers, booleans, null
-      parts.push(
-        <span key={key++}>
-          {highlightJsonValues(before)}
-        </span>
-      );
+      parts.push(<span key={key++}>{highlightJsonValues(before)}</span>);
     }
 
     // The string itself - check if it's a key (followed by :)
@@ -183,11 +176,7 @@ function JsonHighlight({ line }: { line: string }) {
 
   // Remaining text after last match
   if (lastIndex < remaining.length) {
-    parts.push(
-      <span key={key++}>
-        {highlightJsonValues(remaining.slice(lastIndex))}
-      </span>
-    );
+    parts.push(<span key={key++}>{highlightJsonValues(remaining.slice(lastIndex))}</span>);
   }
 
   return <>{parts.length > 0 ? parts : line}</>;
@@ -237,8 +226,9 @@ function TsHighlight({ line }: { line: string }) {
   let key = 0;
 
   // Keywords
-  const keywords = /\b(import|export|from|const|let|var|function|async|await|return|if|else|for|while|class|interface|type|extends|implements|new|this|super|static|public|private|protected|readonly|as|typeof|keyof|infer|enum|namespace|module|declare)\b/g;
-  
+  const keywords =
+    /\b(import|export|from|const|let|var|function|async|await|return|if|else|for|while|class|interface|type|extends|implements|new|this|super|static|public|private|protected|readonly|as|typeof|keyof|infer|enum|namespace|module|declare)\b/g;
+
   // Comments (single line)
   if (remaining.trim().startsWith('//')) {
     return <span className="token-comment">{line}</span>;
@@ -264,7 +254,12 @@ function TsHighlight({ line }: { line: string }) {
     // Check if this keyword is inside a string
     const inString = strings.some((s) => match!.index >= s.start && match!.index < s.end);
     if (!inString) {
-      tokens.push({ start: match.index, end: match.index + match[0].length, text: match[0], type: 'keyword' });
+      tokens.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[0],
+        type: 'keyword',
+      });
     }
   }
 
@@ -321,7 +316,14 @@ function getLanguage(extension: string): string {
 
 function ErrorIcon() {
   return (
-    <svg width="48" height="48" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1">
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1"
+    >
       <circle cx="8" cy="8" r="7" />
       <line x1="8" y1="4" x2="8" y2="9" />
       <circle cx="8" cy="11.5" r="0.5" fill="currentColor" />

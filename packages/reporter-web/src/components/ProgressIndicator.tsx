@@ -19,11 +19,7 @@ export type ProgressIndicatorProps = {
   label?: string;
 };
 
-export function ProgressIndicator({
-  current,
-  total,
-  label,
-}: ProgressIndicatorProps) {
+export function ProgressIndicator({ current, total, label }: ProgressIndicatorProps) {
   const progress = total > 0 ? current / total : 0;
   const isComplete = current >= total;
   const displayLabel = label ?? `Step ${current} of ${total}`;
@@ -36,10 +32,7 @@ export function ProgressIndicator({
     >
       <span className="progress-indicator-label">{displayLabel}</span>
       <div className="progress-indicator-bar">
-        <div
-          className="progress-indicator-fill"
-          style={{ width: `${progress * 100}%` }}
-        />
+        <div className="progress-indicator-fill" style={{ width: `${progress * 100}%` }} />
       </div>
     </div>
   );

@@ -182,8 +182,20 @@ describe('createWebReporterAdapter', () => {
 
       const events: CLIEvent[] = [
         { type: 'group:start', id: 'parent', label: 'Parent', layout: 'sequence' },
-        { type: 'group:start', id: 'child1', parentId: 'parent', label: 'Child 1', layout: 'parallel' },
-        { type: 'group:start', id: 'child2', parentId: 'parent', label: 'Child 2', layout: 'sequence' },
+        {
+          type: 'group:start',
+          id: 'child1',
+          parentId: 'parent',
+          label: 'Child 1',
+          layout: 'parallel',
+        },
+        {
+          type: 'group:start',
+          id: 'child2',
+          parentId: 'parent',
+          label: 'Child 2',
+          layout: 'sequence',
+        },
         { type: 'group:end', id: 'child1' },
         { type: 'group:end', id: 'child2' },
         { type: 'group:end', id: 'parent' },

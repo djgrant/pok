@@ -13,11 +13,7 @@ import type {
   TutorialProgress,
   Tutorial,
 } from '../tutorial';
-import {
-  createTutorialEngine,
-  pokTutorial,
-  stepId,
-} from '../tutorial';
+import { createTutorialEngine, pokTutorial, stepId } from '../tutorial';
 
 // Singleton engine instance shared across all hook consumers
 const sharedEngine = createTutorialEngine(pokTutorial);
@@ -90,10 +86,7 @@ export function useTutorialEngine(): UseTutorialEngineResult {
       }
 
       // Check if current
-      if (
-        sectionIndex === state.currentSectionIndex &&
-        stepIndex === state.currentStepIndex
-      ) {
+      if (sectionIndex === state.currentSectionIndex && stepIndex === state.currentStepIndex) {
         return 'active';
       }
 

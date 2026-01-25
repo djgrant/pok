@@ -152,8 +152,8 @@ await run(process.argv.slice(2), {
 
 ## Related Packages
 
-| Package                   | Purpose             |
-| ------------------------- | ------------------- |
+| Package                 | Purpose             |
+| ----------------------- | ------------------- |
 | `@pokit/prompter-clack` | Interactive prompts |
 | `@pokit/reporter-clack` | Terminal output     |
 | `@pokit/tabs-ink`       | Tabbed terminal UI  |

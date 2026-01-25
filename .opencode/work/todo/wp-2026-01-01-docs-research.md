@@ -15,6 +15,7 @@ pok aims to "reduce onboarding time" and "reduce developer friction" but the doc
 ## Approach
 
 Comprehensive review of all documentation from the perspective of new users at different experience levels:
+
 1. Complete beginner to CLI frameworks
 2. Experienced developer new to pok
 3. Developer migrating from another CLI framework
@@ -67,18 +68,19 @@ The documentation is well-structured but has gaps in progressive learning paths,
 
 #### 1. **README Inconsistencies and Drift**
 
-| Package | Issue |
-|---------|-------|
-| `@pokit/core` README | References `tty: createTTYAdapter()` but actual API uses separate `prompter`, `reporterAdapter`, `tabs` |
+| Package              | Issue                                                                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `@pokit/core` README | References `tty: createTTYAdapter()` but actual API uses separate `prompter`, `reporterAdapter`, `tabs`                          |
 | `@pokit/core` README | Shows utilities like `info, success, done, warn, error, step, dim, header, divider` that may not exist or differ from actual API |
-| `@pokit/core` README | References `createRunner` but router docs show `run()` as the entry point |
-| Package READMEs | Most are thin pointers to docs rather than self-contained references |
+| `@pokit/core` README | References `createRunner` but router docs show `run()` as the entry point                                                        |
+| Package READMEs      | Most are thin pointers to docs rather than self-contained references                                                             |
 
 **Recommendation**: Audit and synchronize package READMEs with actual API. Consider using API extraction to auto-generate.
 
 #### 2. **Missing Migration/Comparison Guide**
 
 There's no documentation helping users coming from:
+
 - Commander.js
 - Yargs
 - Oclif
@@ -89,6 +91,7 @@ There's no documentation helping users coming from:
 #### 3. **No Cookbook/Recipes Section**
 
 Common use cases lack documented solutions:
+
 - Building a deployment CLI
 - Creating a database migration tool
 - Setting up a monorepo CLI
@@ -101,12 +104,14 @@ Common use cases lack documented solutions:
 #### 4. **Playground Tutorial Gaps**
 
 Current playground tutorial covers only:
+
 1. Creating a simple command
 2. Adding flags/validation
 3. Understanding tasks (code display only, no hands-on)
 4. Free exploration
 
 Missing tutorials:
+
 - Pre-flight checks
 - Environment/secrets management
 - Tabbed terminals
@@ -118,6 +123,7 @@ Missing tutorials:
 #### 5. **No Troubleshooting Guide**
 
 Common issues not documented:
+
 - "Command not found" after installation
 - TypeScript configuration issues
 - Bun vs Node compatibility
@@ -128,13 +134,13 @@ Common issues not documented:
 
 #### 6. **API Documentation Gaps**
 
-| Missing Documentation | Impact |
-|----------------------|--------|
-| `@pokit/op` package | No docs at all - users don't know it exists or what it does |
-| `@pokit/tabs-opentui` | No docs - unclear when to use vs tabs-ink |
-| Composite resolvers | `defineCompositeResolver` mentioned but not thoroughly documented |
-| Retry configuration | Documented in API but lacks real-world usage examples |
-| `extraArgs` usage | Mentioned but not explained with examples |
+| Missing Documentation | Impact                                                            |
+| --------------------- | ----------------------------------------------------------------- |
+| `@pokit/op` package   | No docs at all - users don't know it exists or what it does       |
+| `@pokit/tabs-opentui` | No docs - unclear when to use vs tabs-ink                         |
+| Composite resolvers   | `defineCompositeResolver` mentioned but not thoroughly documented |
+| Retry configuration   | Documented in API but lacks real-world usage examples             |
+| `extraArgs` usage     | Mentioned but not explained with examples                         |
 
 **Recommendation**: Fill these documentation gaps with dedicated pages.
 
@@ -150,6 +156,7 @@ Common issues not documented:
 #### 8. **Testing Documentation is Test-Centric**
 
 `docs/testing.md` focuses on testing pok applications but doesn't explain:
+
 - How to test your own commands
 - Mocking external services
 - Integration testing patterns
@@ -160,6 +167,7 @@ Common issues not documented:
 #### 9. **No Contribution Guide**
 
 Missing:
+
 - How to contribute to pok
 - Development setup
 - Architecture decisions
@@ -170,6 +178,7 @@ Missing:
 #### 10. **Scaffolding Creates Minimal Project**
 
 `create-pokit` generates:
+
 ```
 commands/
   hello.ts
@@ -181,6 +190,7 @@ tsconfig.json
 ```
 
 Missing from scaffolded project:
+
 - Example with context/flags
 - Example pre-flight check
 - Example task
@@ -204,6 +214,7 @@ Missing from scaffolded project:
 
 3. **Entry Point Complexity**
    The entry point requires understanding multiple concepts:
+
    ```typescript
    await run(process.argv.slice(2), {
      commandsDir: path.resolve(import.meta.dir, 'commands'),
@@ -214,6 +225,7 @@ Missing from scaffolded project:
      tabs: createTabsAdapter(),
    });
    ```
+
    This is a lot for a "Quick Start"
 
 4. **Zod Requirement Not Clear**
@@ -231,7 +243,7 @@ Missing from scaffolded project:
 #### High Priority
 
 1. **Create Cookbook/Recipes** - Real-world examples users can adapt
-2. **Fix README Drift** - Synchronize package READMEs with actual APIs  
+2. **Fix README Drift** - Synchronize package READMEs with actual APIs
 3. **Add Troubleshooting** - Common issues and solutions
 4. **Document @pokit/op** - Missing package documentation
 

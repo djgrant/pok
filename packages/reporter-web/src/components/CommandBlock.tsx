@@ -35,13 +35,7 @@ export type CommandBlockProps = {
   renderAction?: (props: CommandBlockActionProps) => React.ReactNode;
 };
 
-export function CommandBlock({
-  command,
-  status,
-  output,
-  onRun,
-  renderAction,
-}: CommandBlockProps) {
+export function CommandBlock({ command, status, output, onRun, renderAction }: CommandBlockProps) {
   const disabled = status === 'running';
   const handleClick = () => {
     if (!disabled && onRun) {

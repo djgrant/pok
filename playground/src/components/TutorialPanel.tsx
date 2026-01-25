@@ -173,10 +173,7 @@ function ProgressIndicator({
     >
       <span className="progress-indicator-label">{displayLabel}</span>
       <div className="progress-indicator-bar">
-        <div
-          className="progress-indicator-fill"
-          style={{ width: `${progress * 100}%` }}
-        />
+        <div className="progress-indicator-fill" style={{ width: `${progress * 100}%` }} />
       </div>
     </div>
   );
@@ -289,22 +286,23 @@ export function TutorialPanel({
 
   // Check if current step is complete (for enabling Next button)
   const isCurrentStepComplete = isStepCompleted(currentSectionIndex, currentStepIndex);
-  
+
   // Get current step type
   const currentStep = currentSection.steps[currentStepIndex];
-  const isInteractiveStep = currentStep?.type === 'file-create' || currentStep?.type === 'command-run';
+  const isInteractiveStep =
+    currentStep?.type === 'file-create' || currentStep?.type === 'command-run';
   const isChoiceStep = currentStep?.type === 'choice';
-  
+
   // Determine if we're on the exit section (last section)
-  const exitSectionIndex = tutorial.sections.findIndex(s => s.id === 'exit');
+  const exitSectionIndex = tutorial.sections.findIndex((s) => s.id === 'exit');
   const isOnExitSection = currentSectionIndex === exitSectionIndex;
-  
+
   // Tutorial is complete when we're on exit section AND at section end AND last step is complete
   const isTutorialComplete = isOnExitSection && isAtSectionEnd && isCurrentStepComplete;
-  
+
   // Section is complete when at section end AND current step is complete (but not exit section)
   const isSectionComplete = !isOnExitSection && isAtSectionEnd && isCurrentStepComplete;
-  
+
   // Check if there are more sections after current one
   const hasMoreSections = currentSectionIndex < tutorial.sections.length - 1;
 
@@ -397,11 +395,7 @@ export function TutorialPanel({
   const renderStepContent = (step: TutorialStepType, stepIndex: number, status: StepStatus) => {
     switch (step.type) {
       case 'info':
-        return (
-          <ContentBox variant="info">
-            {step.content}
-          </ContentBox>
-        );
+        return <ContentBox variant="info">{step.content}</ContentBox>;
 
       case 'file-create':
         return (
@@ -424,18 +418,10 @@ export function TutorialPanel({
         );
 
       case 'tip':
-        return (
-          <ContentBox variant="tip">
-            {step.content}
-          </ContentBox>
-        );
+        return <ContentBox variant="tip">{step.content}</ContentBox>;
 
       case 'warning':
-        return (
-          <ContentBox variant="warning">
-            {step.content}
-          </ContentBox>
-        );
+        return <ContentBox variant="warning">{step.content}</ContentBox>;
 
       case 'code-display':
         return (
@@ -517,7 +503,8 @@ export function TutorialPanel({
             <div className="tutorial-completion-icon">🎉</div>
             <h2 className="tutorial-completion-title">Tutorial Complete!</h2>
             <p className="tutorial-completion-message">
-              You've learned the basics of pok: creating commands, adding flags with validation, and working with tasks.
+              You've learned the basics of pok: creating commands, adding flags with validation, and
+              working with tasks.
             </p>
             <div className="tutorial-completion-actions">
               <button

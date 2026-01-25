@@ -14,12 +14,14 @@ The playground should teach pok by experiencing pok, with a UI that visualizes t
 ## Scope
 
 ### Files to Modify
+
 - `playground/src/App.tsx` - Complete rewrite for new layout
 - `playground/src/index.css` - Update styles for new components
 - `playground/src/hooks/useWebContainer.ts` - Update filesystem setup, remove introspect command
 - `playground/src/components/Terminal.tsx` - Adapt for multi-instance in tabs
 
 ### Files to Create
+
 - `playground/src/components/Sidebar.tsx` - Left panel with tabs list + file tree
 - `playground/src/components/TabBar.tsx` - Tab bar above main content
 - `playground/src/components/TabContent.tsx` - Container for terminal or file viewer
@@ -31,9 +33,11 @@ The playground should teach pok by experiencing pok, with a UI that visualizes t
 - `playground/src/commands/learn.ts` - Externalized tutorial command
 
 ### Files to Delete
+
 - `playground/src/introspect/` - Entire directory (highlight.ts, index.ts, input.ts, introspect.ts, render.ts, state.ts, tree.ts, watcher.ts)
 
 ### Packages Touched
+
 - `playground` only (no changes to core pok packages)
 
 ## Approach
@@ -160,8 +164,8 @@ type Tab = {
   type: TabType;
   label: string;
   closeable: boolean;
-  command?: string;    // for terminal tabs
-  filePath?: string;   // for file tabs
+  command?: string; // for terminal tabs
+  filePath?: string; // for file tabs
 };
 
 type WorkspaceState = {
@@ -187,7 +191,7 @@ const initialState: WorkspaceState = {
 ## Event Bus
 
 ```typescript
-type PlaygroundEvent = 
+type PlaygroundEvent =
   | { type: 'file:created'; path: string }
   | { type: 'file:updated'; path: string }
   | { type: 'file:deleted'; path: string }
@@ -204,13 +208,13 @@ interface PlaygroundReporter extends CommandReporter {
   infoBox(title: string, content: string): void;
   tipBox(content: string): void;
   warningBox(content: string): void;
-  
+
   // Code display
   codeBlock(filename: string, code: string, options?: { language?: string }): void;
-  
+
   // Progress
   stepIndicator(current: number, total: number, title: string): void;
-  
+
   // Clipboard (triggers event bus)
   copyToClipboard(content: string): Promise<void>;
 }
@@ -218,13 +222,13 @@ interface PlaygroundReporter extends CommandReporter {
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| ⌘+1, ⌘+2, ... | Switch to tab N |
-| ⌘+\ | Toggle split view |
-| ⌘+B | Toggle sidebar |
-| ⌘+W | Close active tab (file tabs only) |
-| ⌘+K | Clear active terminal |
+| Shortcut      | Action                            |
+| ------------- | --------------------------------- |
+| ⌘+1, ⌘+2, ... | Switch to tab N                   |
+| ⌘+\           | Toggle split view                 |
+| ⌘+B           | Toggle sidebar                    |
+| ⌘+W           | Close active tab (file tabs only) |
+| ⌘+K           | Clear active terminal             |
 
 ## Success Criteria
 
@@ -240,6 +244,7 @@ interface PlaygroundReporter extends CommandReporter {
 ## Results
 
 ### Phase 1: Foundation - React Layout Shell ✅
+
 - Deleted `playground/src/introspect/` directory (8 files)
 - Created `useWorkspace.ts` hook with tab state, sidebar state, folder expansion
 - Created `useEventBus.ts` hook for cross-component pub/sub communication
@@ -248,12 +253,14 @@ interface PlaygroundReporter extends CommandReporter {
 - Updated `index.css` with layout styles
 
 ### Phase 2: File System Integration ✅
+
 - Created `FileTree.tsx` - recursive tree with expand/collapse, file icons, click-to-open
 - Created `FileViewer.tsx` - syntax highlighting for TS/JS/JSON, line numbers
 - Integrated FileTree into Sidebar
 - File clicks open new tabs via workspace hook
 
 ### Phase 3: Custom Reporter ✅
+
 - Created `playground/src/reporter/index.ts` with:
   - `infoBox()`, `tipBox()`, `warningBox()` - bordered boxes with icons
   - `codeBlock()` - syntax highlighted code with line numbers and filename
@@ -261,6 +268,7 @@ interface PlaygroundReporter extends CommandReporter {
   - `wrapText()` utility for text wrapping
 
 ### Phase 4: Tutorial Rewrite ✅
+
 - Externalized learn command to `playground/src/commands/learn.ts`
 - Imported as raw string via Vite's `?raw` suffix
 - Rewrote tutorial with rich formatting (info boxes, code blocks, tips)
@@ -269,27 +277,29 @@ interface PlaygroundReporter extends CommandReporter {
 - Fixed TypeScript syntax issue (converted to pure JavaScript for WebContainer)
 
 ### Phase 5: Polish & Responsive ✅
+
 - Keyboard shortcuts: Cmd+1-9 (tabs), Cmd+B (sidebar), Cmd+W (close), Cmd+K (clear), Cmd+\ (split)
 - Responsive: Mobile layout with hamburger menu, sidebar overlay
 - Visual polish: Transitions, hover states, focus indicators
 - Updated SPEC.md with new architecture documentation
 
 ### Bug Fix
+
 - Fixed learn.ts TypeScript syntax error - converted to pure JavaScript since WebContainer runs it directly without transpilation
 - Added tsconfig exclude for commands directory
 
 ### Verification Results
 
-| Criterion | Status |
-|-----------|--------|
-| Layout renders correctly | ✅ PASS |
-| Two terminals work | ✅ PASS |
-| File tree updates | ✅ PASS |
-| File viewer works | ✅ PASS |
-| Tutorial is readable | ✅ PASS |
-| Clipboard works | ⚠️ NOT IMPLEMENTED (deferred) |
-| Responsive works | ✅ PASS |
-| Keyboard shortcuts work | ✅ PASS |
+| Criterion                | Status                        |
+| ------------------------ | ----------------------------- |
+| Layout renders correctly | ✅ PASS                       |
+| Two terminals work       | ✅ PASS                       |
+| File tree updates        | ✅ PASS                       |
+| File viewer works        | ✅ PASS                       |
+| Tutorial is readable     | ✅ PASS                       |
+| Clipboard works          | ⚠️ NOT IMPLEMENTED (deferred) |
+| Responsive works         | ✅ PASS                       |
+| Keyboard shortcuts work  | ✅ PASS                       |
 
 ## Evaluation
 
@@ -303,15 +313,18 @@ The hypothesis was correct - the "clunky" feeling stemmed from trying to do ever
 4. **Clear separation of concerns** - Tutorial runs in one tab, experimentation in another (shell)
 
 ### What Worked Well
+
 - Event bus pattern for cross-component communication (file events bridge WebContainer to React)
 - OSC escape sequence approach for file events (creative solution to the WebContainer boundary)
 - Responsive design with mobile overlay sidebar
 - Keyboard shortcuts for power users
 
 ### What Could Be Improved
+
 - Clipboard integration was deferred (would require additional browser API bridging)
 - Bundle size warning persists (could benefit from code splitting)
 - Split view functionality is stubbed but not fully implemented
 
 ### Impact
+
 The playground is transformed from "two terminals awkwardly split" into "an IDE-lite that teaches by showing pok's mental model" - exactly as hypothesized.

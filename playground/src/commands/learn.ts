@@ -7,9 +7,9 @@
  * The reporter utilities are inlined here because we can't import from browser modules.
  */
 
-const { defineCommand } = require("@pokit/core");
-const { writeFileSync, mkdirSync, existsSync } = require("fs");
-const { execSync } = require("child_process");
+const { defineCommand } = require('@pokit/core');
+const { writeFileSync, mkdirSync, existsSync } = require('fs');
+const { execSync } = require('child_process');
 
 // ============================================================================
 // Utilities
@@ -22,45 +22,45 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ============================================================================
 
 const ANSI = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  italic: "\x1b[3m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-  brightBlue: "\x1b[94m",
-  brightGreen: "\x1b[92m",
-  brightYellow: "\x1b[93m",
-  brightMagenta: "\x1b[95m",
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  italic: '\x1b[3m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  brightBlue: '\x1b[94m',
+  brightGreen: '\x1b[92m',
+  brightYellow: '\x1b[93m',
+  brightMagenta: '\x1b[95m',
 };
 
 // Box drawing characters
 const BOX = {
-  topLeft: "\u256d",
-  topRight: "\u256e",
-  bottomLeft: "\u2570",
-  bottomRight: "\u256f",
-  horizontal: "\u2500",
-  vertical: "\u2502",
-  leftT: "\u251c",
-  rightT: "\u2524",
-  heavyHorizontal: "\u2501",
+  topLeft: '\u256d',
+  topRight: '\u256e',
+  bottomLeft: '\u2570',
+  bottomRight: '\u256f',
+  horizontal: '\u2500',
+  vertical: '\u2502',
+  leftT: '\u251c',
+  rightT: '\u2524',
+  heavyHorizontal: '\u2501',
 };
 
 // Icons
 const ICONS = {
-  info: "\u2139",
-  tip: "\u2728",
-  warning: "\u26a0",
-  success: "\u2714",
-  error: "\u2718",
-  bullet: "\u25cf",
-  file: "\u{1F4C4}",
+  info: '\u2139',
+  tip: '\u2728',
+  warning: '\u26a0',
+  success: '\u2714',
+  error: '\u2718',
+  bullet: '\u25cf',
+  file: '\u{1F4C4}',
 };
 
 // ============================================================================
@@ -82,7 +82,7 @@ function emitFileEvent(type, path) {
 /**
  * Set the terminal title using OSC escape sequence.
  * Format: \x1b]0;title\x07
- * 
+ *
  * Note: We use console.log instead of process.stdout.write because
  * WebContainer captures console.log more reliably. The newline is
  * stripped by the Terminal component's title extraction.
@@ -101,33 +101,33 @@ const WIDTH = 60;
 
 function stripAnsi(str) {
   // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, "");
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 function padRight(str, width) {
   const visibleLength = stripAnsi(str).length;
   const padding = Math.max(0, width - visibleLength);
-  return str + " ".repeat(padding);
+  return str + ' '.repeat(padding);
 }
 
 function wrapText(text, maxWidth) {
   const lines = [];
-  const paragraphs = text.split("\n");
+  const paragraphs = text.split('\n');
 
   for (const paragraph of paragraphs) {
     if (paragraph.length === 0) {
-      lines.push("");
+      lines.push('');
       continue;
     }
 
-    const words = paragraph.split(" ");
-    let currentLine = "";
+    const words = paragraph.split(' ');
+    let currentLine = '';
 
     for (const word of words) {
       if (currentLine.length === 0) {
         currentLine = word;
       } else if (currentLine.length + 1 + word.length <= maxWidth) {
-        currentLine += " " + word;
+        currentLine += ' ' + word;
       } else {
         lines.push(currentLine);
         currentLine = word;
@@ -156,7 +156,7 @@ function renderBox(title, content, options) {
 
   // Top border
   if (title) {
-    const iconPart = icon ? `${iconColor || titleColor}${icon}${ANSI.reset}  ` : "";
+    const iconPart = icon ? `${iconColor || titleColor}${icon}${ANSI.reset}  ` : '';
     const titlePart = `${titleColor}${ANSI.bold}${title}${ANSI.reset}`;
     const headerContent = `  ${iconPart}${titlePart}`;
     const headerVisibleLen = stripAnsi(headerContent).length;
@@ -166,11 +166,9 @@ function renderBox(title, content, options) {
       `${borderColor}${BOX.topLeft}${horizontalLine(WIDTH - 2)}${BOX.topRight}${ANSI.reset}`
     );
     console.log(
-      `${borderColor}${BOX.vertical}${ANSI.reset}${headerContent}${" ".repeat(remainingWidth)}${borderColor}${BOX.vertical}${ANSI.reset}`
+      `${borderColor}${BOX.vertical}${ANSI.reset}${headerContent}${' '.repeat(remainingWidth)}${borderColor}${BOX.vertical}${ANSI.reset}`
     );
-    console.log(
-      `${borderColor}${BOX.leftT}${horizontalLine(WIDTH - 2)}${BOX.rightT}${ANSI.reset}`
-    );
+    console.log(`${borderColor}${BOX.leftT}${horizontalLine(WIDTH - 2)}${BOX.rightT}${ANSI.reset}`);
   } else {
     console.log(
       `${borderColor}${BOX.topLeft}${horizontalLine(WIDTH - 2)}${BOX.topRight}${ANSI.reset}`
@@ -202,7 +200,7 @@ function infoBox(title, content) {
 }
 
 function tipBox(content) {
-  renderBox("Tip", content, {
+  renderBox('Tip', content, {
     borderColor: ANSI.green,
     titleColor: ANSI.brightGreen,
     icon: ICONS.tip,
@@ -211,7 +209,7 @@ function tipBox(content) {
 }
 
 function warningBox(content) {
-  renderBox("Warning", content, {
+  renderBox('Warning', content, {
     borderColor: ANSI.yellow,
     titleColor: ANSI.brightYellow,
     icon: ICONS.warning,
@@ -224,7 +222,7 @@ function warningBox(content) {
 // ============================================================================
 
 function codeBlock(filename, code) {
-  const codeLines = code.split("\n");
+  const codeLines = code.split('\n');
   const lineNumWidth = String(codeLines.length).length;
   const contentWidth = WIDTH - 4 - lineNumWidth - 3;
 
@@ -239,11 +237,11 @@ function codeBlock(filename, code) {
 
   // Code lines with line numbers
   for (let i = 0; i < codeLines.length; i++) {
-    const lineNum = String(i + 1).padStart(lineNumWidth, " ");
+    const lineNum = String(i + 1).padStart(lineNumWidth, ' ');
     let codeLine = codeLines[i];
 
     if (codeLine.length > contentWidth) {
-      codeLine = codeLine.substring(0, contentWidth - 1) + "\u2026";
+      codeLine = codeLine.substring(0, contentWidth - 1) + '\u2026';
     }
 
     const paddedCode = padRight(codeLine, contentWidth);
@@ -342,194 +340,186 @@ exports.command = defineCommand({
 // ============================================================================
 
 exports.command = defineCommand({
-  label: "Learn pok interactively",
+  label: 'Learn pok interactively',
   run: async (r) => {
     // Set initial title
-    setTitle("pok learn");
-    
+    setTitle('pok learn');
+
     // Ensure commands directory exists
-    if (!existsSync("commands")) {
-      mkdirSync("commands");
-      emitFileEvent("created", "commands");
+    if (!existsSync('commands')) {
+      mkdirSync('commands');
+      emitFileEvent('created', 'commands');
     }
 
     // Welcome message
-    console.log("");
+    console.log('');
     infoBox(
-      "Welcome to pok",
-      "pok is a framework for building beautiful CLI tools. It handles routing, validation, prompts, and multi-process terminals.\n\nThis tutorial will show you the basics."
+      'Welcome to pok',
+      'pok is a framework for building beautiful CLI tools. It handles routing, validation, prompts, and multi-process terminals.\n\nThis tutorial will show you the basics.'
     );
-    console.log("");
+    console.log('');
 
     await sleep(500);
 
     while (true) {
       const choice = await r.prompter.select({
-        message: "What would you like to learn?",
+        message: 'What would you like to learn?',
         options: [
-          { value: "create", label: "Create your first command" },
-          { value: "args", label: "Add flags and validation" },
-          { value: "tabs", label: "Learn about tabs" },
-          { value: "tasks", label: "Understand tasks" },
-          { value: "exit", label: "Explore on your own" },
+          { value: 'create', label: 'Create your first command' },
+          { value: 'args', label: 'Add flags and validation' },
+          { value: 'tabs', label: 'Learn about tabs' },
+          { value: 'tasks', label: 'Understand tasks' },
+          { value: 'exit', label: 'Explore on your own' },
         ],
       });
 
-      console.log("");
+      console.log('');
 
-      if (choice === "exit") {
-        setTitle("pok learn - Complete");
-        stepIndicator(5, 5, "Explore freely");
-        console.log("");
+      if (choice === 'exit') {
+        setTitle('pok learn - Complete');
+        stepIndicator(5, 5, 'Explore freely');
+        console.log('');
 
         infoBox(
           "You're ready!",
-          "Your commands are in ./commands\n\nTry these:\n  pok         - see all commands\n  pok hello   - run hello command\n  pok --help  - see options"
+          'Your commands are in ./commands\n\nTry these:\n  pok         - see all commands\n  pok hello   - run hello command\n  pok --help  - see options'
         );
 
-        console.log("");
+        console.log('');
         tipBox(
-          "Edit files in the sidebar and watch them update. The shell tab is a full terminal."
+          'Edit files in the sidebar and watch them update. The shell tab is a full terminal.'
         );
-        console.log("");
-        
+        console.log('');
+
         // Exit the process so the Terminal component can detect completion
         // and disable input. The shell tab remains available for exploration.
         process.exit(0);
       }
 
-      if (choice === "create") {
-        setTitle("pok learn - Commands");
-        stepIndicator(1, 5, "Create your first command");
-        console.log("");
+      if (choice === 'create') {
+        setTitle('pok learn - Commands');
+        stepIndicator(1, 5, 'Create your first command');
+        console.log('');
 
         infoBox(
-          "Commands",
-          "Commands are the entry points to your CLI. Each file in commands/ becomes a command. The filename becomes the command name."
+          'Commands',
+          'Commands are the entry points to your CLI. Each file in commands/ becomes a command. The filename becomes the command name.'
         );
-        console.log("");
+        console.log('');
 
         console.log(`${ANSI.cyan}Creating${ANSI.reset} commands/hello.ts`);
-        console.log("");
+        console.log('');
 
-        writeFileSync("commands/hello.ts", HELLO_CODE);
-        emitFileEvent("created", "commands/hello.ts");
+        writeFileSync('commands/hello.ts', HELLO_CODE);
+        emitFileEvent('created', 'commands/hello.ts');
 
         await sleep(300);
 
-        codeBlock("commands/hello.ts", HELLO_CODE);
-        console.log("");
+        codeBlock('commands/hello.ts', HELLO_CODE);
+        console.log('');
 
         tipBox('The file is now visible in the sidebar. Click it to view the code.');
-        console.log("");
+        console.log('');
 
         console.log(`${ANSI.dim}Running:${ANSI.reset} pok hello`);
-        console.log("");
+        console.log('');
 
         await sleep(300);
 
         try {
-          execSync("node_modules/.bin/pok hello", {
-            stdio: "inherit",
+          execSync('node_modules/.bin/pok hello', {
+            stdio: 'inherit',
             cwd: process.cwd(),
           });
         } catch (_e) {
           // Output already shown
         }
 
-        console.log("");
-        console.log(
-          `${ANSI.green}${ICONS.success}${ANSI.reset}  Command created and executed!`
-        );
-        console.log("");
+        console.log('');
+        console.log(`${ANSI.green}${ICONS.success}${ANSI.reset}  Command created and executed!`);
+        console.log('');
       }
 
-      if (choice === "args") {
-        setTitle("pok learn - Context");
-        stepIndicator(2, 5, "Add flags and validation");
-        console.log("");
+      if (choice === 'args') {
+        setTitle('pok learn - Context');
+        stepIndicator(2, 5, 'Add flags and validation');
+        console.log('');
 
         infoBox(
-          "Context",
+          'Context',
           "Context defines the inputs your command needs. Use 'from: flag' for CLI flags, or 'from: prompt' for interactive input. Zod schemas handle validation automatically."
         );
-        console.log("");
+        console.log('');
 
         console.log(`${ANSI.cyan}Creating${ANSI.reset} commands/greet.ts`);
-        console.log("");
+        console.log('');
 
-        writeFileSync("commands/greet.ts", GREET_CODE);
-        emitFileEvent("created", "commands/greet.ts");
+        writeFileSync('commands/greet.ts', GREET_CODE);
+        emitFileEvent('created', 'commands/greet.ts');
 
         await sleep(300);
 
-        codeBlock("commands/greet.ts", GREET_CODE);
-        console.log("");
+        codeBlock('commands/greet.ts', GREET_CODE);
+        console.log('');
 
         console.log(`${ANSI.dim}Running:${ANSI.reset} pok greet --name World`);
-        console.log("");
+        console.log('');
 
         await sleep(300);
 
         try {
-          execSync("node_modules/.bin/pok greet --name World", {
-            stdio: "inherit",
+          execSync('node_modules/.bin/pok greet --name World', {
+            stdio: 'inherit',
             cwd: process.cwd(),
           });
         } catch (_e) {
           // Output already shown
         }
 
-        console.log("");
-        tipBox(
-          "Try running 'pok greet' without --name. It will prompt you!"
-        );
-        console.log("");
+        console.log('');
+        tipBox("Try running 'pok greet' without --name. It will prompt you!");
+        console.log('');
       }
 
-      if (choice === "tabs") {
-        setTitle("pok learn - Tabs");
-        stepIndicator(3, 5, "Learn about tabs");
-        console.log("");
+      if (choice === 'tabs') {
+        setTitle('pok learn - Tabs');
+        stepIndicator(3, 5, 'Learn about tabs');
+        console.log('');
 
         infoBox(
-          "Tabs",
-          "Tabs let you run multiple processes side by side. Perfect for dev servers, watchers, or any concurrent workflows."
+          'Tabs',
+          'Tabs let you run multiple processes side by side. Perfect for dev servers, watchers, or any concurrent workflows.'
         );
-        console.log("");
+        console.log('');
 
-        codeBlock("commands/dev.ts", DEV_CODE);
-        console.log("");
+        codeBlock('commands/dev.ts', DEV_CODE);
+        console.log('');
 
         warningBox(
           "Tabs require a real terminal with PTY support. They won't work in this browser-based playground, but they're powerful in a real environment!"
         );
-        console.log("");
+        console.log('');
 
-        tipBox(
-          "In a real terminal, use arrow keys to switch tabs and 'q' to quit."
-        );
-        console.log("");
+        tipBox("In a real terminal, use arrow keys to switch tabs and 'q' to quit.");
+        console.log('');
       }
 
-      if (choice === "tasks") {
-        setTitle("pok learn - Tasks");
-        stepIndicator(4, 5, "Understand tasks");
-        console.log("");
+      if (choice === 'tasks') {
+        setTitle('pok learn - Tasks');
+        stepIndicator(4, 5, 'Understand tasks');
+        console.log('');
 
         infoBox(
-          "Tasks",
-          "Tasks are reusable units of work. They have typed inputs and outputs, can be composed together, and are perfect for complex workflows."
+          'Tasks',
+          'Tasks are reusable units of work. They have typed inputs and outputs, can be composed together, and are perfect for complex workflows.'
         );
-        console.log("");
+        console.log('');
 
-        codeBlock("commands/use-task.ts", TASK_CODE);
-        console.log("");
+        codeBlock('commands/use-task.ts', TASK_CODE);
+        console.log('');
 
-        tipBox(
-          "Tasks can call other tasks, enabling powerful composition patterns."
-        );
-        console.log("");
+        tipBox('Tasks can call other tasks, enabling powerful composition patterns.');
+        console.log('');
       }
 
       await sleep(300);

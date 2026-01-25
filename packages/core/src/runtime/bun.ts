@@ -8,7 +8,14 @@
  * - Bun.file() for file reading
  */
 
-import type { Runtime, SpawnOptions, SpawnResult, ShellOptions, ShellResult, GlobOptions } from './types';
+import type {
+  Runtime,
+  SpawnOptions,
+  SpawnResult,
+  ShellOptions,
+  ShellResult,
+  GlobOptions,
+} from './types';
 
 /**
  * Create a Bun runtime implementation

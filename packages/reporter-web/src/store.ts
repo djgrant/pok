@@ -59,7 +59,9 @@ export type ReporterStoreWithHandler = ReporterStore & {
  * @param options - Optional configuration
  * @returns Store compatible with useSyncExternalStore
  */
-export function createReporterStore(options?: CreateReporterStoreOptions): ReporterStoreWithHandler {
+export function createReporterStore(
+  options?: CreateReporterStoreOptions
+): ReporterStoreWithHandler {
   const temporalMarkerDelay = options?.temporalMarkerDelay ?? TEMPORAL_MARKER_DELAY;
   const disableTemporalMarkerClearing = options?.disableTemporalMarkerClearing ?? false;
 
@@ -78,7 +80,10 @@ export function createReporterStore(options?: CreateReporterStoreOptions): Repor
   /**
    * Schedule clearing of temporal markers for an activity
    */
-  function scheduleActivityMarkerClear(activityId: ActivityId, markers: (keyof ActivityState)[]): void {
+  function scheduleActivityMarkerClear(
+    activityId: ActivityId,
+    markers: (keyof ActivityState)[]
+  ): void {
     if (disableTemporalMarkerClearing) return;
 
     setTimeout(() => {
@@ -312,7 +317,8 @@ export function createReporterStore(options?: CreateReporterStoreOptions): Repor
         const activity = state.activities.get(event.id);
         if (!activity) break;
 
-        const errorMessage = event.error instanceof Error ? event.error.message : String(event.error);
+        const errorMessage =
+          event.error instanceof Error ? event.error.message : String(event.error);
 
         const newActivities = new Map(state.activities);
         newActivities.set(event.id, {

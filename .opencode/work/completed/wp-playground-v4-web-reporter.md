@@ -16,6 +16,7 @@ This proves pok's core architectural claim: define once, render anywhere.
 A reusable package that implements the `ReporterAdapter` interface for web/React contexts.
 
 **Must support:**
+
 - All existing event types: `group:start/end`, `activity:start/success/failure/update`, `log`, `reporter:suspend/resume`
 - React component rendering for each event type
 - Stateful accumulation of events into renderable UI
@@ -43,6 +44,7 @@ Replace the current split-terminal layout with a fixed three-pane IDE-like struc
 ```
 
 **Key changes:**
+
 - Remove split-pane terminal view
 - Add fixed Tutorial pane (center)
 - Editor pane contains tabbed shell + file viewer (right)
@@ -54,10 +56,12 @@ Replace the current split-terminal layout with a fixed three-pane IDE-like struc
 The current tutorial does everything for the user. The new tutorial should create learning moments by requiring user action.
 
 **Philosophy shift:**
+
 - Old: "Watch pok create a file and run a command"
 - New: "Here's the code. Click to create the file. Now run `pok hello` in the shell."
 
 **Interactive elements:**
+
 - **File preview + create button**: Show code in a mini file viewer, button underneath creates the file
 - **Command hints**: Tell user what to run, they type it themselves
 - **Auto-progression**: Tutorial advances when user completes the task (file created, command executed)
@@ -126,7 +130,7 @@ interface ReporterAdapter {
 }
 
 // Event types (packages/core/src/events/types.ts)
-type CLIEvent = 
+type CLIEvent =
   | { type: 'group:start'; ... }
   | { type: 'activity:start'; ... }
   | { type: 'log'; level: 'info' | 'warn' | 'error' | 'success' | 'step'; ... }
@@ -138,6 +142,7 @@ The `reporter-clack` package shows how to implement an adapter - subscribe to Ev
 ### Recommended Library
 
 **react-resizable-panels** - Best fit for the three-pane layout:
+
 - Collapsible panels with imperative API
 - Built-in layout persistence
 - Full accessibility (WAI-ARIA)
@@ -177,19 +182,19 @@ The `reporter-clack` package shows how to implement an adapter - subscribe to Ev
 
 ## Resolved Decisions
 
-*Added after design and architecture review on 2024-12-30*
+_Added after design and architecture review on 2024-12-30_
 
 ### Open Questions Resolved
 
-| Question | Decision | Rationale |
-|----------|----------|-----------|
-| **Event rendering model** | Declarative with animation markers | Flat maps with `justStarted`/`justCompleted` temporal flags that auto-clear after 600ms |
-| **Tutorial state bridge** | Direct WebContainer access from tutorial | Tutorial actions call WebContainer API directly; events flow through existing event bus |
-| **Auto-progression triggers** | File creation + command execution | Detect via WebContainer file watcher and command exit codes |
-| **Verification sophistication** | Simple | Just detect file exists or command ran; no content validation in MVP |
-| **Responsive behavior** | Deferred | Desktop-first; responsive breakpoints are post-MVP |
-| **File creation UX** | File preview card with "Create →" button | Shows filename header, code preview, action button |
-| **Tutorial content** | Restructured data-driven format | Tutorial steps as typed data, not ANSI strings |
+| Question                        | Decision                                 | Rationale                                                                               |
+| ------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Event rendering model**       | Declarative with animation markers       | Flat maps with `justStarted`/`justCompleted` temporal flags that auto-clear after 600ms |
+| **Tutorial state bridge**       | Direct WebContainer access from tutorial | Tutorial actions call WebContainer API directly; events flow through existing event bus |
+| **Auto-progression triggers**   | File creation + command execution        | Detect via WebContainer file watcher and command exit codes                             |
+| **Verification sophistication** | Simple                                   | Just detect file exists or command ran; no content validation in MVP                    |
+| **Responsive behavior**         | Deferred                                 | Desktop-first; responsive breakpoints are post-MVP                                      |
+| **File creation UX**            | File preview card with "Create →" button | Shows filename header, code preview, action button                                      |
+| **Tutorial content**            | Restructured data-driven format          | Tutorial steps as typed data, not ANSI strings                                          |
 
 ### Key Architecture Decisions
 
@@ -211,21 +216,22 @@ See detailed plan: `playground-v4-implementation-plan.md`
 
 ### Phase Summary
 
-| Phase | Description | Effort | Risk |
-|-------|-------------|--------|------|
-| 1 | Reporter Web Core (store, hooks) | Small | Low |
-| 2 | Tutorial Renderer Components | Medium | Medium |
-| 3 | Tutorial Data Model | Small | Low |
-| 4 | Tutorial Panel UI | Medium | Medium |
-| 5 | Three-Pane Layout | Medium | **High** |
-| 6 | WebContainer Integration | Medium | Medium |
-| 7 | Polish & Animation | Small | Low |
+| Phase | Description                      | Effort | Risk     |
+| ----- | -------------------------------- | ------ | -------- |
+| 1     | Reporter Web Core (store, hooks) | Small  | Low      |
+| 2     | Tutorial Renderer Components     | Medium | Medium   |
+| 3     | Tutorial Data Model              | Small  | Low      |
+| 4     | Tutorial Panel UI                | Medium | Medium   |
+| 5     | Three-Pane Layout                | Medium | **High** |
+| 6     | WebContainer Integration         | Medium | Medium   |
+| 7     | Polish & Animation               | Small  | Low      |
 
 **Total estimated effort**: 2-3 weeks
 
 ### MVP Scope
 
 **Included:**
+
 - 3-pane layout (Explorer | Tutorial | Editor)
 - Event-driven tutorial rendering via `@pok/reporter-web`
 - File preview with "Create" action
@@ -233,6 +239,7 @@ See detailed plan: `playground-v4-implementation-plan.md`
 - Basic auto-progression
 
 **Deferred:**
+
 - Responsive breakpoints
 - Typewriter animation
 - Copy button on commands

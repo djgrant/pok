@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TabBar } from './components/TabBar';
 import { TabContent } from './components/TabContent';
-import { TutorialPanel, useTutorialHeaderInfo, ProgressIndicator } from './components/TutorialPanel';
+import {
+  TutorialPanel,
+  useTutorialHeaderInfo,
+  ProgressIndicator,
+} from './components/TutorialPanel';
 import { LoadingScreen } from './components/LoadingScreen';
 import { UnsupportedBrowser } from './components/UnsupportedBrowser';
 import { RefreshIcon, AlertIcon, MenuIcon } from './components/Icons';
@@ -232,11 +236,7 @@ export function App() {
       <div className="app-body">
         {/* Mobile menu backdrop */}
         {mobileMenuOpen && (
-          <div
-            className="mobile-menu-backdrop"
-            onClick={closeMobileMenu}
-            aria-hidden="true"
-          />
+          <div className="mobile-menu-backdrop" onClick={closeMobileMenu} aria-hidden="true" />
         )}
 
         <Sidebar
@@ -281,7 +281,7 @@ export function App() {
               const isActive = tab.id === workspace.activeTabId;
               const isSplit = tab.id === workspace.splitTabId;
               const isVisible = isActive || isSplit;
-              
+
               return (
                 <TabContent
                   key={tab.id}

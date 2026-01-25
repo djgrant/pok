@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import {
-  createInitialState,
-  reducer,
-  getTabsGroupActivities,
-  findTabsGroup,
-} from '../src';
+import { createInitialState, reducer, getTabsGroupActivities, findTabsGroup } from '../src';
 import type { CLIEvent, ActivityId, GroupId } from '@pokit/core';
 
 // =============================================================================

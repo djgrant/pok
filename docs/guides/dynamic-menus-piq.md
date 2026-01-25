@@ -17,13 +17,14 @@ import type { OptionsProvider } from '@pokit/core';
 
 // Define the provider
 const postsProvider: OptionsProvider<string> = async () => {
-  const results = await piq.from<PostSearch, PostMeta>('posts')
+  const results = await piq
+    .from<PostSearch, PostMeta>('posts')
     .search('*')
     .select({ meta: ['title'] })
     .exec();
 
   return {
-    options: results.map(r => ({
+    options: results.map((r) => ({
       value: r.path,
       label: r.meta?.title ?? r.search.slug,
       hint: r.search.date,
@@ -39,6 +40,7 @@ const selected = await prompter.select({
 ```
 
 **Key points:**
+
 - `search('*')` returns all items matching the collection pattern
 - `select({ meta: ['title'] })` loads only the title field from frontmatter
 - Map piq results to pok's `SelectOption<T>` shape
@@ -55,7 +57,8 @@ const PAGE_SIZE = 25;
 
 const paginatedProvider: OptionsProvider<string> = async ({ cursor }) => {
   // Fetch all results (piq caches the search layer)
-  const results = await piq.from<PostSearch, PostMeta>('posts')
+  const results = await piq
+    .from<PostSearch, PostMeta>('posts')
     .search('*')
     .select({ meta: ['title', 'date'] })
     .exec();
@@ -66,7 +69,7 @@ const paginatedProvider: OptionsProvider<string> = async ({ cursor }) => {
   const hasMore = offset + PAGE_SIZE < results.length;
 
   return {
-    options: page.map(r => ({
+    options: page.map((r) => ({
       value: r.path,
       label: r.meta?.title ?? r.search.slug,
       hint: r.meta?.date?.toLocaleDateString(),
@@ -84,6 +87,7 @@ const selected = await prompter.select({
 ```
 
 **Key points:**
+
 - Use cursor as string-encoded offset
 - Return `totalCount` for progress display ("25 of 150")
 - `nextCursor: undefined` signals end of results
@@ -99,7 +103,8 @@ let cachedResults: QueryResult<PostSearch, PostMeta>[] | null = null;
 const cachedProvider: OptionsProvider<string> = async ({ cursor }) => {
   // Fetch once, reuse across pages
   if (!cachedResults) {
-    cachedResults = await piq.from<PostSearch, PostMeta>('posts')
+    cachedResults = await piq
+      .from<PostSearch, PostMeta>('posts')
       .search('*')
       .select({ meta: ['title'] })
       .exec();
@@ -110,7 +115,7 @@ const cachedProvider: OptionsProvider<string> = async ({ cursor }) => {
   const hasMore = offset + PAGE_SIZE < cachedResults.length;
 
   return {
-    options: page.map(r => ({
+    options: page.map((r) => ({
       value: r.path,
       label: r.meta?.title ?? r.search.slug,
     })),
@@ -146,7 +151,7 @@ const filterableProvider = withCapabilities(
     const results = await query.select({ meta: ['title'] }).exec();
 
     return {
-      options: results.map(r => ({
+      options: results.map((r) => ({
         value: r.path,
         label: r.meta?.title ?? r.search.slug,
         hint: r.search.tag,
@@ -169,8 +174,7 @@ Filter using piq's `filter()` for frontmatter-based constraints:
 ```typescript
 const statusFilterProvider = withCapabilities(
   async ({ filter }) => {
-    const query = piq.from<PostSearch, PostMeta>('posts')
-      .search('*');
+    const query = piq.from<PostSearch, PostMeta>('posts').search('*');
 
     // Filter by status in frontmatter
     if (filter && ['draft', 'published', 'archived'].includes(filter)) {
@@ -180,7 +184,7 @@ const statusFilterProvider = withCapabilities(
     const results = await query.select({ meta: ['title', 'status'] }).exec();
 
     return {
-      options: results.map(r => ({
+      options: results.map((r) => ({
         value: r.path,
         label: r.meta?.title ?? r.search.slug,
         hint: r.meta?.status,
@@ -205,12 +209,10 @@ type PostSearch = { year: string; month: string; slug: string };
 
 const fastProvider: OptionsProvider<string> = async () => {
   // Search layer only - no file I/O
-  const results = await piq.from<PostSearch>('posts')
-    .search('*')
-    .exec();
+  const results = await piq.from<PostSearch>('posts').search('*').exec();
 
   return {
-    options: results.map(r => ({
+    options: results.map((r) => ({
       value: r.path,
       label: r.search.slug.replace(/-/g, ' '),
       hint: `${r.search.year}/${r.search.month}`,
@@ -225,13 +227,14 @@ Add frontmatter for better labels:
 
 ```typescript
 const richProvider: OptionsProvider<string> = async () => {
-  const results = await piq.from<PostSearch, PostMeta>('posts')
+  const results = await piq
+    .from<PostSearch, PostMeta>('posts')
     .search('*')
     .select({ meta: ['title', 'description'] })
     .exec();
 
   return {
-    options: results.map(r => ({
+    options: results.map((r) => ({
       value: r.path,
       label: r.meta?.title ?? r.search.slug,
       hint: r.meta?.description?.slice(0, 50),
@@ -252,7 +255,8 @@ const selected = await prompter.select({
 });
 
 // Load body only for selected item
-const post = await piq.from<PostSearch, PostMeta, PostBody>('posts')
+const post = await piq
+  .from<PostSearch, PostMeta, PostBody>('posts')
   .search('*')
   .select({ body: ['html', 'headings'] })
   .single()
@@ -267,6 +271,7 @@ Mirror your content directory structure as a command tree with nested menus.
 ### Directory Pattern
 
 Content structure:
+
 ```
 content/
   docs/
@@ -287,13 +292,13 @@ const categoryProvider: OptionsProvider<string> = async () => {
   const results = await piq.from<DocSearch>('docs').search('*').exec();
 
   // Extract unique categories
-  const categories = [...new Set(results.map(r => r.search.category))];
+  const categories = [...new Set(results.map((r) => r.search.category))];
 
   return {
-    options: categories.map(cat => ({
+    options: categories.map((cat) => ({
       value: cat,
       label: cat.replace(/-/g, ' '),
-      hint: `${results.filter(r => r.search.category === cat).length} docs`,
+      hint: `${results.filter((r) => r.search.category === cat).length} docs`,
     })),
   };
 };
@@ -301,13 +306,14 @@ const categoryProvider: OptionsProvider<string> = async () => {
 // Second-level menu: docs in category
 const docsInCategoryProvider = (category: string): OptionsProvider<string> => {
   return async () => {
-    const results = await piq.from<DocSearch, DocMeta>('docs')
+    const results = await piq
+      .from<DocSearch, DocMeta>('docs')
       .search({ category })
       .select({ meta: ['title'] })
       .exec();
 
     return {
-      options: results.map(r => ({
+      options: results.map((r) => ({
         value: r.path,
         label: r.meta?.title ?? r.search.slug,
       })),
@@ -341,7 +347,7 @@ type ContentPath = {
 async function navigateContent<TSearch extends Record<string, string>>(
   prompter: Prompter,
   collection: string,
-  segmentKeys: (keyof TSearch)[],
+  segmentKeys: (keyof TSearch)[]
 ): Promise<ContentPath> {
   const segments: string[] = [];
 
@@ -352,17 +358,18 @@ async function navigateContent<TSearch extends Record<string, string>>(
       constraints[k] = segments[i] as TSearch[typeof k];
     });
 
-    const results = await piq.from<TSearch>(collection)
+    const results = await piq
+      .from<TSearch>(collection)
       .search(segments.length === 0 ? '*' : constraints)
       .exec();
 
     // Extract unique values for current segment
-    const values = [...new Set(results.map(r => r.search[key] as string))];
+    const values = [...new Set(results.map((r) => r.search[key] as string))];
 
     const selected = await prompter.select({
       message: `Select ${String(key)}`,
       provider: async () => ({
-        options: values.map(v => ({ value: v, label: v })),
+        options: values.map((v) => ({ value: v, label: v })),
       }),
     });
 
@@ -375,9 +382,7 @@ async function navigateContent<TSearch extends Record<string, string>>(
     finalConstraints[k] = segments[i] as TSearch[typeof k];
   });
 
-  const results = await piq.from<TSearch>(collection)
-    .search(finalConstraints)
-    .exec();
+  const results = await piq.from<TSearch>(collection).search(finalConstraints).exec();
 
   return {
     collection,
@@ -397,23 +402,26 @@ Wrap piq queries with error handling for better UX:
 ```typescript
 const resilientProvider: OptionsProvider<string> = async ({ signal }) => {
   try {
-    const results = await piq.from<PostSearch, PostMeta>('posts')
+    const results = await piq
+      .from<PostSearch, PostMeta>('posts')
       .search('*')
       .select({ meta: ['title'] })
       .exec();
 
     if (results.length === 0) {
       return {
-        options: [{
-          value: '__empty__',
-          label: 'No posts found',
-          hint: 'Create a post first',
-        }],
+        options: [
+          {
+            value: '__empty__',
+            label: 'No posts found',
+            hint: 'Create a post first',
+          },
+        ],
       };
     }
 
     return {
-      options: results.map(r => ({
+      options: results.map((r) => ({
         value: r.path,
         label: r.meta?.title ?? r.search.slug,
       })),

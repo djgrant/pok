@@ -1,15 +1,19 @@
 # DX and API Design Research
 
 ## Problem
+
 Identify opportunities to improve pok's developer experience and API design. Focus on ergonomics, type inference, error messages, boilerplate reduction, and discoverability.
 
 ## Scope
+
 - `packages/core/src/` - Core API definitions
 - `test/commands/` and `commands/` - Real-world usage patterns
 - `docs/api/` - API documentation
 
 ## Approach
+
 Thorough codebase exploration examining:
+
 1. API ergonomics and verbosity
 2. TypeScript inference quality
 3. Error message helpfulness
@@ -18,6 +22,7 @@ Thorough codebase exploration examining:
 6. Comparison to competitors
 
 ## Hypothesis
+
 There are concrete improvements possible in context definition syntax, type exports, error messages, and API discoverability that could significantly reduce friction for developers adopting pok.
 
 ## Results
@@ -25,6 +30,7 @@ There are concrete improvements possible in context definition syntax, type expo
 ### 1. Current State Assessment
 
 #### Strengths
+
 - **Clean file-based routing**: Command files like `deploy.ts` become `mycli deploy` automatically
 - **Strong Zod integration**: Schema inference works well for context types
 - **Good separation of concerns**: defineCommand, defineTask, defineCheck, defineEnv are distinct primitives
@@ -32,6 +38,7 @@ There are concrete improvements possible in context definition syntax, type expo
 - **Comprehensive retry configuration**: BackoffStrategies enum with clear documentation
 
 #### Well-Designed Patterns
+
 ```typescript
 // This is elegant - spread to add dry-run
 context: {
@@ -52,7 +59,9 @@ const migrate = defineTask({
 ### 2. Pain Points Discovered
 
 #### 2.1 Context Definition Verbosity (HIGH PRIORITY)
+
 **Current pattern requires significant boilerplate:**
+
 ```typescript
 context: {
   env: {
@@ -74,17 +83,21 @@ context: {
 ```
 
 **Issues:**
+
 - `from: 'flag'` is always the same (no other sources implemented)
 - Every field needs the same structure repeated
 - 5+ lines per flag
 
 **Comparison to competitors:**
+
 - **Commander.js**: `.option('--env <type>', 'Target environment', 'dev')`
 - **Yargs**: `.option('env', { alias: 'e', type: 'string', default: 'dev' })`
 - **oclif**: Uses decorators but more concise
 
 #### 2.2 Undocumented/Unimplemented `flag:` Property (BUG)
+
 **In `commands/publish.ts` and `commands/version.ts`:**
+
 ```typescript
 context: {
   unscopedOnly: {
@@ -96,6 +109,7 @@ context: {
 ```
 
 The `flag:` property is being used to customize CLI flag names but:
+
 1. It's NOT in the `ContextFieldDef` type
 2. The `args.ts` parser doesn't look for it - it uses `camelToKebab(name)`
 3. TypeScript should error but doesn't because `ContextFieldDef` isn't strict
@@ -103,19 +117,22 @@ The `flag:` property is being used to customize CLI flag names but:
 **This is a discoverability failure** - developers can't discover this "feature" from types, and it may not work!
 
 #### 2.3 Deeply Nested Context Access (MEDIUM PRIORITY)
+
 **Current access pattern is verbose:**
+
 ```typescript
 run: async (r, ctx) => {
   // Must access ctx.context.env, not just ctx.env
   const env = ctx.context.env;
   const dryRun = ctx.context.dryRun;
-  
+
   // ctx.extraArgs and ctx.cwd are top-level
   // but context fields are nested
-}
+};
 ```
 
 **Why two levels?** The `RunContext` type has:
+
 - `context: InferContext<C>` - parsed flags
 - `extraArgs: string[]` - positional args
 - `cwd: string` - project root
@@ -123,7 +140,9 @@ run: async (r, ctx) => {
 This creates asymmetry and verbosity.
 
 #### 2.4 Task Context Type Complexity (MEDIUM PRIORITY)
+
 **The TaskContext generic has 4+ type parameters:**
+
 ```typescript
 type TaskContext<
   TEnvs = Record<string, never>,
@@ -136,7 +155,9 @@ type TaskContext<
 This complexity leaks into hover-tips and error messages, making debugging harder.
 
 #### 2.5 Missing Convenience Exports (LOW PRIORITY)
+
 **Common patterns aren't pre-packaged:**
+
 ```typescript
 // Developers need to manually create these
 const envFlag = {
@@ -149,7 +170,9 @@ const envFlag = {
 ```
 
 #### 2.6 Error Messages Lack Context (MEDIUM PRIORITY)
+
 **Good error example from CLIError:**
+
 ```
 Error: Required flag --env is missing
 
@@ -159,12 +182,15 @@ Run 'mycli deploy --help' for more information.
 ```
 
 **Bad error example - task execution failure:**
+
 ```
 CommandError: Command failed: prisma migrate deploy
 ```
+
 No context about which task, what env, retry status, etc.
 
 #### 2.7 No Short Flag Support (LOW PRIORITY)
+
 ```typescript
 // Can't define: -e as alias for --env
 context: {
@@ -174,6 +200,7 @@ context: {
 ```
 
 #### 2.8 Async Check Bodies Need Await (MINOR)
+
 ```typescript
 // Easy to forget the await
 export const dockerRunning = defineCheck({
@@ -184,6 +211,7 @@ export const dockerRunning = defineCheck({
   },
 });
 ```
+
 No enforcement that check actually awaits its async operations.
 
 ---
@@ -191,6 +219,7 @@ No enforcement that check actually awaits its async operations.
 ### 3. Concrete Improvement Ideas
 
 #### 3.1 Shorthand Context Syntax (HIGH IMPACT)
+
 **Proposal: Support Zod schema directly for common cases**
 
 ```typescript
@@ -215,12 +244,14 @@ context: {
 ```
 
 **Implementation:**
+
 - Normalize context at runtime - detect Zod schema vs full object
 - `z.describe()` already exists and works
 
 **Backwards compatible:** Old format still works.
 
 #### 3.2 Fix/Implement Custom Flag Names (BUG FIX)
+
 **Add `flag` to type and implement in parser:**
 
 ```typescript
@@ -229,18 +260,20 @@ type ContextFieldDef = {
   schema: z.ZodType;
   description?: string;
   choices?: string[];
-  flag?: string;     // <-- Add this
-  alias?: string;    // <-- And short alias
+  flag?: string; // <-- Add this
+  alias?: string; // <-- And short alias
 };
 ```
 
 **Update args.ts to respect custom flag names:**
+
 ```typescript
 // In parseContext, check for custom flag name
 const cliName = fieldDef.flag || camelToKebab(name);
 ```
 
 #### 3.3 Flatten Context Access
+
 **Proposal: Merge context into RunContext**
 
 ```typescript
@@ -248,20 +281,22 @@ const cliName = fieldDef.flag || camelToKebab(name);
 run: async (r, ctx) => {
   const env = ctx.context.env;
   const args = ctx.extraArgs;
-}
+};
 
 // AFTER
 run: async (r, ctx) => {
-  const env = ctx.env;           // Flattened
-  const args = ctx.extraArgs;    // Same
-}
+  const env = ctx.env; // Flattened
+  const args = ctx.extraArgs; // Same
+};
 ```
 
 **Implementation:**
+
 - RunContext could spread InferContext<C> directly
 - Check for conflicts with reserved names (extraArgs, cwd)
 
 #### 3.4 Common Flag Presets
+
 **Proposal: Export reusable context patterns**
 
 ```typescript
@@ -272,15 +307,15 @@ export const flags = {
     schema: z.enum(choices as [string, ...string[]]),
     description: 'Target environment',
   }),
-  
+
   dryRun: dryRunContext.dryRun,
-  
+
   verbose: {
     from: 'flag' as const,
     schema: z.boolean().default(false),
     description: 'Enable verbose output',
   },
-  
+
   yes: {
     from: 'flag' as const,
     schema: z.boolean().default(false),
@@ -297,6 +332,7 @@ context: {
 ```
 
 #### 3.5 Better Error Context in Task Failures
+
 **Proposal: Include task metadata in errors**
 
 ```typescript
@@ -306,7 +342,7 @@ class TaskError extends Error {
     public readonly taskLabel: string,
     public readonly attempt: number,
     public readonly maxAttempts: number,
-    public readonly output?: string,
+    public readonly output?: string
   ) {}
 }
 
@@ -317,6 +353,7 @@ class TaskError extends Error {
 ```
 
 #### 3.6 Type-Safe Context Helper
+
 **Proposal: Helper function for defining context with inference**
 
 ```typescript
@@ -337,19 +374,23 @@ This is less radical than proposal 3.1 but still reduces boilerplate.
 ### 4. Priority Recommendations
 
 #### P0 - Critical (Bug Fixes)
+
 1. **Fix `flag:` property** - Either implement or remove from dogfood code
 2. **Make ContextFieldDef strict** - Add `& Record<string, never>` to catch extra props
 
 #### P1 - High Impact
+
 3. **Shorthand context syntax** - Biggest DX win, high usage frequency
 4. **Common flag presets** - Low effort, immediate benefit
 5. **Short flag aliases** - Expected feature in any CLI framework
 
 #### P2 - Medium Impact
+
 6. **Flatten context access** - Reduces verbosity in every command
 7. **Better task error messages** - Improves debugging experience
 
 #### P3 - Nice to Have
+
 8. **Type-safe context helper (ctx)** - Alternative if shorthand is too radical
 9. **Async check enforcement** - Catches subtle bugs
 
@@ -357,24 +398,26 @@ This is less radical than proposal 3.1 but still reduces boilerplate.
 
 ### 5. Comparison to Competitors
 
-| Feature | pok | Commander.js | Yargs | oclif |
-|---------|-----|--------------|-------|-------|
-| Type safety | ★★★★★ | ★★☆☆☆ | ★★★☆☆ | ★★★★☆ |
-| Boilerplate | ★★★☆☆ | ★★★★★ | ★★★★☆ | ★★★☆☆ |
-| File-based routing | ★★★★★ | N/A | N/A | ★★★☆☆ |
-| Interactive prompts | ★★★★★ | ★★☆☆☆ | ★★★☆☆ | ★★★★☆ |
-| Pre-flight checks | ★★★★★ | N/A | N/A | N/A |
-| Env resolution | ★★★★★ | N/A | N/A | N/A |
-| Error messages | ★★★★☆ | ★★★☆☆ | ★★★★☆ | ★★★★☆ |
-| Learning curve | ★★★☆☆ | ★★★★★ | ★★★★☆ | ★★★☆☆ |
+| Feature             | pok   | Commander.js | Yargs | oclif |
+| ------------------- | ----- | ------------ | ----- | ----- |
+| Type safety         | ★★★★★ | ★★☆☆☆        | ★★★☆☆ | ★★★★☆ |
+| Boilerplate         | ★★★☆☆ | ★★★★★        | ★★★★☆ | ★★★☆☆ |
+| File-based routing  | ★★★★★ | N/A          | N/A   | ★★★☆☆ |
+| Interactive prompts | ★★★★★ | ★★☆☆☆        | ★★★☆☆ | ★★★★☆ |
+| Pre-flight checks   | ★★★★★ | N/A          | N/A   | N/A   |
+| Env resolution      | ★★★★★ | N/A          | N/A   | N/A   |
+| Error messages      | ★★★★☆ | ★★★☆☆        | ★★★★☆ | ★★★★☆ |
+| Learning curve      | ★★★☆☆ | ★★★★★        | ★★★★☆ | ★★★☆☆ |
 
 **pok's differentiators:**
+
 - Integrated secret resolution (defineEnv/defineEnvResolver)
 - Pre-flight check system
 - Tabbed terminal UI
 - Event-driven output
 
 **pok's gaps vs competitors:**
+
 - More verbose flag definitions than Commander
 - No short flag aliases (-e for --env)
 - Higher learning curve due to more concepts
@@ -384,7 +427,7 @@ This is less radical than proposal 3.1 but still reduces boilerplate.
 ### 6. Quick Wins (< 1 day effort each)
 
 1. **Add `flag:` and `alias:` to ContextFieldDef** - 2 hours
-2. **Export common presets** - 2 hours  
+2. **Export common presets** - 2 hours
 3. **Document all type exports in README** - 1 hour
 4. **Add examples of shorthand when Zod supports it** - 1 hour
 5. **Improve CommandError with task context** - 3 hours

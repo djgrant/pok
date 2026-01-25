@@ -33,4 +33,3 @@ export interface ReporterAdapter {
    */
   start(bus: EventBus): ReporterAdapterController;
 }
-

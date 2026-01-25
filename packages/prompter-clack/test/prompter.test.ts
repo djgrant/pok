@@ -289,19 +289,16 @@ describe('typeahead filtering', () => {
     });
 
     it('filterDebounceMs configures debounce timing', () => {
-      const provider = withCapabilities(
-        async () => ({ options: [] }),
-        { supportsFilter: true, filterDebounceMs: 300 }
-      );
+      const provider = withCapabilities(async () => ({ options: [] }), {
+        supportsFilter: true,
+        filterDebounceMs: 300,
+      });
 
       expect(provider.capabilities?.filterDebounceMs).toBe(300);
     });
 
     it('defaults filterDebounceMs to 150ms when not specified', () => {
-      const provider = withCapabilities(
-        async () => ({ options: [] }),
-        { supportsFilter: true }
-      );
+      const provider = withCapabilities(async () => ({ options: [] }), { supportsFilter: true });
 
       // Default 150ms is in the implementation, not the type
       expect(provider.capabilities?.filterDebounceMs).toBeUndefined();

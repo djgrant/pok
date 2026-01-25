@@ -3,7 +3,8 @@
 ## Vision
 
 Two terminals side by side:
-- **Left**: `pok learn` - interactive guide that *does things*
+
+- **Left**: `pok learn` - interactive guide that _does things_
 - **Right**: `pok introspect` - live file viewer with syntax highlighting
 
 When learn creates a file, it appears in introspect. User sees cause and effect directly. No explaining - just doing.
@@ -17,25 +18,31 @@ When learn creates a file, it appears in introspect. User sees cause and effect 
 ## Core Components
 
 ### 1. `pok introspect` command
+
 A TUI command (view-only) that:
+
 - Shows file tree of commands/
 - Syntax highlighted file preview
 - Live reloads on filesystem changes
 - Arrow key navigation between files
 
 ### 2. `pok learn` command (redesigned)
-An interactive guide that *executes*, not explains:
+
+An interactive guide that _executes_, not explains:
+
 - User selects an option
 - Learn performs actions (scaffolds files, runs commands)
 - User watches it happen in real-time
 - Minimal text - actions speak
 
 ### 3. Two-terminal playground layout
+
 - Side by side terminals
 - Left: `pok learn` (action)
 - Right: `pok introspect` (evidence)
 
 ### 4. Whimsical loading
+
 - Fun, not corporate
 - Bouncing ball or similar
 - Silly loading words
@@ -64,18 +71,21 @@ Each option is a sequence of actions, not a lesson.
 ## Technical Requirements
 
 ### pok introspect
+
 - File tree navigation (arrow keys)
 - Syntax highlighting (ANSI codes in terminal)
 - File watching for live updates
 - Runs as long-lived TUI process
 
 ### pok learn
+
 - Interactive menu (existing prompter)
 - Executes shell commands (touch, write files)
 - Runs other pok commands
 - Streams output as it happens
 
 ### Playground
+
 - Two xterm instances
 - Both connected to WebContainer
 - Coordinated startup (introspect first, then learn)
@@ -87,9 +97,11 @@ Each option is a sequence of actions, not a lesson.
 3. How to coordinate the two shell startups?
 
 ## Results
+
 (To be filled out)
 
 ## Evaluation
+
 (To be filled out)
 
 ---
@@ -121,6 +133,7 @@ Each option is a sequence of actions, not a lesson.
 ### Verification
 
 All features tested and working:
+
 - Loading screen is fun and whimsical
 - Two terminals appear side by side
 - Learn command creates files, runs commands
@@ -136,6 +149,7 @@ All features tested and working:
 ## Evaluation
 
 The hypothesis was correct:
+
 - **Do, then understand** works better than explain, then do
 - Two-terminal layout provides clear cause/effect visibility
 - Action-based learn command is more engaging than tutorial-style

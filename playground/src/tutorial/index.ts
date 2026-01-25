@@ -34,7 +34,4 @@ export {
 
 // Engine
 export type { TutorialEngine } from './engine';
-export {
-  createTutorialEngine,
-  createInitialState,
-} from './engine';
+export { createTutorialEngine, createInitialState } from './engine';
