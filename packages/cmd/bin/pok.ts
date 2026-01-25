@@ -113,6 +113,7 @@ Run \`pok init\` to create a pok.config.ts file.
     tabs: config.tabs,
     pmScripts: config.pmScripts,
     pmCommands: config.pmCommands,
+    plugins: config.plugins,
   });
 }
 

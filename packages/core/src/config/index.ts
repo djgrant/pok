@@ -12,6 +12,7 @@ import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
 import type { Prompter } from '../prompter';
 import type { TabsAdapter } from '../tabs';
+import type { MountableLike } from '../lib/command';
 
 export * from './prompter';
 export * from './tabs';
@@ -90,6 +91,12 @@ export type PokConfig = {
     * - string[]: List of specific commands to include
     */
    pmCommands?: boolean | string[];
+
+   /**
+    * Plugins to mount at the root.
+    * Allows injecting dynamic command sources.
+    */
+   plugins?: MountableLike[];
  };
 
  /**
@@ -106,6 +113,7 @@ export type PokConfig = {
    version: z.string().optional(),
    pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
    pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
+   plugins: z.array(z.any()).optional(),
  });
 
  /**
@@ -123,6 +131,7 @@ export type PokConfig = {
    tabs?: TabsAdapter;
    pmScripts?: boolean | string[];
    pmCommands?: boolean | string[];
+   plugins?: MountableLike[];
  }
 
 /**

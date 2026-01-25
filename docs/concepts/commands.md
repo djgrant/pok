@@ -55,11 +55,11 @@ export const command = defineCommand({
 
 ### Composition
 
-The root of your CLI is composed of multiple mountables. By default, `pok` composes:
-1. Package manager scripts (`pmScripts`)
-2. Package manager commands (`pmCommands`)
-3. Static extra commands (`extraCommands`)
-4. Root plugins (`plugins`)
+The root of your CLI is composed of multiple mountables. The default composition order is:
+1. Package manager scripts (if `pmScripts` is configured)
+2. Package manager commands (if `pmCommands` is configured)
+3. Static extra commands (if `extraCommands` is configured)
+4. Root plugins (if `plugins` is configured)
 5. File-based commands (from `commandsDir`)
 
 This order ensures file-based commands can override package manager scripts if needed.
