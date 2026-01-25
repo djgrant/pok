@@ -33,6 +33,55 @@ commands/
 
 Then `mycli db` will show a submenu with just "migrate".
 
+## Plugin System & Mounting
+
+You can build complex command trees by composing commands from multiple sources (plugins, directories, or scripts).
+
+### Mounting from a Directory
+
+You can mount a directory of commands under a specific command:
+
+```typescript
+// commands/admin.ts
+import { defineCommand } from '@pokit/core';
+import { mountFrom } from '@pokit/core/plugins';
+
+export const command = defineCommand({
+  label: 'Admin',
+  // Mounts all commands from ./admin/*.ts under 'mycli admin.*'
+  mount: mountFrom(import.meta.url, './admin'),
+});
+```
+
+### Composition
+
+The root of your CLI is composed of multiple mountables. By default, `pok` composes:
+1. Package manager scripts (`pmScripts`)
+2. Package manager commands (`pmCommands`)
+3. Static extra commands (`extraCommands`)
+4. Root plugins (`plugins`)
+5. File-based commands (from `commandsDir`)
+
+This order ensures file-based commands can override package manager scripts if needed.
+
+### Root Plugins
+
+You can inject plugins at the root level via `pok.config.ts`:
+
+```typescript
+// pok.config.ts
+import { defineConfig } from '@pokit/core';
+import { mountFrom } from '@pokit/core/plugins';
+
+export default defineConfig({
+  // ...
+  plugins: [
+    // Mount a directory from a package or local folder at the root
+    mountFrom(import.meta.url, './internal-tools'),
+  ],
+});
+```
+
 ## Context Patterns
 
 ### Required vs Optional

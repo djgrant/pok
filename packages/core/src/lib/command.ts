@@ -12,6 +12,58 @@
 import { z } from 'zod';
 import type { CheckConfig } from './check';
 import type { Runner } from './runner';
+import type { Reporter } from '../events';
+import type { Prompter } from '../prompter';
+
+// =============================================================================
+// Plugin / Mount Types
+// =============================================================================
+
+/**
+ * Context provided to a mountable during mounting
+ */
+export type MountContext = {
+  /** Project root directory */
+  projectRoot: string;
+  /** Reporter for emitting events */
+  reporter: Reporter;
+  /** Prompter for interactive input */
+  prompter: Prompter;
+  /** The path where the mountable is being mounted (e.g. ['admin']) */
+  path: string[];
+  /** The router configuration (typed as any to avoid cycles) */
+  config: any;
+  /** Arbitrary context data */
+  [key: string]: any;
+};
+
+/**
+ * Result of mounting a plugin
+ */
+export type MountResult = {
+  /**
+   * The command tree to merge into the parent.
+   * Root keys become children of the mounting command.
+   */
+  tree: CommandTree;
+
+  /**
+   * Unique ID for cycle detection.
+   * Must be deterministic based on the source (path, config, etc).
+   */
+  mountSourceId: string;
+};
+
+/**
+ * A function that produces a MountResult (or a promise of one)
+ */
+export type Mountable = (context: MountContext) => MountResult | Promise<MountResult>;
+
+/**
+ * Something that can be mounted: a Mountable function or a lazy factory
+ */
+export type MountableLike = Mountable | ((context: MountContext) => Mountable | Promise<Mountable>);
+
 
 // =============================================================================
 // Context Field Definition Types
@@ -244,6 +296,14 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
    * @default false
    */
   requestArgs?: boolean;
+
+  /**
+   * Mount a dynamic subcommand tree.
+   *
+   * A mountable function (or factory) that produces children for this command.
+   * This is the primary mechanism for plugins and composition.
+   */
+  mount?: MountableLike;
 };
 
 /**
@@ -313,6 +373,8 @@ export type CommandNode = {
   config: CommandConfig;
   /** Child commands keyed by their segment */
   children: Map<string, CommandNode>;
+  /** Provenance: where this node came from (plugin ID, directory, etc.) */
+  source?: string;
 };
 
 /**

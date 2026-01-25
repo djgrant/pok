@@ -13,7 +13,17 @@ import * as path from 'path';
 import picomatch from 'picomatch';
 
 import { getRuntime, getPackageManager } from '../runtime';
-import type { CommandConfig, CommandNode, CommandTree, HookContext } from './command';
+import type { CommandConfig, CommandNode, CommandTree, HookContext, MountContext, MountableLike } from './command';
+import { 
+    compose, 
+    fromDirectory, 
+    fromPackageScripts, 
+    fromPackageCommands, 
+    fromStatic, 
+    noop, 
+    resolveMountable,
+    tagNodes 
+} from './plugins';
 
 import type { CheckConfig } from './check';
 import { CheckError } from './check';
@@ -94,6 +104,12 @@ export type RouterConfig = {
    * Useful for dynamically generated commands or internal tooling.
    */
   extraCommands?: Record<string, import('./command').CommandConfig>;
+
+  /**
+   * Plugins to mount at the root.
+   * Allows injecting dynamic command sources (e.g. from other packages).
+   */
+  plugins?: MountableLike[];
 };
 
 /**
@@ -121,249 +137,11 @@ export type RouterContext = {
   tabs?: TabsAdapter;
 };
 
-type ScriptInfo = {
-  scriptName: string;
-  cwd: string;
-  scriptContent: string;
-  requestArgs: boolean;
-};
 
-type ParsedPmCommand = {
-  pm: 'pnpm' | 'bun' | 'npm' | 'yarn';
-  targetName?: string;
-  targetPath?: string;
-  commandToken?: string | null;
-  scriptToken?: string | null;
-};
 
-function tokenizeCommand(input: string): string[] {
-  const tokens: string[] = [];
-  let current = '';
-  let quote: '"' | "'" | null = null;
-  let escaped = false;
 
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i]!;
 
-    if (escaped) {
-      current += char;
-      escaped = false;
-      continue;
-    }
 
-    if (char === '\\') {
-      escaped = true;
-      continue;
-    }
-
-    if (quote) {
-      if (char === quote) {
-        quote = null;
-      } else {
-        current += char;
-      }
-      continue;
-    }
-
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-
-    if (/\s/.test(char)) {
-      if (current) {
-        tokens.push(current);
-        current = '';
-      }
-      continue;
-    }
-
-    current += char;
-  }
-
-  if (current) tokens.push(current);
-  return tokens;
-}
-
-function parsePmCommand(scriptContent: string): ParsedPmCommand | null {
-  const tokens = tokenizeCommand(scriptContent);
-  if (tokens.length === 0) return null;
-
-  const pm = tokens[0];
-  if (pm !== 'pnpm' && pm !== 'bun' && pm !== 'npm' && pm !== 'yarn') return null;
-
-  if (pm === 'yarn' && tokens[1] === 'workspace') {
-    const targetName = tokens[2];
-    if (!targetName) return null;
-    const commandToken = tokens[3] ?? null;
-    return {
-      pm,
-      targetName,
-      commandToken,
-      scriptToken: commandToken,
-    };
-  }
-
-  let filterValue: string | undefined;
-  let workspaceValue: string | undefined;
-  let commandPathValue: string | undefined;
-  const nonFlagTokens: string[] = [];
-
-  for (let i = 1; i < tokens.length; i++) {
-    const token = tokens[i]!;
-    if (token === '--') break;
-
-    if (token.startsWith('--filter=')) {
-      filterValue = token.slice('--filter='.length);
-      continue;
-    }
-    if (token === '--filter') {
-      filterValue = tokens[i + 1];
-      i++;
-      continue;
-    }
-    if (token.startsWith('--command=')) {
-      commandPathValue = token.slice('--command='.length);
-      continue;
-    }
-    if (token === '--command') {
-      commandPathValue = tokens[i + 1];
-      i++;
-      continue;
-    }
-    if (token.startsWith('--workspace=')) {
-      workspaceValue = token.slice('--workspace='.length);
-      continue;
-    }
-    if (token === '--workspace') {
-      workspaceValue = tokens[i + 1];
-      i++;
-      continue;
-    }
-
-    if (token.startsWith('-F')) {
-      filterValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
-      if (token.length === 2) i++;
-      continue;
-    }
-    if (token.startsWith('-C')) {
-      commandPathValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
-      if (token.length === 2) i++;
-      continue;
-    }
-    if (token.startsWith('-w')) {
-      workspaceValue = token.length > 2 ? token.slice(2) : tokens[i + 1];
-      if (token.length === 2) i++;
-      continue;
-    }
-
-    if (token.startsWith('-')) continue;
-
-    nonFlagTokens.push(token);
-  }
-
-  let commandToken: string | null = null;
-  let scriptToken: string | null = null;
-  if (nonFlagTokens.length > 0) {
-    if (nonFlagTokens[0] === 'run' || nonFlagTokens[0] === 'run-script') {
-      commandToken = nonFlagTokens[0];
-      scriptToken = nonFlagTokens[1] ?? null;
-    } else {
-      commandToken = nonFlagTokens[0];
-      scriptToken = nonFlagTokens[0];
-    }
-  }
-
-  if (pm === 'pnpm' || pm === 'bun') {
-    return {
-      pm,
-      targetName: commandPathValue ? undefined : filterValue,
-      targetPath: commandPathValue,
-      commandToken,
-      scriptToken,
-    };
-  }
-
-  if (pm === 'npm') {
-    return {
-      pm,
-      targetName: workspaceValue,
-      targetPath: commandPathValue,
-      commandToken,
-      scriptToken,
-    };
-  }
-
-  return {
-    pm,
-    targetName: workspaceValue,
-    targetPath: commandPathValue,
-    commandToken,
-    scriptToken,
-  };
-}
-
-async function loadPackageInfo(
-  pkgDir: string,
-  runtime: any
-): Promise<{ name: string | null; scripts: Record<string, unknown> } | null> {
-  try {
-    const content = await runtime.readFile(path.join(pkgDir, 'package.json'));
-    const pkg = JSON.parse(content);
-    return {
-      name: typeof pkg.name === 'string' ? pkg.name : null,
-      scripts: pkg.scripts || {},
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function resolveWorkspaceTarget(
-  parsed: ParsedPmCommand,
-  infoCwd: string,
-  projectRoot: string,
-  runtime: any,
-  workspaceMap: Map<string, string> | null
-): Promise<{
-  targetDir: string;
-  targetName: string | null;
-  scripts: Record<string, unknown>;
-  workspaceMap: Map<string, string> | null;
-} | null> {
-  if (parsed.targetPath) {
-    const absPath = path.isAbsolute(parsed.targetPath)
-      ? parsed.targetPath
-      : path.resolve(infoCwd, parsed.targetPath);
-    const pkgDir = absPath.endsWith('package.json') ? path.dirname(absPath) : absPath;
-    const pkgInfo = await loadPackageInfo(pkgDir, runtime);
-    if (!pkgInfo) return null;
-    return {
-      targetDir: pkgDir,
-      targetName: pkgInfo.name || path.basename(pkgDir),
-      scripts: pkgInfo.scripts,
-      workspaceMap,
-    };
-  }
-
-  if (parsed.targetName) {
-    if (!workspaceMap) {
-      workspaceMap = await buildWorkspaceMap(projectRoot, runtime);
-    }
-    const targetDir = workspaceMap.get(parsed.targetName);
-    if (!targetDir) return null;
-    const pkgInfo = await loadPackageInfo(targetDir, runtime);
-    if (!pkgInfo) return null;
-    return {
-      targetDir,
-      targetName: pkgInfo.name || parsed.targetName,
-      scripts: pkgInfo.scripts,
-      workspaceMap,
-    };
-  }
-
-  return null;
-}
 
 /**
  * Validate that there are no alias conflicts within a command tree level.
@@ -415,438 +193,100 @@ export async function buildCommandTree(
   commandsDir: string,
   ctx: RouterContext
 ): Promise<CommandTree> {
-  const tree: CommandTree = new Map();
-  const runtime = await getRuntime();
-  const { reporter } = ctx;
+  const { config, projectRoot, reporter, prompter } = ctx;
 
-  // 1. Add package manager scripts (pmScripts)
-  const scriptsConfig = ctx.config.pmScripts;
-  if (scriptsConfig) {
-    const projectRoot = ctx.projectRoot;
-    const { reporter } = ctx;
+  // Build the root composition
+  const rootMountable = compose(
+    // 1. Package Manager Scripts
+    config.pmScripts ? fromPackageScripts(config.pmScripts, projectRoot) : noop(),
+    
+    // 2. Package Manager Commands
+    config.pmCommands ? fromPackageCommands(config.pmCommands, projectRoot) : noop(),
+    
+    // 3. Extra Commands
+    config.extraCommands ? fromStatic(config.extraCommands) : noop(),
 
-    try {
-      const patterns = Array.isArray(scriptsConfig) ? scriptsConfig : [true];
+    // 4. Plugins (Root Mountables)
+    ...(config.plugins || []),
+    
+    // 5. File-based commands (legacy/standard way)
+    fromDirectory(commandsDir)
+  );
 
-      const allScripts = new Map<string, ScriptInfo>();
-
-      for (const pattern of patterns) {
-        if (typeof pattern === 'boolean') {
-          if (pattern === true) {
-            const rootPkgPath = path.join(projectRoot, 'package.json');
-            try {
-              const content = await runtime.readFile(rootPkgPath);
-              const pkg = JSON.parse(content);
-              for (const [name, script] of Object.entries(pkg.scripts || {})) {
-                if (name !== 'preinstall') {
-                  const scriptStr = typeof script === 'string' ? script : '';
-                  allScripts.set(name, {
-                    scriptName: name,
-                    cwd: projectRoot,
-                    scriptContent: scriptStr,
-                    requestArgs: scriptStr.trim().endsWith(' --'),
-                  });
-                }
-              }
-            } catch {
-              // Ignore
-            }
-          }
-          continue;
-        }
-
-        // 1. Try matching against root package scripts
-        try {
-          const rootPkgContent = await runtime.readFile(path.join(projectRoot, 'package.json'));
-          const rootPkg = JSON.parse(rootPkgContent);
-          const rootScripts = rootPkg.scripts || {};
-
-          if (rootScripts[pattern]) {
-            const script = rootScripts[pattern];
-            const scriptStr = typeof script === 'string' ? script : '';
-            allScripts.set(pattern, {
-              scriptName: pattern,
-              cwd: projectRoot,
-              scriptContent: scriptStr,
-              requestArgs: scriptStr.trim().endsWith(' --'),
-            });
-          } else if (!pattern.includes('/')) {
-            // Only try script name glob if there's no slash (avoid confusion with paths)
-            const isMatch = picomatch(pattern);
-            for (const [name, script] of Object.entries(rootScripts)) {
-              if (isMatch(name)) {
-                const scriptStr = typeof script === 'string' ? script : '';
-                allScripts.set(name, {
-                  scriptName: name,
-                  cwd: projectRoot,
-                  scriptContent: scriptStr,
-                  requestArgs: scriptStr.trim().endsWith(' --'),
-                });
-              }
-            }
-          }
-        } catch {
-          // Root package.json might not exist or be invalid, ignore
-        }
-
-        // 2. Try matching as a path glob for other package.jsons (monorepo support)
-        if (pattern.includes('/') || pattern.includes('\\') || pattern.includes('*')) {
-          let globPattern = pattern;
-          // If it doesn't end in package.json, assume it's a directory pattern
-          if (!pattern.endsWith('package.json')) {
-            globPattern = pattern.endsWith('/')
-              ? `${pattern}package.json`
-              : `${pattern}/package.json`;
-          }
-
-          try {
-            for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
-              // Skip root package.json if it was already handled as true or matched above
-              if (pkgPath === 'package.json') continue;
-
-              const absPath = path.join(projectRoot, pkgPath);
-              const content = await runtime.readFile(absPath);
-              const pkg = JSON.parse(content);
-              const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
-              const pkgDir = path.dirname(absPath);
-
-              for (const [scriptName, script] of Object.entries(pkg.scripts || {})) {
-                // Use package name as prefix for workspace scripts
-                const commandPath = `${pkgName}:${scriptName}`;
-                const scriptStr = typeof script === 'string' ? script : '';
-                allScripts.set(commandPath, {
-                  scriptName,
-                  cwd: pkgDir,
-                  scriptContent: scriptStr,
-                  requestArgs: scriptStr.trim().endsWith(' --'),
-                });
-              }
-            }
-          } catch {
-            // Ignore glob errors
-          }
-        }
-      }
-
-      let workspaceMap: Map<string, string> | null = null;
-
-      for (const [commandPath, info] of allScripts) {
-        const parsed = parsePmCommand(info.scriptContent);
-        if (parsed) {
-          const resolved = await resolveWorkspaceTarget(
-            parsed,
-            info.cwd,
-            projectRoot,
-            runtime,
-            workspaceMap
-          );
-          if (resolved) {
-            workspaceMap = resolved.workspaceMap;
-            const targetScripts = resolved.scripts || {};
-            const scriptNames = Object.keys(targetScripts);
-
-            const hasCommand = parsed.commandToken !== null && parsed.commandToken !== undefined;
-            const isRunCommand =
-              parsed.commandToken === 'run' || parsed.commandToken === 'run-script';
-            const hasExplicitScript = parsed.scriptToken !== null && parsed.scriptToken !== undefined;
-
-            const shouldCreateSubmenu =
-              scriptNames.length > 0 && (!hasCommand || (isRunCommand && !hasExplicitScript));
-
-            if (shouldCreateSubmenu) {
-              const segments = commandPath.split(/[:.]/);
-              const parentConfig: CommandConfig = {
-                label: info.scriptName,
-                description: `Proxy to ${resolved.targetName} scripts`,
-              };
-              insertIntoTree(tree, segments, parentConfig);
-
-              let addedChild = false;
-              for (const [childName, childScript] of Object.entries(targetScripts)) {
-                const childSegments = [...segments, childName];
-
-                const childConfig: CommandConfig = {
-                  label: childName,
-                  description: typeof childScript === 'string' ? childScript : `Run ${childName}`,
-                  ignoreUnknownFlags: true,
-                  run: async (r, ctx) => {
-                    const args = ctx.extraArgs.length > 0 ? ` ${ctx.extraArgs.join(' ')}` : '';
-                    const fullCmd = `${info.scriptContent} ${childName}${args}`;
-                    await r.exec(fullCmd, {
-                      interactive: true,
-                      cwd: info.cwd,
-                      env: {
-                        npm_config_recursive: undefined,
-                      },
-                    });
-                  },
-                };
-                insertIntoTree(tree, childSegments, childConfig);
-                addedChild = true;
-              }
-
-              if (addedChild) {
-                continue;
-              }
-            }
-          }
-        }
-
-        const config = createPmAction('run', info.scriptName, info.cwd, info.requestArgs);
-        const segments = commandPath.split(/[:.]/);
-        insertIntoTree(tree, segments, config);
-      }
-    } catch (error) {
-      reporter.warn(
-        `Failed to load scripts: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  // 2. Add native package manager commands
-  if (ctx.config.pmCommands) {
-    const projectRoot = ctx.projectRoot;
-    const commandsConfig = ctx.config.pmCommands;
-
-    // Normalize commands list and discovery patterns
-    const commands: string[] = [];
-    const patterns: string[] = [];
-
-    if (commandsConfig === true) {
-      commands.push('install', 'add', 'remove', 'update', 'audit', 'outdated');
-    } else if (Array.isArray(commandsConfig)) {
-      for (const item of commandsConfig) {
-        if (item.includes('/') || item.includes('\\') || item.includes('*')) {
-          patterns.push(item);
-        } else {
-          commands.push(item);
-        }
-      }
-    }
-
-    // 1. Register commands for root
-    for (const cmd of commands) {
-      const config = createPmAction('exec', cmd, projectRoot);
-      insertIntoTree(tree, [cmd], config);
-    }
-
-    // 2. Register commands for workspaces if patterns exist
-    if (patterns.length > 0) {
-      for (const pattern of patterns) {
-        let globPattern = pattern;
-        if (!pattern.endsWith('package.json')) {
-          globPattern = pattern.endsWith('/')
-            ? `${pattern}package.json`
-            : `${pattern}/package.json`;
-        }
-
-        try {
-          for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
-            if (pkgPath === 'package.json') continue;
-
-            const absPath = path.join(projectRoot, pkgPath);
-            const content = await runtime.readFile(absPath);
-            const pkg = JSON.parse(content);
-            const pkgName = pkg.name || path.basename(path.dirname(pkgPath));
-            const pkgDir = path.dirname(absPath);
-
-            for (const cmd of commands) {
-              const commandPath = `${pkgName}:${cmd}`;
-              const config = createPmAction('exec', cmd, pkgDir);
-              insertIntoTree(tree, commandPath.split(/[:.]/), config);
-            }
-          }
-        } catch {
-          // Ignore glob errors
-        }
-      }
-    }
-  }
-
-  // 3. Add extra commands
-  if (ctx.config.extraCommands) {
-    for (const [name, config] of Object.entries(ctx.config.extraCommands)) {
-      insertIntoTree(tree, name.split('.'), config);
-    }
-  }
-
-  // 4. Load file-based commands
-  if (fs.existsSync(commandsDir)) {
-    for await (const file of runtime.glob('*.{ts,tsx}', { cwd: commandsDir })) {
-      // Skip non-command files
-      if (file.startsWith('_')) continue;
-
-      const filePath = path.join(commandsDir, file);
-
-      try {
-        const module = await import(filePath);
-
-        if (!module.command) {
-          // File doesn't export a command - skip
-          continue;
-        }
-
-        // Convert filename to command path
-        // e.g., 'generate.types.cloudflare.ts' -> ['generate', 'types', 'cloudflare']
-        const commandPath = file.replace(/\.tsx?$/, '');
-        const segments = commandPath.split('.');
-
-        const config = module.command as CommandConfig;
-
-        // Warn if command has conflicting configuration
-        if (config.run && config.enableRunAllChildren) {
-          reporter.warn(
-            `Command "${commandPath}" has both 'run' and 'enableRunAllChildren'. ` +
-              `The 'enableRunAllChildren' option will be ignored.`
-          );
-        }
-
-        // Insert into tree
-        insertIntoTree(tree, segments, config);
-      } catch (error) {
-        // Log with actionable guidance - allows partial loading
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        reporter.error(
-          `Failed to load command "${file}":\n` +
-            `  ${errorMessage}\n\n` +
-            `To fix this:\n` +
-            `  1. Ensure the file exports a valid command: export const command = defineCommand({ ... })\n` +
-            `  2. Check for syntax errors or missing imports in the file\n` +
-            `  3. Verify all referenced tasks and checks are properly defined`
-        );
-      }
-    }
-  }
-
-  // Validate aliases after building the tree
-
-  validateAliases(tree);
-
-  return tree;
-}
-
-/**
- * Create a command that runs a package manager action (script or command)
- *
- * @internal
- * @param type - 'run' for scripts (pm run x), 'exec' for native commands (pm x)
- * @param name - The script name or command name
- * @param cwd - Working directory for the command
- * @returns Command configuration
- */
-function createPmAction(
-  type: 'run' | 'exec',
-  name: string,
-  cwd: string,
-  requestArgs: boolean = false
-): CommandConfig {
-  const pm = getPackageManager(cwd);
-  const isPnpmWorkspace = pm === 'pnpm' && fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml'));
-  const isYarnWorkspace =
-    pm === 'yarn' &&
-    fs.existsSync(path.join(cwd, 'package.json')) &&
-    (() => {
-      try {
-        return !!JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')).workspaces;
-      } catch {
-        return false;
-      }
-    })();
-
-  // Map logical command names to PM-specific commands
-  let actualName = name;
-  let flags = '';
-
-  if (type === 'exec') {
-    if (pm === 'npm') {
-      if (name === 'add') actualName = 'install';
-      if (name === 'remove') actualName = 'uninstall';
-    } else if (pm === 'yarn') {
-      if (name === 'update') actualName = 'upgrade';
-      // Yarn v1 needs -W for root commands in workspace
-      if (isYarnWorkspace && ['add', 'remove', 'upgrade', 'install'].includes(actualName)) {
-        flags = ' -W';
-      }
-    } else if (pm === 'bun') {
-      if (name === 'audit') actualName = 'pm audit';
-    } else if (pm === 'pnpm') {
-      // pnpm needs -w for root commands in workspace
-      if (isPnpmWorkspace && ['add', 'install', 'remove', 'update'].includes(actualName)) {
-        flags = ' -w';
-      }
-    }
-  }
-
-  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${actualName}${flags}`;
-
-  return {
-    label: name,
-    description,
-    ignoreUnknownFlags: true,
-    requestArgs,
-    run: async (r, ctx) => {
-      const pm = getPackageManager(cwd);
-      // Ensure we have args if requested (handled by executeLeaf logic now)
-      const args =
-        ctx.extraArgs.length > 0
-          ? type === 'run'
-            ? ` -- ${ctx.extraArgs.join(' ')}`
-            : ` ${ctx.extraArgs.join(' ')}`
-          : '';
-      const cmd =
-        type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${flags}${args}`;
-      await r.exec(cmd, {
-        interactive: true,
-        cwd,
-        env: {
-          npm_config_recursive: undefined,
-        },
-      });
-    },
+  const mountCtx: MountContext = {
+    projectRoot,
+    reporter,
+    prompter,
+    path: [],
+    config: ctx.config,
+    ...ctx,
   };
-}
 
-/**
- * Insert a command into the tree, creating intermediate nodes as needed.
+  try {
+    // 1. Resolve root
+    const rootResult = await resolveMountable(rootMountable, mountCtx);
+    const tree = rootResult.tree;
 
- *
- * Walks the segment path (e.g., ['generate', 'types', 'cloudflare']) and creates
- * tree nodes as necessary. Intermediate nodes get a placeholder config with just
- * a label. The final segment receives the actual command config.
- *
- * @internal
- * @param tree - The command tree to insert into
- * @param segments - Path segments from the command filename (e.g., 'foo.bar.ts' -> ['foo', 'bar'])
- * @param config - The command configuration to attach to the leaf node
- */
-function insertIntoTree(tree: CommandTree, segments: string[], config: CommandConfig): void {
-  let currentLevel = tree;
-  let currentPath = '';
+    // 2. Recursively expand
+    await expandTree(tree, mountCtx, new Set([rootResult.mountSourceId]));
 
-  for (let i = 0; i < segments.length; i++) {
-    const segment = segments[i]!;
-    currentPath = currentPath ? `${currentPath}.${segment}` : segment;
-    const isLast = i === segments.length - 1;
+    // 3. Validate aliases
+    validateAliases(tree);
 
-    let node = currentLevel.get(segment);
-
-    if (!node) {
-      // Create new node
-      node = {
-        path: currentPath,
-        segment,
-        config: isLast ? config : { label: segment },
-        children: new Map(),
-      };
-      currentLevel.set(segment, node);
-    } else if (isLast) {
-      // Update existing node with actual config
-      node.config = config;
-    }
-
-    currentLevel = node.children;
+    return tree;
+  } catch (error) {
+    reporter.error(`Failed to build command tree: ${error}`);
+    throw error;
   }
 }
+
+async function expandTree(tree: CommandTree, ctx: MountContext, visited: Set<string>): Promise<void> {
+  for (const node of tree.values()) {
+    let branchVisited = visited;
+
+    if (node.config.mount) {
+      const childContext: MountContext = {
+        ...ctx,
+        path: [...ctx.path, node.segment],
+      };
+
+      try {
+        const result = await resolveMountable(node.config.mount, childContext);
+
+        if (visited.has(result.mountSourceId)) {
+          ctx.reporter.warn(`Cycle detected in mount source: ${result.mountSourceId}. Skipping.`);
+          continue;
+        }
+
+        branchVisited = new Set(visited);
+        branchVisited.add(result.mountSourceId);
+
+        // Merge children
+        for (const [childKey, childNode] of result.tree) {
+           if (node.children.has(childKey)) {
+              // Collision policy: fail fast
+              throw new Error(`Command collision: "${childKey}" already exists in "${node.path}"`);
+           }
+           
+           // Tag with provenance
+           tagNodes(childNode, result.mountSourceId);
+           
+           node.children.set(childKey, childNode);
+        }
+      } catch (e) {
+          ctx.reporter.error(`Failed to mount plugin at ${node.path}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    if (node.children.size > 0) {
+       await expandTree(node.children, { ...ctx, path: [...ctx.path, node.segment] }, branchVisited);
+    }
+  }
+}
+
+
+
+
 
 /**
  * Find a node in a tree level by name or alias.
@@ -875,75 +315,7 @@ function findNodeByNameOrAlias(level: CommandTree, name: string): CommandNode | 
   return undefined;
 }
 
-/**
- * Discover all workspace packages and return a map of name -> path
- */
-async function buildWorkspaceMap(projectRoot: string, runtime: any): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
-  const patterns: string[] = [];
 
-  // 1. Try pnpm-workspace.yaml
-  try {
-    const pnpmPath = path.join(projectRoot, 'pnpm-workspace.yaml');
-    const content = await runtime.readFile(pnpmPath);
-    // Simple YAML array extraction (handles 'packages/*' and "packages/*")
-    const matches = content.matchAll(/-\s+['"]?([^'"\n]+)['"]?/g);
-    for (const m of matches) patterns.push(m[1]);
-  } catch {
-    // Ignore
-  }
-
-  // 2. Try package.json workspaces
-  try {
-    const pkgPath = path.join(projectRoot, 'package.json');
-    const content = await runtime.readFile(pkgPath);
-    const pkg = JSON.parse(content);
-    if (Array.isArray(pkg.workspaces)) {
-      patterns.push(...pkg.workspaces);
-    } else if (pkg.workspaces && Array.isArray(pkg.workspaces.packages)) {
-      patterns.push(...pkg.workspaces.packages);
-    }
-  } catch {
-    // Ignore
-  }
-
-  // Default fallback if no patterns found
-  if (patterns.length === 0) {
-    patterns.push('packages/*', 'apps/*');
-  }
-
-  // 3. Scan directories
-  for (const pattern of patterns) {
-    // Convert dir glob to package.json glob
-    let globPattern = pattern;
-    if (!pattern.endsWith('package.json')) {
-      globPattern = pattern.endsWith('/') ? `${pattern}package.json` : `${pattern}/package.json`;
-    }
-
-    try {
-      for await (const pkgPath of runtime.glob(globPattern, { cwd: projectRoot })) {
-        if (pkgPath === 'package.json') continue; // Skip root
-
-        const absPath = path.join(projectRoot, pkgPath);
-        const pkgDir = path.dirname(absPath);
-
-        try {
-          const content = await runtime.readFile(absPath);
-          const pkg = JSON.parse(content);
-          if (pkg.name) {
-            map.set(pkg.name, pkgDir);
-          }
-        } catch {
-          // Skip invalid package.json
-        }
-      }
-    } catch {
-      // Ignore glob errors
-    }
-  }
-
-  return map;
-}
 
 /**
  * Find a node in the tree by path segments.

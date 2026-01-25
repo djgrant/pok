@@ -41,6 +41,10 @@ export type {
   LoadedCommand,
   CommandNode,
   CommandTree,
+  MountContext,
+  MountResult,
+  Mountable,
+  MountableLike,
 } from './lib/command';
 
 // =============================================================================
@@ -271,4 +275,18 @@ export type { RunCliConfig } from './cli';
 // =============================================================================
 
 export * from './config';
+
+// =============================================================================
+// Plugins
+// =============================================================================
+
+export {
+  compose,
+  fromDirectory,
+  mountFrom,
+  fromStatic,
+  fromPackageScripts,
+  fromPackageCommands,
+  resolveMountable,
+} from './lib/plugins';
 
