@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 import type { CommandConfig, CommandTree, MountContext, MountResult, Mountable, MountableLike } from './command';
 import { getRuntime } from '../runtime';
 import { 
@@ -171,7 +172,7 @@ export function fromDirectory(dir: string): Mountable {
  * @example mountFrom(import.meta.url, './admin')
  */
 export function mountFrom(baseUrl: string, relativePath: string): Mountable {
-    const dir = path.resolve(path.dirname(new URL(baseUrl).pathname), relativePath);
+    const dir = path.resolve(path.dirname(fileURLToPath(baseUrl)), relativePath);
     return fromDirectory(dir);
 }
 
@@ -375,7 +376,7 @@ export function fromPackageScripts(
 
         return {
             tree,
-            mountSourceId: `pmScripts:${stableStringify(config)}`,
+            mountSourceId: `pmScripts:${projectRoot}:${stableStringify(config)}`,
         };
     };
 }
@@ -447,7 +448,7 @@ export function fromPackageCommands(
 
         return {
             tree,
-            mountSourceId: `pmCommands:${stableStringify(config)}`,
+            mountSourceId: `pmCommands:${projectRoot}:${stableStringify(config)}`,
         };
     };
 }
