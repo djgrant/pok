@@ -40,6 +40,32 @@ type ContextFieldDef = {
 };
 ```
 
+### Static Context Values
+
+You can also provide literal values (string, number, or boolean) directly in the `context` object. These are "hardcoded" values that:
+1. Are **not** exposed as CLI flags.
+2. Are **not** prompted for.
+3. Are fully typed in the `run` function and passed to tasks.
+
+This is useful for creating "shortcuts" or specialized commands that fix a context value (like `env`) for a set of tasks.
+
+```typescript
+export const command = defineCommand({
+  label: 'Deploy Production',
+  context: {
+    env: 'prod', // Static value
+    verbose: {
+      from: 'flag',
+      schema: z.boolean().default(false),
+    }
+  },
+  run: async (r, ctx) => {
+    // ctx.context.env is typed as 'prod'
+    await r.run(deployTask); // deployTask's resolver receives { env: 'prod' }
+  },
+});
+```
+
 ## Examples
 
 ### Basic Command

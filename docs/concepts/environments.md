@@ -268,6 +268,26 @@ resolve: async (keys, ctx) => {
 },
 ```
 
+### Static Context Pattern
+
+Sometimes you want to create specialized commands that "fix" a context value (like `env`) so users don't have to provide it as a flag. You can do this by providing a literal value in the `context` object:
+
+```typescript
+// commands/deploy.prod.ts
+export const command = defineCommand({
+  label: 'Deploy to Production',
+  context: {
+    env: 'prod', // Satisfies { env: string } requirement statically
+  },
+  run: async (r) => {
+    // No flag required, but task receives env: 'prod'
+    await r.run(deployTask);
+  },
+});
+```
+
+This ensures the command remains type-safe and tasks get the context they need, without cluttering the CLI interface with unnecessary flags for that specific command.
+
 ## Caching
 
 Resolved values are cached per runner session:

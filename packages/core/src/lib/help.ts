@@ -7,6 +7,7 @@
  */
 
 import type { CommandConfig, CommandNode, ContextDef, ContextFieldDef } from './command';
+import { isContextFieldDef } from './command';
 import type { CheckConfig } from './check';
 import type { SchemaInfo } from './args';
 import { getSchemaInfo } from './args';
@@ -121,6 +122,11 @@ function getMaxFlagWidth(contextDef: ContextDef): number {
   let max = 0;
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Skip static values
+    if (!isContextFieldDef(fieldDef)) {
+      continue;
+    }
+
     const info = getSchemaInfo(fieldDef.schema);
     const kebabName = camelToKebab(name);
     let width = `--${kebabName}`.length;
@@ -230,8 +236,12 @@ export function generateHelp(options: HelpOptions): string {
 
     // Sort flags alphabetically
     const sortedFlags = Object.entries(contextDef).sort(([a], [b]) => a.localeCompare(b));
-
     for (const [name, fieldDef] of sortedFlags) {
+      // Skip static values
+      if (!isContextFieldDef(fieldDef)) {
+        continue;
+      }
+
       const info = getSchemaInfo(fieldDef.schema);
       lines.push(formatFlagLine(name, fieldDef, info, maxWidth));
     }
