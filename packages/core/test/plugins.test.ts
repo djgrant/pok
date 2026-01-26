@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import * as path from 'path';
 import { defineCommand } from '../src/lib/command';
-import {
-  compose,
-  fromStatic,
-  resolveMountable,
-  fromDirectory,
-} from '../src/lib/plugins';
+import { compose, fromStatic, resolveMountable, fromDirectory } from '../src/lib/plugins';
 import { buildCommandTree } from '../src/lib/router';
 import { createRawPrompter } from '../src/prompter';
 import { createRawReporterAdapter } from '../src/events';
