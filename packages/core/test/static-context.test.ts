@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import { parseContext, resolveInteractiveContext, validateRequiredContext, extractChoices } from '../src/lib/args';
+import {
+  parseContext,
+  resolveInteractiveContext,
+  validateRequiredContext,
+  extractChoices,
+} from '../src/lib/args';
 import { generateHelp } from '../src/lib/help';
 import { generateCompletions } from '../src/lib/completion';
 import type { ContextDef, CommandNode } from '../src';
@@ -13,7 +18,7 @@ describe('Static Context (Duck Typing Literals)', () => {
     tag: {
       from: 'flag' as const,
       schema: z.string().default('v1'),
-    }
+    },
   } satisfies ContextDef;
 
   describe('parseContext', () => {
@@ -36,19 +41,34 @@ describe('Static Context (Duck Typing Literals)', () => {
     it('skips static values during interaction', async () => {
       let promptCalled = false;
       const prompter = {
-        select: async () => { promptCalled = true; return 'dev'; },
-        confirm: async () => { promptCalled = true; return false; },
-        text: async () => { promptCalled = true; return ''; },
+        select: async () => {
+          promptCalled = true;
+          return 'dev';
+        },
+        confirm: async () => {
+          promptCalled = true;
+          return false;
+        },
+        text: async () => {
+          promptCalled = true;
+          return '';
+        },
       } as any;
 
       const context = { env: 'prod', version: 1, debug: true, tag: undefined } as any;
-      const result = await resolveInteractiveContext(context, contextWithStatic, new Map(), prompter, true);
+      const result = await resolveInteractiveContext(
+        context,
+        contextWithStatic,
+        new Map(),
+        prompter,
+        true
+      );
 
       expect(result.env).toBe('prod');
       expect(result.version).toBe(1);
       expect(result.debug).toBe(true);
       // tag IS a flag, so it might be prompted if fromMenu=true
-      expect(promptCalled).toBe(true); 
+      expect(promptCalled).toBe(true);
     });
   });
 
