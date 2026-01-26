@@ -187,6 +187,10 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
   }
 }
 
+function getNodeProjectRoot(node: CommandNode, ctx: RouterContext): string {
+  return node.projectRoot ?? ctx.projectRoot;
+}
+
 /**
  * Load all command files and build a command tree
  */
@@ -246,8 +250,10 @@ async function expandTree(
     let branchVisited = visited;
 
     if (node.config.mount) {
+      const effectiveProjectRoot = node.projectRoot ?? ctx.projectRoot;
       const childContext: MountContext = {
         ...ctx,
+        projectRoot: effectiveProjectRoot,
         path: [...ctx.path, node.segment],
       };
 
@@ -658,7 +664,8 @@ async function executeLeaf(
   const { fromMenu, menuOpen = false, quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
   const contextDef = config.context || {};
-  const { projectRoot, reporter, prompter, eventBus, tabs, appName } = ctx;
+  const { reporter, prompter, eventBus, tabs, appName } = ctx;
+  const projectRoot = getNodeProjectRoot(node, ctx);
 
   // Check if already aborted before starting
   if (signal?.aborted) {
@@ -801,12 +808,13 @@ async function resolveChildrenContexts(
  */
 async function collectPreChecks(
   leavesWithContext: LeafWithContext[],
-  projectRoot: string
+  ctx: RouterContext
 ): Promise<CheckConfig[]> {
   const seen = new Set<CheckConfig>();
   const allChecks: CheckConfig[] = [];
 
   for (const { node: leaf, resolvedContext, extraArgs } of leavesWithContext) {
+    const projectRoot = getNodeProjectRoot(leaf, ctx);
     const hookCtx: HookContext = {
       ...resolvedContext,
       extraArgs,
@@ -898,7 +906,7 @@ async function executeAllChildren(
   menuOpen: boolean = false
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
-  const { reporter, projectRoot } = ctx;
+  const { reporter } = ctx;
 
   if (!mode) {
     throw new RouterError('enableRunAllChildren not configured');
@@ -921,7 +929,7 @@ async function executeAllChildren(
   const leavesWithContext = await resolveChildrenContexts(leaves, args, ctx, fromMenu);
 
   // Phase 2: Collect all pre-checks
-  const allChecks = await collectPreChecks(leavesWithContext, projectRoot);
+  const allChecks = await collectPreChecks(leavesWithContext, ctx);
 
   // Phase 3: Run all pre-checks in one group
   await runChecksGroup(allChecks, reporter);
@@ -947,7 +955,8 @@ async function executeLeafWithContext(
 ): Promise<void> {
   const { quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
-  const { projectRoot, reporter, prompter, eventBus, tabs } = ctx;
+  const { reporter, prompter, eventBus, tabs } = ctx;
+  const projectRoot = getNodeProjectRoot(node, ctx);
 
   // Check if already aborted before starting
   if (signal?.aborted) {
@@ -1008,7 +1017,7 @@ async function executeAllChildrenWithContext(
   ctx: RouterContext
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
-  const { reporter, projectRoot } = ctx;
+  const { reporter } = ctx;
 
   if (!mode) {
     throw new RouterError('enableRunAllChildren not configured');
@@ -1028,6 +1037,7 @@ async function executeAllChildrenWithContext(
   const allChecks: CheckConfig[] = [];
 
   for (const leaf of leaves) {
+    const projectRoot = getNodeProjectRoot(leaf, ctx);
     const hookCtx: HookContext = {
       ...resolvedContext,
       extraArgs,

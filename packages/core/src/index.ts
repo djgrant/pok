@@ -282,6 +282,7 @@ export * from './config';
 
 export {
   compose,
+  fromConfig,
   fromDirectory,
   fromStatic,
   fromPackageScripts,

@@ -374,6 +374,8 @@ export type CommandNode = {
   children: Map<string, CommandNode>;
   /** Provenance: where this node came from (plugin ID, directory, etc.) */
   source?: string;
+  /** Optional project root override for this subtree */
+  projectRoot?: string;
 };
 
 /**

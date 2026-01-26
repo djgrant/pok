@@ -52,6 +52,21 @@ export const command = defineCommand({
 });
 ```
 
+### Mounting from Another Config
+
+You can mount an entire sub-app from another `pok.config.ts` file or directory:
+
+```typescript
+// commands/tools.ts
+import { defineCommand, fromConfig } from '@pokit/core';
+
+export const command = defineCommand({
+  label: 'Tools',
+  // Mounts the other app as a sub-tree under 'mycli tools.*'
+  mount: fromConfig(import.meta.url, '../tools-app'),
+});
+```
+
 ### Composition
 
 The root of your CLI is composed of multiple mountables. The default composition order is:

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
+import { validateConfig } from '../config';
 import type {
   CommandConfig,
   CommandTree,
@@ -126,6 +127,72 @@ function insertIntoTree(tree: CommandTree, segments: string[], config: CommandCo
   }
 }
 
+type ConfigTarget = {
+  configPath: string;
+  configDir: string;
+};
+
+function findConfigInDir(dir: string): ConfigTarget | null {
+  const configPath = path.join(dir, 'pok.config.ts');
+  if (fs.existsSync(configPath)) {
+    return { configPath, configDir: dir };
+  }
+
+  const dotConfigPath = path.join(dir, '.config', 'pok.config.ts');
+  if (fs.existsSync(dotConfigPath)) {
+    return { configPath: dotConfigPath, configDir: dir };
+  }
+
+  return null;
+}
+
+function resolveConfigTarget(targetPath: string): ConfigTarget | null {
+  try {
+    if (!fs.existsSync(targetPath)) return null;
+    const stat = fs.statSync(targetPath);
+    if (stat.isFile()) {
+      return { configPath: targetPath, configDir: path.dirname(targetPath) };
+    }
+    if (stat.isDirectory()) {
+      return findConfigInDir(targetPath);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function applyProjectRoot(
+  tree: CommandTree,
+  projectRoot: string,
+  config: MountContext['config']
+): void {
+  for (const node of tree.values()) {
+    node.projectRoot = projectRoot;
+
+    if (node.config.mount) {
+      const originalMount = node.config.mount;
+      node.config = {
+        ...node.config,
+        mount: async (context: MountContext) => {
+          const result = await resolveMountable(originalMount, {
+            ...context,
+            projectRoot,
+            config,
+          });
+          applyProjectRoot(result.tree, projectRoot, config);
+          return result;
+        },
+      };
+    }
+
+    if (node.children.size > 0) {
+      applyProjectRoot(node.children, projectRoot, config);
+    }
+  }
+}
+
 /**
  * Mount commands from a directory
  * @example fromDirectory('/absolute/path/to/commands')
@@ -180,6 +247,85 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
     return {
       tree,
       mountSourceId: `dir:${dir}`,
+    };
+  };
+}
+
+/**
+ * Mount commands and plugins from another pok.config.ts
+ * @example fromConfig('/absolute/path/to/pok.config.ts')
+ * @example fromConfig('/absolute/path/to/project')
+ * @example fromConfig(import.meta.url, '../sub-app')
+ */
+export function fromConfig(...pathSegments: string[]): Mountable {
+  if (pathSegments.length === 0) {
+    throw new Error('fromConfig() requires a path to a config file or directory');
+  }
+
+  let targetPath: string;
+  if (pathSegments[0]!.includes('://')) {
+    const [baseUrl, ...rest] = pathSegments;
+    const basePath = path.dirname(fileURLToPath(baseUrl!));
+    targetPath = rest.length > 0 ? path.resolve(basePath, ...rest) : basePath;
+  } else {
+    targetPath = path.resolve(...pathSegments);
+  }
+
+  return async (context: MountContext) => {
+    const configTarget = resolveConfigTarget(targetPath);
+    if (!configTarget) {
+      throw new Error(`No pok.config.ts found at ${targetPath}`);
+    }
+
+    const { configPath, configDir } = configTarget;
+
+    let resolvedConfig: import('../config').ResolvedPokConfig;
+    try {
+      const rawConfig = await import(configPath);
+      resolvedConfig = validateConfig(rawConfig.default, configPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to load config from ${configPath}\n${message}`);
+    }
+
+    const appDir = path.resolve(configDir, resolvedConfig.appDir);
+    const commandsDir = path.resolve(appDir, resolvedConfig.commandsDir);
+    const projectRoot = path.resolve(configDir, resolvedConfig.cwd);
+
+    if (!fs.existsSync(commandsDir)) {
+      throw new Error(`Commands directory not found: ${commandsDir}`);
+    }
+
+    const subConfig = {
+      ...context.config,
+      commandsDir,
+      projectRoot,
+      appName: resolvedConfig.appName ?? context.config?.appName,
+      pmScripts: resolvedConfig.pmScripts,
+      pmCommands: resolvedConfig.pmCommands,
+      plugins: resolvedConfig.plugins,
+    };
+
+    const rootMountable = compose(
+      resolvedConfig.pmScripts ? fromPackageScripts(resolvedConfig.pmScripts, projectRoot) : noop(),
+      resolvedConfig.pmCommands
+        ? fromPackageCommands(resolvedConfig.pmCommands, projectRoot)
+        : noop(),
+      ...(resolvedConfig.plugins || []),
+      fromDirectory(commandsDir)
+    );
+
+    const result = await resolveMountable(rootMountable, {
+      ...context,
+      projectRoot,
+      config: subConfig,
+    });
+
+    applyProjectRoot(result.tree, projectRoot, subConfig);
+
+    return {
+      ...result,
+      mountSourceId: `config:${configPath}`,
     };
   };
 }
