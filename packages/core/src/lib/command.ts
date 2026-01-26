@@ -107,13 +107,18 @@ export type ContextFieldDef = {
 /**
  * Context definition - a record of field definitions or literal values
  */
-export type ContextDef = Record<string, ContextFieldDef | string | number | boolean>;
+export type ContextDef = Record<string, any>;
 
 /**
  * Check if a value is a ContextFieldDef (vs a static literal value)
  */
 export function isContextFieldDef(value: unknown): value is ContextFieldDef {
-  return typeof value === 'object' && value !== null && 'from' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'from' in (value as any) &&
+    (value as any).from === 'flag'
+  );
 }
 
 /**

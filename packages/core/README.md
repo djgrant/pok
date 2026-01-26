@@ -291,7 +291,7 @@ await run(args, {
 ```typescript
 defineCommand({
   label: string,
-  context?: Record<string, ContextFieldDef>,
+  context?: Record<string, any>,
   pre?: CheckConfig | HookFn | Array<CheckConfig | HookFn>,
   run?: (runner: Runner, ctx: RunContext) => Promise<void> | void,
   enableRunAllChildren?: 'sequential' | 'parallel',
