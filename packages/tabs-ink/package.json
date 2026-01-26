@@ -1,6 +1,6 @@
 {
   "name": "@pokit/tabs-ink",
-  "version": "0.0.30",
+  "version": "0.0.31",
   "description": "Ink-based tab renderer for pok CLI applications",
   "keywords": [
     "cli",
