@@ -43,13 +43,12 @@ You can mount a directory of commands under a specific command:
 
 ```typescript
 // commands/admin.ts
-import { defineCommand } from '@pokit/core';
-import { mountFrom } from '@pokit/core/plugins';
+import { defineCommand, fromDirectory } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Admin',
   // Mounts all commands from ./admin/*.ts under 'mycli admin.*'
-  mount: mountFrom(import.meta.url, './admin'),
+  mount: fromDirectory(import.meta.url, './admin'),
 });
 ```
 
@@ -71,14 +70,13 @@ You can inject plugins at the root level via `pok.config.ts`:
 
 ```typescript
 // pok.config.ts
-import { defineConfig } from '@pokit/core';
-import { mountFrom } from '@pokit/core/plugins';
+import { defineConfig, fromDirectory } from '@pokit/core';
 
 export default defineConfig({
   // ...
   plugins: [
     // Mount a directory from a package or local folder at the root
-    mountFrom(import.meta.url, './internal-tools'),
+    fromDirectory(import.meta.url, './internal-tools'),
   ],
 });
 ```

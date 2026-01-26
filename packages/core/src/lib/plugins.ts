@@ -128,8 +128,22 @@ function insertIntoTree(tree: CommandTree, segments: string[], config: CommandCo
 
 /**
  * Mount commands from a directory
+ * @example fromDirectory('/absolute/path/to/commands')
+ * @example fromDirectory(import.meta.url, './admin')
+ * @example fromDirectory(import.meta.url, '..', 'shared', 'commands')
  */
-export function fromDirectory(dir: string): Mountable {
+export function fromDirectory(...pathSegments: string[]): Mountable {
+  // If first segment looks like a URL (starts with file:// or contains ://), treat it as ESM import.meta.url
+  let dir: string;
+  if (pathSegments.length > 0 && pathSegments[0]!.includes('://')) {
+    const [baseUrl, ...rest] = pathSegments;
+    const basePath = path.dirname(fileURLToPath(baseUrl!));
+    dir = rest.length > 0 ? path.resolve(basePath, ...rest) : basePath;
+  } else {
+    // Just path segments, join them
+    dir = path.resolve(...pathSegments);
+  }
+
   return async (context: MountContext) => {
     const runtime = await getRuntime();
     const tree: CommandTree = new Map();
@@ -168,15 +182,6 @@ export function fromDirectory(dir: string): Mountable {
       mountSourceId: `dir:${dir}`,
     };
   };
-}
-
-/**
- * Mount commands from a relative path (ESM friendly)
- * @example mountFrom(import.meta.url, './admin')
- */
-export function mountFrom(baseUrl: string, relativePath: string): Mountable {
-  const dir = path.resolve(path.dirname(fileURLToPath(baseUrl)), relativePath);
-  return fromDirectory(dir);
 }
 
 /**

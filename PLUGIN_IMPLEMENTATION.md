@@ -27,11 +27,10 @@ It is intentionally non-prescriptive: it aims to keep us honest about requiremen
 - Provenance is attached at insert/override time to the final `CommandNode` instance stored in the tree (so errors/debugging can explain where nodes came from).
 
 - Built-in mountables list (names/intent):
-  - `fromDirectory`
-  - `mountFrom`
-  - `fromStatic`
-  - `fromPackageScripts`
-  - `fromPackageCommands`
+  - `fromDirectory` - Mounts commands from a directory (accepts variadic path segments; ESM-friendly when first arg is import.meta.url)
+  - `fromStatic` - Mounts a static set of commands
+  - `fromPackageScripts` - Mounts package.json scripts
+  - `fromPackageCommands` - Mounts package manager native commands
 
 ## What We Can Lift Verbatim (pmScripts / pmCommands)
 
@@ -60,7 +59,7 @@ Regression avoidance matters more than refactoring quality for the first extract
 - Determinism in directory scanning: whether `fromDirectory` sorts results before importing.
 - Config merge depth: shallow merge only vs any form of deep merge (if supported, it should be explicit and tested).
 - Exports surface:
-  - whether built-in mountables are exported from `@pokit/core`, `@pokit/core/plugins`, or both
+  - whether built-in mountables are exported from `@pokit/core` only or also from a separate subpath
   - whether the built-ins are considered stable API or internal conveniences
 
 ## Notes

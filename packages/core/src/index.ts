@@ -283,7 +283,6 @@ export * from './config';
 export {
   compose,
   fromDirectory,
-  mountFrom,
   fromStatic,
   fromPackageScripts,
   fromPackageCommands,
