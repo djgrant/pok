@@ -1,13 +1,9 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import {
-  parseContext,
-  resolveInteractiveContext,
-  validateRequiredContext,
-  extractChoices,
-} from '../src/lib/args';
+import { parseContext, resolveInteractiveContext, validateRequiredContext, extractChoices } from '../src/lib/args';
 import { generateHelp } from '../src/lib/help';
 import { generateCompletions } from '../src/lib/completion';
+import { defineCommand } from '../src/lib/command';
 import type { ContextDef, CommandNode } from '../src';
 
 describe('Static Context (Duck Typing Literals)', () => {
@@ -18,8 +14,47 @@ describe('Static Context (Duck Typing Literals)', () => {
     tag: {
       from: 'flag' as const,
       schema: z.string().default('v1'),
-    },
+    }
   } satisfies ContextDef;
+
+  it('allows defining a command with static context', () => {
+    // This is a type-level test. If it compiles, it passes.
+    const command = defineCommand({
+      label: 'Test',
+      context: {
+        env: 'prod',
+        count: 123,
+        enabled: true,
+        flag: {
+          from: 'flag',
+          schema: z.string()
+        }
+      },
+      run: (r, ctx) => {
+        // ctx.context.env should be typed as string or 'prod'
+        const env: string = ctx.context.env;
+        const count: number = ctx.context.count;
+        const enabled: boolean = ctx.context.enabled;
+        const flag: string = ctx.context.flag;
+        
+        expect(env).toBe('prod');
+        expect(count).toBe(123);
+        expect(enabled).toBe(true);
+      }
+    });
+    expect(command.label).toBe('Test');
+  });
+
+  it('allows defining a command with explicit CommandConfig type', () => {
+    const config: import('../src/lib/command').CommandConfig = {
+      label: 'Test',
+      context: {
+        env: 'prod'
+      }
+    };
+    const command = defineCommand(config);
+    expect(command.label).toBe('Test');
+  });
 
   describe('parseContext', () => {
     it('includes static values in parsed context', () => {
