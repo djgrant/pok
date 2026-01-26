@@ -74,40 +74,71 @@ export type MountableLike = Mountable | ((context: MountContext) => Mountable | 
 export type ContextSource = 'flag';
 
 /**
+
  * Context field definition
+
  *
+
  * Each field in a command's context specifies where its value comes from
+
  * and a Zod schema for validation/typing.
+
  */
+
 export type ContextFieldDef = {
+
   /** Where the value comes from */
-  from: ContextSource;
+
+  from: 'flag';
+
   /** Zod schema for validation and type inference */
+
   schema: z.ZodType;
+
   /** Human-readable description for help text */
+
   description?: string;
+
   /**
+
    * Explicit choices for select prompts (escape hatch)
+
    *
+
    * Use this when automatic enum extraction from the schema fails,
+
    * such as with custom refinements or complex schema compositions.
+
    *
+
    * @example
+
    * ```ts
+
    * mode: {
+
    *   from: 'flag',
+
    *   schema: z.string().refine(v => ['a', 'b', 'c'].includes(v)),
+
    *   choices: ['a', 'b', 'c'],  // Explicit fallback
+
    * }
+
    * ```
+
    */
+
   choices?: string[];
+
 };
+
+
 
 /**
  * Context definition - a record of field definitions or literal values
  */
-export type ContextDef = Record<string, any>;
+export type ContextDef = Record<string, ContextFieldDef | string | number | boolean>;
 
 /**
  * Check if a value is a ContextFieldDef (vs a static literal value)
@@ -116,8 +147,9 @@ export function isContextFieldDef(value: unknown): value is ContextFieldDef {
   return (
     typeof value === 'object' &&
     value !== null &&
-    'from' in (value as any) &&
-    (value as any).from === 'flag'
+    'from' in value &&
+    (value as any).from === 'flag' &&
+    'schema' in value
   );
 }
 
