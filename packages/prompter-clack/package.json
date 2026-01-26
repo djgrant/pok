@@ -1,6 +1,6 @@
 {
   "name": "@pokit/prompter-clack",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "Clack-based prompter adapter for pok CLI applications",
   "keywords": [
     "cli",
