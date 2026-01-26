@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
-import { parseContext, resolveInteractiveContext, validateRequiredContext, extractChoices } from '../src/lib/args';
+import {
+  parseContext,
+  resolveInteractiveContext,
+  validateRequiredContext,
+  extractChoices,
+} from '../src/lib/args';
 import { generateHelp } from '../src/lib/help';
 import { generateCompletions } from '../src/lib/completion';
 import { defineCommand } from '../src/lib/command';
@@ -14,7 +19,7 @@ describe('Static Context (Duck Typing Literals)', () => {
     tag: {
       from: 'flag' as const,
       schema: z.string().default('v1'),
-    }
+    },
   } satisfies ContextDef;
 
   it('allows defining a command with static context', () => {
@@ -27,8 +32,8 @@ describe('Static Context (Duck Typing Literals)', () => {
         enabled: true,
         flag: {
           from: 'flag',
-          schema: z.string()
-        }
+          schema: z.string(),
+        },
       },
       run: (r, ctx) => {
         // ctx.context.env should be typed as string or 'prod'
@@ -36,11 +41,11 @@ describe('Static Context (Duck Typing Literals)', () => {
         const count: number = ctx.context.count;
         const enabled: boolean = ctx.context.enabled;
         const flag: string = ctx.context.flag;
-        
+
         expect(env).toBe('prod');
         expect(count).toBe(123);
         expect(enabled).toBe(true);
-      }
+      },
     });
     expect(command.label).toBe('Test');
   });
@@ -49,8 +54,8 @@ describe('Static Context (Duck Typing Literals)', () => {
     const config: import('../src/lib/command').CommandConfig = {
       label: 'Test',
       context: {
-        env: 'prod'
-      }
+        env: 'prod',
+      },
     };
     const command = defineCommand(config);
     expect(command.label).toBe('Test');
