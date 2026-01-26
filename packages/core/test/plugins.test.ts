@@ -4,7 +4,6 @@ import { defineCommand } from '../src/lib/command';
 import {
   compose,
   fromStatic,
-  mountFrom,
   resolveMountable,
   fromDirectory,
 } from '../src/lib/plugins';

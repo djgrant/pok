@@ -80,13 +80,12 @@ You define a parent node, then mount a whole subtree under it. The mounted child
 
 ```ts
 // commands/admin.ts (planned)
-import { defineCommand } from '@pokit/core';
-import { mountFrom } from '@pokit/core/plugins';
+import { defineCommand, fromDirectory } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Admin',
   // Mounts ./admin/*.ts(x) under the admin namespace
-  mount: mountFrom(import.meta.url, './admin'),
+  mount: fromDirectory(import.meta.url, './admin'),
 });
 ```
 

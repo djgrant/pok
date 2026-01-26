@@ -167,13 +167,12 @@ export const command = defineCommand({
 You can mount entire command trees from other directories or sources using `mount`:
 
 ```typescript
-import { defineCommand } from '@pokit/core';
-import { mountFrom } from '@pokit/core/plugins';
+import { defineCommand, fromDirectory } from '@pokit/core';
 
 export const command = defineCommand({
   label: 'Admin',
   // Mounts ./admin/*.ts(x) under the admin namespace
-  mount: mountFrom(import.meta.url, './admin'),
+  mount: fromDirectory(import.meta.url, './admin'),
 });
 ```
 
