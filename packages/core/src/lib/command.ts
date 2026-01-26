@@ -105,17 +105,24 @@ export type ContextFieldDef = {
 };
 
 /**
- * Context definition - a record of field definitions
+ * Context definition - a record of field definitions or literal values
  */
-export type ContextDef = Record<string, ContextFieldDef>;
+export type ContextDef = Record<string, ContextFieldDef | string | number | boolean>;
+
+/**
+ * Check if a value is a ContextFieldDef (vs a static literal value)
+ */
+export function isContextFieldDef(value: unknown): value is ContextFieldDef {
+  return typeof value === 'object' && value !== null && 'from' in value;
+}
 
 /**
  * Infer the resolved context type from a context definition
  *
- * Extracts the Zod-inferred type for each field.
+ * Extracts the Zod-inferred type for fields, and the literal type for static values.
  */
 export type InferContext<C extends ContextDef> = {
-  [K in keyof C]: z.infer<C[K]['schema']>;
+  [K in keyof C]: C[K] extends ContextFieldDef ? z.infer<C[K]['schema']> : C[K];
 };
 
 /**

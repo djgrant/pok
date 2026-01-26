@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ContextDef, InferContext } from './command';
+import { isContextFieldDef } from './command';
 import type { Prompter } from '../prompter';
 import { findClosestMatch } from './string-distance';
 import { CLIError, type ErrorContext } from './cli-error';
@@ -306,6 +307,12 @@ export function parseContext<C extends ContextDef>(
   const schemaInfoCache = new Map<string, SchemaInfo>();
   const knownFlags: string[] = [];
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Skip static values
+    if (!isContextFieldDef(fieldDef)) {
+      context[name] = fieldDef;
+      continue;
+    }
+
     const info = getSchemaInfo(fieldDef.schema);
     schemaInfoCache.set(name, info);
     knownFlags.push(name);
@@ -354,12 +361,22 @@ export function parseContext<C extends ContextDef>(
       const flagName = kebabToCamel(rawFlagName);
       const fieldDef = contextDef[flagName];
 
-      if (!fieldDef) {
+      if (!fieldDef || !isContextFieldDef(fieldDef)) {
         if (options?.ignoreUnknownFlags) {
           rest.push(arg);
           i++;
           continue;
         }
+
+        // Better error message if it's a static context value
+        if (fieldDef !== undefined) {
+          throw createError(
+            `Cannot use --${rawFlagName} as a flag because it is a static context value`,
+            contextDef,
+            errorContext
+          );
+        }
+
         // Try to find a close match for typo detection
         const suggestion = findClosestMatch(rawFlagName, knownFlags);
         let errorMessage = `Unknown flag: ${arg}`;
@@ -453,6 +470,11 @@ export async function resolveInteractiveContext<C extends ContextDef>(
   }
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Skip static values
+    if (!isContextFieldDef(fieldDef)) {
+      continue;
+    }
+
     const currentValue = resolved[name as keyof typeof resolved];
     const info = getSchemaInfo(fieldDef.schema);
     const fieldChoices = choices.get(name);
@@ -541,6 +563,11 @@ export function validateRequiredContext<C extends ContextDef>(
   const errorContext = options?.errorContext;
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Skip static values
+    if (!isContextFieldDef(fieldDef)) {
+      continue;
+    }
+
     const info = getSchemaInfo(fieldDef.schema);
     if (!info.isOptional) {
       const value = context[name as keyof typeof context];
@@ -565,6 +592,11 @@ export function extractChoices<C extends ContextDef>(contextDef: C): Map<string,
   const result = new Map<string, string[]>();
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
+    // Skip static values
+    if (!isContextFieldDef(fieldDef)) {
+      continue;
+    }
+
     // Prefer explicit choices if provided (escape hatch for edge cases)
     if (fieldDef.choices && fieldDef.choices.length > 0) {
       result.set(name, fieldDef.choices);

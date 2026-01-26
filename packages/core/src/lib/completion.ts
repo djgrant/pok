@@ -6,7 +6,8 @@
  */
 
 import type { CommandTree, CommandNode } from './command';
-import { getSchemaInfo } from './args';
+import { isContextFieldDef } from './command';
+import { getSchemaInfo, extractEnumChoices } from './args';
 
 // =============================================================================
 // Types
@@ -258,10 +259,12 @@ function getFlagsForNode(node: CommandNode | null): string[] {
   const contextDef = node.config.context;
   if (!contextDef) return ['help'];
 
-  const flags = Object.keys(contextDef).map(camelToKebab);
-  flags.push('help');
+  const flags = Object.entries(contextDef)
+    .filter(([_, def]) => isContextFieldDef(def))
+    .map(([name]) => camelToKebab(name));
+  const completions = [...flags, 'help'];
 
-  return flags;
+  return completions;
 }
 
 /**
@@ -274,7 +277,7 @@ function getChoicesForFlag(flagName: string, node: CommandNode | null): string[]
   if (!contextDef) return undefined;
 
   const fieldDef = contextDef[flagName];
-  if (!fieldDef) return undefined;
+  if (!fieldDef || !isContextFieldDef(fieldDef)) return undefined;
 
   // Check for explicit choices first
   if (fieldDef.choices && fieldDef.choices.length > 0) {
@@ -282,11 +285,12 @@ function getChoicesForFlag(flagName: string, node: CommandNode | null): string[]
   }
 
   // Try to extract from schema
-  const info = getSchemaInfo(fieldDef.schema);
-  if (info.type === 'enum' && info.choices) {
-    return info.choices;
+  const choices = extractEnumChoices(fieldDef.schema);
+  if (choices && choices.length > 0) {
+    return choices;
   }
 
+  const info = getSchemaInfo(fieldDef.schema);
   // For boolean, suggest true/false
   if (info.type === 'boolean') {
     return ['true', 'false'];
