@@ -9,6 +9,7 @@
  */
 
 import type { ContextDef } from './command';
+import { isContextFieldDef } from './command';
 import { getSchemaInfo } from './args';
 
 // =============================================================================
@@ -109,6 +110,8 @@ export class CLIError extends Error {
     const parts: string[] = [];
 
     for (const [name, def] of Object.entries(this.context.contextDef)) {
+      if (!isContextFieldDef(def)) continue;
+
       const info = getSchemaInfo(def.schema);
       const kebabName = camelToKebab(name);
 
@@ -149,6 +152,8 @@ export function generateUsageLine(
   const flags: string[] = [];
 
   for (const [name, def] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(def)) continue;
+
     const info = getSchemaInfo(def.schema);
     const kebabName = camelToKebab(name);
 

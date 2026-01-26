@@ -128,7 +128,7 @@ export type InferContext<C extends ContextDef> = {
 /**
  * Context passed to hooks
  */
-export type HookContext<C extends ContextDef = ContextDef> = InferContext<C> & {
+export type HookContext<C extends ContextDef = any> = InferContext<C> & {
   /** Extra positional arguments not consumed by command path or flags */
   extraArgs: string[];
   /** Project root directory */
@@ -141,14 +141,14 @@ export type HookContext<C extends ContextDef = ContextDef> = InferContext<C> & {
  * Returns checks to execute based on the command context.
  * The returned checks are executed with their labels logged.
  */
-export type HookFn<C extends ContextDef = ContextDef> = (
+export type HookFn<C extends ContextDef = any> = (
   ctx: HookContext<C>
 ) => Promise<CheckConfig | CheckConfig[] | void> | CheckConfig | CheckConfig[] | void;
 
 /**
  * Context passed to run function
  */
-export type RunContext<C extends ContextDef = ContextDef> = {
+export type RunContext<C extends ContextDef = any> = {
   /** Resolved context values from command flags */
   context: InferContext<C>;
   /** Extra positional arguments not consumed by command path or flags */
@@ -164,7 +164,7 @@ export type RunContext<C extends ContextDef = ContextDef> = {
  * When calling r.run(task), TypeScript enforces that the command's context
  * satisfies the task's env resolver context requirements.
  */
-export type RunFn<C extends ContextDef = ContextDef> = (
+export type RunFn<C extends ContextDef = any> = (
   runner: Runner<InferContext<C>>,
   ctx: RunContext<C>
 ) => Promise<void> | void;

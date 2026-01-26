@@ -749,7 +749,7 @@ async function executeLeaf(
  */
 type LeafWithContext = {
   node: CommandNode;
-  resolvedContext: Record<string, unknown>;
+  resolvedContext: any;
   extraArgs: string[];
 };
 
@@ -944,7 +944,7 @@ async function executeAllChildren(
  */
 async function executeLeafWithContext(
   node: CommandNode,
-  resolvedContext: Record<string, unknown>,
+  resolvedContext: any,
   extraArgs: string[],
   ctx: RouterContext,
   options: {
@@ -1012,7 +1012,7 @@ async function executeLeafWithContext(
  */
 async function executeAllChildrenWithContext(
   node: CommandNode,
-  resolvedContext: Record<string, unknown>,
+  resolvedContext: any,
   extraArgs: string[],
   ctx: RouterContext
 ): Promise<void> {
@@ -1110,7 +1110,7 @@ async function executeAllChildrenWithContext(
  */
 type MenuSelectionResult = {
   node: CommandNode;
-  context: Record<string, unknown>;
+  context: any;
   extraArgs: string[];
 };
 
