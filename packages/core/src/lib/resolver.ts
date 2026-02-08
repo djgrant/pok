@@ -24,14 +24,14 @@ export type ResolverResult<TAvailableVars extends string> = {
  * Resolvers can optionally implement a `write` method to persist values.
  */
 export type EnvResolver<
-  TContext extends z.ZodRawShape = z.ZodRawShape,
+  TContext extends z.ZodType = z.ZodType,
   TAvailableVars extends string = string,
 > = {
-  requiredContext: z.ZodObject<TContext>;
+  requiredContext: TContext;
   availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
-    context: z.infer<z.ZodObject<TContext>>
+    context: z.infer<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
 
   /**
@@ -40,7 +40,7 @@ export type EnvResolver<
    */
   write?: (
     values: ResolverResult<TAvailableVars>,
-    context: z.infer<z.ZodObject<TContext>>
+    context: z.infer<TContext>
   ) => Promise<void>;
 };
 
@@ -52,7 +52,7 @@ export type EnvResolver<
  * Individual resolvers validate context against their `requiredContext` schema.
  */
 export type TypedEnvResolver<TAvailableVars extends string = string> = {
-  requiredContext: z.ZodObject<z.ZodRawShape>;
+  requiredContext: z.ZodType;
   availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
@@ -73,7 +73,7 @@ export type AnyEnvResolver = TypedEnvResolver<any>;
  * Infer the context type required by a resolver
  */
 export type InferResolverContext<T> =
-  T extends EnvResolver<infer C, any> ? z.infer<z.ZodObject<C>> : never;
+  T extends EnvResolver<infer C, any> ? z.infer<C> : never;
 
 /**
  * Infer the available vars from a resolver
@@ -125,28 +125,25 @@ export function validateResolverKeys<TAvailableVars extends string>(
  * ```
  */
 export function defineEnvResolver<
-  TContext extends z.ZodRawShape = {},
+  TContext extends z.ZodType = z.ZodObject<{}>,
   const TAvailableVars extends string = string,
 >(config: {
-  requiredContext?: z.ZodObject<TContext>;
+  requiredContext?: TContext;
   availableVars: readonly TAvailableVars[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
-    context: z.infer<z.ZodObject<TContext>>
+    context: z.infer<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
   write?: (
     values: ResolverResult<TAvailableVars>,
-    context: z.infer<z.ZodObject<TContext>>
+    context: z.infer<TContext>
   ) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
-  // Default to empty context if not provided
   const requiredContext =
-    config.requiredContext ?? (z.object({}) as unknown as z.ZodObject<TContext>);
+    config.requiredContext ?? (z.object({}) as unknown as TContext);
 
-  // Wrap the config to ensure it conforms to TypedEnvResolver interface
-  // The context is widened to unknown for generic composition
   return {
-    requiredContext: requiredContext as z.ZodObject<z.ZodRawShape>,
+    requiredContext: requiredContext as z.ZodType,
     availableVars: config.availableVars as readonly EnvVarKey<TAvailableVars>[],
     resolve: (keys, context) => {
       // Validate context against the schema before resolving
@@ -178,11 +175,11 @@ export function defineEnvResolver<
  * ```
  */
 export function createStaticEnvResolver<
-  TContext extends z.ZodRawShape = {},
+  TContext extends z.ZodType = z.ZodObject<{}>,
   const TVars extends Record<string, string> = Record<string, string>,
 >(opts: {
   vars: TVars;
-  requiredContext?: z.ZodObject<TContext>;
+  requiredContext?: TContext;
 }): TypedEnvResolver<Extract<keyof TVars, string>> {
   // We need to cast Object.keys result to make TypeScript happy with the generic TAvailableVars
   // In usage, TypeScript will infer the keys from the passed object literal
