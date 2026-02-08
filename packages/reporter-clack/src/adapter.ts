@@ -361,7 +361,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 const firstSuccess = sorted.find(([, a]) => a.status === 'success');
                 if (firstSuccess) {
                   // Show first success via spinner stop
-                  state.parallelSpinner.spinner.stop(firstSuccess[1].label, 0);
+                  state.parallelSpinner.spinner.stop(firstSuccess[1].label);
                   // Flush buffered logs for this activity
                   flushLogsForActivity(state, firstSuccess[0]);
                   state.parallelActivities.delete(firstSuccess[0]);
@@ -369,7 +369,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                   // All failed - show first failure label (not error) via spinner stop
                   const firstFailure = sorted[0];
                   if (firstFailure) {
-                    state.parallelSpinner.spinner.stop(firstFailure[1].label, 1);
+                    state.parallelSpinner.spinner.error(firstFailure[1].label);
                     hasFailures = true;
                     // Defer the error message with remediation to print after outro
                     if (firstFailure[1].error) {
@@ -383,7 +383,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                     flushLogsForActivity(state, firstFailure[0]);
                     state.parallelActivities.delete(firstFailure[0]);
                   } else {
-                    state.parallelSpinner.spinner.stop('Complete', 0);
+                    state.parallelSpinner.spinner.stop('Complete');
                   }
                 }
                 state.parallelSpinner = null;
@@ -595,7 +595,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 writeLine(`  ${prefix} ${entry.label}`);
               } else if (entry.spinner) {
                 // Unicode + interactive mode - stop spinner
-                entry.spinner.stop(entry.label, 0);
+                entry.spinner.stop(entry.label);
               }
               state.spinners.delete(event.id);
 
@@ -659,7 +659,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
                 writeLine(`  ${prefix} ${errorMessage}`);
               } else if (entry.spinner) {
                 // Unicode + interactive mode - stop spinner with error
-                entry.spinner.stop(errorMessage, 1);
+                entry.spinner.error(errorMessage);
               }
               state.spinners.delete(event.id);
 
@@ -720,7 +720,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               if (spinner && spinner.spinner) {
                 // Temporarily stop spinner, show error, resume
                 const currentMessage = spinner.currentMessage;
-                spinner.spinner.stop(currentMessage, 0);
+                spinner.spinner.stop(currentMessage);
                 displayLog(event.level, event.message, state, false);
                 spinner.spinner.start(currentMessage);
               } else {
@@ -762,7 +762,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               for (const [id, entry] of state.spinners) {
                 try {
                   if (entry.spinner) {
-                    entry.spinner.stop(entry.label + '...', 0);
+                    entry.spinner.stop(entry.label + '...');
                   }
                   state.suspendedActivities.set(id, { label: entry.label });
                 } catch {
@@ -774,7 +774,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               // Also stop parallel spinner
               if (state.parallelSpinner) {
                 try {
-                  state.parallelSpinner.spinner.stop('Paused...', 0);
+                  state.parallelSpinner.spinner.stop('Paused...');
                 } catch {
                   // Spinner may already be stopped
                 }
@@ -800,7 +800,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             for (const entry of state.spinners.values()) {
               try {
                 if (entry.spinner) {
-                  entry.spinner.stop('Stopped', 1);
+                  entry.spinner.error('Stopped');
                 }
               } catch {
                 // Spinner may already be stopped
@@ -808,7 +808,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
             }
             if (state.parallelSpinner) {
               try {
-                state.parallelSpinner.spinner.stop('Stopped', 1);
+                state.parallelSpinner.spinner.error('Stopped');
               } catch {
                 // Spinner may already be stopped
               }
