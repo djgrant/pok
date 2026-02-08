@@ -486,7 +486,9 @@ export function createPrompter(): Prompter {
         message: options.message,
         placeholder: options.placeholder,
         initialValue: options.initialValue,
-        validate: options.validate,
+        validate: options.validate
+          ? (value: string | undefined) => options.validate!(value ?? '')
+          : undefined,
       });
 
       if (p.isCancel(result)) {
