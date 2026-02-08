@@ -1,7 +1,7 @@
 export const lines: string[] = [
   '┌  Test Group',
   '│',
-  '■  Something went wrong',
+  '◇  Something went wrong',
   '│',
   '└  ✘ Failed',
 ];

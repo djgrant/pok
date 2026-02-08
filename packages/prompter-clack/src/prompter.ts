@@ -13,6 +13,7 @@ import type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  AutocompleteOptions,
   OptionsPage,
 } from '@pokit/core';
 import { isDynamicOptions } from '@pokit/core';
@@ -493,6 +494,25 @@ export function createPrompter(): Prompter {
       }
 
       return result;
+    },
+
+    async autocomplete<T>(options: AutocompleteOptions<T>): Promise<T> {
+      const result = await p.autocomplete({
+        message: options.message,
+        options: options.options.map((opt) => ({
+          value: opt.value,
+          label: opt.label,
+          hint: opt.hint,
+        })) as Parameters<typeof p.autocomplete>[0]['options'],
+        placeholder: options.placeholder,
+        maxItems: options.maxItems,
+      });
+
+      if (p.isCancel(result)) {
+        process.exit(0);
+      }
+
+      return result as T;
     },
   };
 }

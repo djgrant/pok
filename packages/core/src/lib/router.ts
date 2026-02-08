@@ -587,7 +587,11 @@ async function showParentSubmenu(
     });
   }
 
-  const selected = await prompter.select({
+  const choose = prompter.autocomplete
+    ? prompter.autocomplete.bind(prompter)
+    : prompter.select.bind(prompter);
+
+  const selected = await choose({
     message: `Select ${node.segment}:`,
     options,
   });
@@ -1153,8 +1157,12 @@ async function selectFromMenu(
     // Track the navigation path for breadcrumb display
     const navigationPath: string[] = [];
 
+    const choose = prompter.autocomplete
+      ? prompter.autocomplete.bind(prompter)
+      : prompter.select.bind(prompter);
+
     // Initial selection
-    const selected = await prompter.select({
+    const selected = await choose({
       message: 'What would you like to do?',
       options: topLevel.map((node) => {
         const description = node.config.description || node.config.label;
@@ -1210,7 +1218,7 @@ async function selectFromMenu(
         reporter.info(breadcrumb);
       }
 
-      const childSelected = await prompter.select({
+      const childSelected = await choose({
         message: `Select ${currentNode.segment}:`,
         options,
       });
