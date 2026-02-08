@@ -86,7 +86,6 @@ export type ContextSource = 'flag';
  */
 
 export type ContextFieldDef = {
-
   /** Where the value comes from */
 
   from: 'flag';
@@ -130,10 +129,7 @@ export type ContextFieldDef = {
    */
 
   choices?: string[];
-
 };
-
-
 
 /**
  * Context definition - a record of field definitions or literal values

@@ -44,10 +44,7 @@ export type EnvResolver<
     keys: EnvVarKey<TAvailableVars>[],
     context: z.infer<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
-  write?: (
-    values: ResolverResult<TAvailableVars>,
-    context: z.infer<TContext>
-  ) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
 };
 ```
 
@@ -73,10 +70,7 @@ export function defineEnvResolver<
     keys: EnvVarKey<TAvailableVars>[],
     context: z.infer<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
-  write?: (
-    values: ResolverResult<TAvailableVars>,
-    context: z.infer<TContext>
-  ) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars>;
 ```
 
@@ -87,8 +81,7 @@ The default for `requiredContext` remains `z.object({})` at runtime.
 Currently infers through `z.ZodObject<C>` indirection. Simplify to:
 
 ```ts
-export type InferResolverContext<T> =
-  T extends EnvResolver<infer C, any> ? z.infer<C> : never;
+export type InferResolverContext<T> = T extends EnvResolver<infer C, any> ? z.infer<C> : never;
 ```
 
 ### Composite resolver

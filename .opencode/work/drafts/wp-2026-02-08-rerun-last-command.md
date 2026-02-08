@@ -68,6 +68,7 @@ After successful execution in `executeLeaf`, append the command path and origina
 ### `poks` binary
 
 `poks` needs to:
+
 1. Find and load the `pok.config.ts` (same logic as `pok`)
 2. Read history for that app
 3. Show interactive menu with search-ahead

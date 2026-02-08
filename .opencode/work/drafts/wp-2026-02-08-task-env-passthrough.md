@@ -1,8 +1,8 @@
- Task Env Contracts
+Task Env Contracts
 
 ## Goal/Problem
 
-Tasks are coupled to both the resolver and the var selection via `defineEnv({ resolver, vars })`. A task knows *what* env vars it needs **and** *where* they come from. This means:
+Tasks are coupled to both the resolver and the var selection via `defineEnv({ resolver, vars })`. A task knows _what_ env vars it needs **and** _where_ they come from. This means:
 
 - Tasks aren't portable across projects (they import a specific resolver)
 - Commands can't control how env vars are sourced
@@ -34,9 +34,7 @@ export type FulfilledEnvSpec<TVars extends string = string, TEnv extends Env = E
   env: TEnv;
 };
 
-export function defineEnvSpec<const TVars extends string>(
-  vars: readonly TVars[]
-): EnvSpec<TVars> {
+export function defineEnvSpec<const TVars extends string>(vars: readonly TVars[]): EnvSpec<TVars> {
   return {
     vars,
     using(env) {
@@ -60,9 +58,9 @@ const dbSpec = defineEnvSpec(['POSTGRES_URL'] as const);
 
 const migrate = defineTask({
   label: 'Run migrations',
-  env: dbSpec.using(dbaEnv),        // fulfilled at definition
+  env: dbSpec.using(dbaEnv), // fulfilled at definition
   run: async (r, ctx) => {
-    ctx.envs.POSTGRES_URL;          // typed from spec
+    ctx.envs.POSTGRES_URL; // typed from spec
   },
 });
 ```
@@ -74,14 +72,14 @@ The task declares what it needs but the caller provides fulfilment:
 ```ts
 const migrate = defineTask({
   label: 'Run migrations',
-  env: dbSpec,                      // unfulfilled spec
+  env: dbSpec, // unfulfilled spec
   run: async (r, ctx) => {
-    ctx.envs.POSTGRES_URL;          // still typed from spec
+    ctx.envs.POSTGRES_URL; // still typed from spec
   },
 });
 
 // Command fulfils at call site:
-await r.run(migrate, { env: dbaEnv });  // TypeScript enforces this
+await r.run(migrate, { env: dbaEnv }); // TypeScript enforces this
 ```
 
 `r.run()` requires an `env` argument when the spec is unfulfilled — this is a compile error if omitted.
@@ -98,9 +96,9 @@ export const command = defineCommand({
   },
   run: async (r) => {
     // Each task has its own resolver chain with intentional precedence
-    await r.run(buildAssets);              // env: viteBuildSpec.using(viteEnv)
-    await r.run(deployWorker);            // env: cloudflareSpec.using(cfEnv)
-    await r.run(rotateSecrets);           // env: edgeSecretsSpec.using(vaultEnv)
+    await r.run(buildAssets); // env: viteBuildSpec.using(viteEnv)
+    await r.run(deployWorker); // env: cloudflareSpec.using(cfEnv)
+    await r.run(rotateSecrets); // env: edgeSecretsSpec.using(vaultEnv)
   },
 });
 ```
@@ -177,11 +175,14 @@ The original draft proposed binding at the command:
 ```ts
 defineCommand({
   env: { resolver: opResolver },
-  run: async (r) => { await r.run(migrate); },
+  run: async (r) => {
+    await r.run(migrate);
+  },
 });
 ```
 
 This assumes one resolver can satisfy all tasks. In practice, commands like `deploy` orchestrate tasks with:
+
 - Different resolver chains (vite, cloudflare, vault)
 - Different var lists
 - Different context shapes (`{ env }` vs `{ from, to }`)
