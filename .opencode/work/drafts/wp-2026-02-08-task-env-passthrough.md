@@ -8,54 +8,87 @@ Tasks are coupled to both the resolver and the var selection via `defineEnv({ re
 - Commands can't control how env vars are sourced
 - The same task can't be reused with different resolvers
 
-The env system should mirror the existing context pattern: resolvers declare `requiredContext`, commands provide context through flags, and the runner bridges the gap. Env vars should follow the same contractual split:
-
-- **Tasks** declare what env vars they need (just names)
-- **Commands** declare how env vars are resolved (the resolver binding)
-- **Runner** checks satisfaction and bridges the two
+The env system should separate the **contract** (what vars a task needs) from the **fulfilment** (which resolver provides them), while keeping binding close to where domain knowledge lives.
 
 ## Scope
 
-- `packages/core/src/lib/env.ts` — replace `defineEnv` with `defineEnvSpec` (vars-only contract)
-- `packages/core/src/lib/task.ts` — task accepts `EnvSpec` instead of `Env`
-- `packages/core/src/lib/command.ts` — add `env` binding to `defineCommand`
-- `packages/core/src/lib/runner.ts` — resolve env from command binding, validate against task specs
+- `packages/core/src/lib/env.ts` — add `defineEnvSpec`, add `.using()` method on specs
+- `packages/core/src/lib/task.ts` — task accepts `EnvSpec` (unfulfilled) or `FulfilledEnvSpec` (via `.using()`)
+- `packages/core/src/lib/runner.ts` — resolve env from fulfilled specs, require env at call site for unfulfilled specs
+- `packages/core/src/lib/command.ts` — no env changes needed (commands stay out of env business)
 
 ## Design
 
-### `defineEnvSpec` — task-side contract (vars only)
+### `defineEnvSpec` — vars-only contract
 
 Tasks declare what they need without knowing where it comes from:
 
 ```ts
 export type EnvSpec<TVars extends string = string> = {
   vars: readonly TVars[];
+  using<TEnv extends Env>(env: TEnv): FulfilledEnvSpec<TVars, TEnv>;
+};
+
+export type FulfilledEnvSpec<TVars extends string = string, TEnv extends Env = Env> = {
+  vars: readonly TVars[];
+  env: TEnv;
 };
 
 export function defineEnvSpec<const TVars extends string>(
   vars: readonly TVars[]
 ): EnvSpec<TVars> {
-  return { vars };
+  return {
+    vars,
+    using(env) {
+      // Validate: env.resolver.availableVars ⊇ vars
+      return { vars, env };
+    },
+  };
 }
 ```
 
-Usage in tasks:
+### Spec-side binding via `.using()`
+
+Instead of binding the resolver at the command, the spec is fulfilled either at task definition or at the call site.
+
+#### Case 1: Self-contained task (common case)
+
+The task knows its env — binding happens at definition time:
 
 ```ts
-const dbEnv = defineEnvSpec(['POSTGRES_URL'] as const);
+const dbSpec = defineEnvSpec(['POSTGRES_URL'] as const);
 
 const migrate = defineTask({
   label: 'Run migrations',
-  env: dbEnv,
+  env: dbSpec.using(dbaEnv),        // fulfilled at definition
   run: async (r, ctx) => {
-    ctx.envs.POSTGRES_URL; // typed as string
+    ctx.envs.POSTGRES_URL;          // typed from spec
   },
 });
 ```
 
-### Command-level env binding
+#### Case 2: Portable task (env deferred to caller)
 
-Commands declare how env vars are resolved by binding resolver(s):
+The task declares what it needs but the caller provides fulfilment:
+
+```ts
+const migrate = defineTask({
+  label: 'Run migrations',
+  env: dbSpec,                      // unfulfilled spec
+  run: async (r, ctx) => {
+    ctx.envs.POSTGRES_URL;          // still typed from spec
+  },
+});
+
+// Command fulfils at call site:
+await r.run(migrate, { env: dbaEnv });  // TypeScript enforces this
+```
+
+`r.run()` requires an `env` argument when the spec is unfulfilled — this is a compile error if omitted.
+
+#### Case 3: Heterogeneous env in a single command
+
+This is the case that command-level binding cannot handle cleanly:
 
 ```ts
 export const command = defineCommand({
@@ -63,64 +96,108 @@ export const command = defineCommand({
   context: {
     env: { from: 'flag', schema: z.enum(['dev', 'staging', 'prod']) },
   },
-  env: {
-    resolver: opResolver,     // or [staticResolver, opResolver] for fallback chains
-    writer: opResolver,       // optional, for tasks that use envWriter
-  },
   run: async (r) => {
-    await r.run(migrate);     // runner checks opResolver can satisfy ['POSTGRES_URL']
+    // Each task has its own resolver chain with intentional precedence
+    await r.run(buildAssets);              // env: viteBuildSpec.using(viteEnv)
+    await r.run(deployWorker);            // env: cloudflareSpec.using(cfEnv)
+    await r.run(rotateSecrets);           // env: edgeSecretsSpec.using(vaultEnv)
   },
 });
 ```
 
-Multiple resolvers follow precedence order (first advertising a key wins) — same as `defineCompositeResolver` but declared at the command level.
+No mega-composite. No risk of dev values leaking into prod resolver chains.
+
+### Writer support
+
+The same pattern works for `envWriter`:
+
+```ts
+// Self-contained writer task
+const bootstrap = defineTask({
+  label: 'Bootstrap secrets',
+  envWriter: bootstrapSpec.using(bootstrapEnv),
+  run: async (r, ctx) => {
+    await ctx.writeEnvs({ POSTGRES_URL: '...' });
+  },
+});
+
+// Portable writer task
+const bootstrap = defineTask({
+  label: 'Bootstrap secrets',
+  envWriter: bootstrapSpec,              // unfulfilled
+  run: async (r, ctx) => { ... },
+});
+await r.run(bootstrap, { envWriter: bootstrapEnv });
+```
+
+### Backwards compatibility
+
+A bare `env: dbaEnv` (existing `Env` object) continues to work — pok treats it as an already-fulfilled spec where `vars` and `resolver` are both present. This makes the migration non-breaking.
 
 ### Runner changes
 
 When executing a task:
 
-1. Collect required keys from the task's `env` spec(s)
-2. Validate that the command's bound resolver(s) advertise all required keys — throw with a clear error if not
-3. Call resolver(s) to fetch values
-4. Populate `ctx.envs` and the env cache
-
-For `envWriter`:
-
-1. Validate the command's `writer` exists and supports `write`
-2. Validate the task's writer spec keys are in the writer's `availableVars`
-3. Wire up `ctx.writeEnvs` to call `writer.write()`
+1. Check if `task.env` is a `FulfilledEnvSpec`, an unfulfilled `EnvSpec`, or a legacy `Env`
+2. For unfulfilled specs, require the env to be provided via `r.run(task, { env })` — throw if missing
+3. For fulfilled specs / legacy envs, resolve from the bound resolver
+4. Validate that `resolver.availableVars ⊇ spec.vars`
+5. Call resolver(s) to fetch values
+6. Populate `ctx.envs` and the env cache
 
 ### What happens to `defineEnv`
 
 `defineEnv` currently bundles `{ resolver, vars }`. That bundle is split:
 
-- **Task side:** `defineEnvSpec(vars)` — just the var names
-- **Command side:** `env: { resolver }` on `defineCommand` — just the sourcing
+- **Spec side:** `defineEnvSpec(vars)` — just the var names
+- **Binding:** `.using(env)` — attaches the resolver
 
-`defineEnv` is removed. It was the coupling point.
+`defineEnv` is deprecated but continues to work (treated as a fulfilled spec). It can be removed in a future major version.
 
 ### Type safety
 
-The runner should be generic over available env vars so TypeScript enforces that tasks can only run if the command's resolver(s) advertise their required vars. The `Runner` type gains env var type parameters derived from the command's bound resolver:
+The key type-level enforcement points:
+
+- `EnvSpec.using(env)` — checks at definition time that `env.resolver.availableVars ⊇ spec.vars`
+- `r.run(task, opts)` — when task has unfulfilled spec, `opts.env` is required (compile error if omitted)
+- `ctx.envs` — typed from the spec's vars, not the full resolver's available vars (narrowed)
+
+### What pok gains
+
+With specs as a first-class concept:
+
+- **Definition-time validation** — `env.vars ⊇ spec.vars` checked eagerly via `.using()`, not deferred to runtime
+- **Resolution tracing** — `pok env inspect --env dev serverEnv` showing which resolver provides which var
+- **Typed narrowing** — `ctx.envs` typed from the spec, not the full env
+
+## Why not command-level binding
+
+The original draft proposed binding at the command:
 
 ```ts
-interface Runner<TContext, TReadVars extends string, TWriteVars extends string> {
-  run(task: /* constrained: task env vars ⊆ TReadVars */): DeferredTask;
-}
+defineCommand({
+  env: { resolver: opResolver },
+  run: async (r) => { await r.run(migrate); },
+});
 ```
 
-`defineCommand` infers `TReadVars` from `env.resolver.availableVars` and threads it through to `RunFn`'s runner parameter.
+This assumes one resolver can satisfy all tasks. In practice, commands like `deploy` orchestrate tasks with:
+- Different resolver chains (vite, cloudflare, vault)
+- Different var lists
+- Different context shapes (`{ env }` vs `{ from, to }`)
+- Writer-only tasks
+
+A "mega composite" resolver flattens precedence and risks value leakage across environments. Spec-side binding keeps the resolver where domain knowledge lives — with the env object — and keeps commands as pure orchestrators.
 
 ## Approach
 
-1. Add `EnvSpec` type and `defineEnvSpec` function
-2. Update `defineTask` to accept `EnvSpec` (instead of `Env`) for both `env` and `envWriter`
-3. Add `env` option to `defineCommand` config (`{ resolver, writer? }`)
-4. Update runner to resolve env from command binding, validating against task specs
-5. Update `Runner` type to carry env var type parameters
-6. Remove `defineEnv`
-7. Update tests and mocks
+1. Add `EnvSpec` and `FulfilledEnvSpec` types, `defineEnvSpec` function with `.using()` method
+2. Update `defineTask` to accept `EnvSpec | FulfilledEnvSpec | Env` for both `env` and `envWriter`
+3. Update runner to detect fulfilment state and resolve accordingly
+4. Update `r.run()` signature to conditionally require `{ env }` for unfulfilled specs
+5. Deprecate `defineEnv` (keep working as fulfilled spec)
+6. Update tests and mocks
 
 ## Hypothesis
 
-Splitting the env contract into task-side specs and command-side bindings will make tasks portable and give commands full control over env sourcing. The runtime change is small — the runner already calls `.resolve()` and `.parse()` — the main work is reorganising the type-level contracts.
+Spec-side binding via `.using()` preserves the RFC's core insight (tasks declare vars-only contracts) while keeping resolver binding close to domain knowledge. Commands become pure orchestrators. Portable tasks opt in by omitting `.using()`, with TypeScript enforcing fulfilment at the call site.
