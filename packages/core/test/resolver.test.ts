@@ -191,10 +191,16 @@ describe('flexible context schemas', () => {
       },
     });
 
-    const awsResult = await resolver.resolve(['SECRET_KEY'], { provider: 'aws', region: 'us-east-1' });
+    const awsResult = await resolver.resolve(['SECRET_KEY'], {
+      provider: 'aws',
+      region: 'us-east-1',
+    });
     expect(awsResult).toEqual({ SECRET_KEY: 'aws-us-east-1' });
 
-    const gcpResult = await resolver.resolve(['SECRET_KEY'], { provider: 'gcp', project: 'my-proj' });
+    const gcpResult = await resolver.resolve(['SECRET_KEY'], {
+      provider: 'gcp',
+      project: 'my-proj',
+    });
     expect(gcpResult).toEqual({ SECRET_KEY: 'gcp-my-proj' });
   });
 

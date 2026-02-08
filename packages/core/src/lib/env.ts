@@ -8,10 +8,7 @@ import type { AnyEnvResolver, TypedEnvResolver, InferResolverContext } from './r
  *
  * For writing, use `envWriter` on the task definition instead.
  */
-export type Env<
-  TContext = Record<string, unknown>,
-  TVars extends string = string,
-> = {
+export type Env<TContext = Record<string, unknown>, TVars extends string = string> = {
   resolver: AnyEnvResolver;
   vars: readonly TVars[];
   // Cached for type inference

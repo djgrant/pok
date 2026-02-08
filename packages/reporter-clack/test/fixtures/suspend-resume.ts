@@ -1,1 +1,9 @@
-export const lines: string[] = ['┌  Test', '│', '◇  Running...', '│', '◆  Running', '│', '└  ✔ Done'];
+export const lines: string[] = [
+  '┌  Test',
+  '│',
+  '◇  Running...',
+  '│',
+  '◆  Running',
+  '│',
+  '└  ✔ Done',
+];

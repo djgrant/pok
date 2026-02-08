@@ -38,10 +38,7 @@ export type EnvResolver<
    * Optional write capability - persist values to the underlying store.
    * Not all resolvers support writing (e.g., composite resolvers are read-only).
    */
-  write?: (
-    values: ResolverResult<TAvailableVars>,
-    context: z.infer<TContext>
-  ) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
 };
 
 /**
@@ -72,8 +69,7 @@ export type AnyEnvResolver = TypedEnvResolver<any>;
 /**
  * Infer the context type required by a resolver
  */
-export type InferResolverContext<T> =
-  T extends EnvResolver<infer C, any> ? z.infer<C> : never;
+export type InferResolverContext<T> = T extends EnvResolver<infer C, any> ? z.infer<C> : never;
 
 /**
  * Infer the available vars from a resolver
@@ -134,13 +130,9 @@ export function defineEnvResolver<
     keys: EnvVarKey<TAvailableVars>[],
     context: z.infer<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
-  write?: (
-    values: ResolverResult<TAvailableVars>,
-    context: z.infer<TContext>
-  ) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
-  const requiredContext =
-    config.requiredContext ?? (z.object({}) as unknown as TContext);
+  const requiredContext = config.requiredContext ?? (z.object({}) as unknown as TContext);
 
   return {
     requiredContext: requiredContext as z.ZodType,
