@@ -62,7 +62,7 @@ export function defineCompositeResolver<const TResolvers extends readonly AnyTyp
   const mergedContext = z.object({}).passthrough();
 
   return {
-    requiredContext: mergedContext as z.ZodObject<z.ZodRawShape>,
+    requiredContext: mergedContext as z.ZodType,
     availableVars: [...allVars] as EnvVarKey<CompositeVars>[],
     resolve: async (keys, context): Promise<ResolverResult<CompositeVars>> => {
       const result: ResolverResult<CompositeVars> = {};

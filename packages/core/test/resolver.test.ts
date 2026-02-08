@@ -172,6 +172,113 @@ describe('defineEnvResolver', () => {
 });
 
 // =============================================================================
+// Flexible Context Schema Tests
+// =============================================================================
+
+describe('flexible context schemas', () => {
+  it('accepts z.discriminatedUnion as requiredContext', async () => {
+    const resolver = defineEnvResolver({
+      requiredContext: z.discriminatedUnion('provider', [
+        z.object({ provider: z.literal('aws'), region: z.string() }),
+        z.object({ provider: z.literal('gcp'), project: z.string() }),
+      ]),
+      availableVars: ['SECRET_KEY'] as const,
+      resolve: async (_keys, ctx) => {
+        if (ctx.provider === 'aws') {
+          return { SECRET_KEY: `aws-${ctx.region}` };
+        }
+        return { SECRET_KEY: `gcp-${ctx.project}` };
+      },
+    });
+
+    const awsResult = await resolver.resolve(['SECRET_KEY'], { provider: 'aws', region: 'us-east-1' });
+    expect(awsResult).toEqual({ SECRET_KEY: 'aws-us-east-1' });
+
+    const gcpResult = await resolver.resolve(['SECRET_KEY'], { provider: 'gcp', project: 'my-proj' });
+    expect(gcpResult).toEqual({ SECRET_KEY: 'gcp-my-proj' });
+  });
+
+  it('rejects invalid discriminatedUnion context', () => {
+    const resolver = defineEnvResolver({
+      requiredContext: z.discriminatedUnion('provider', [
+        z.object({ provider: z.literal('aws'), region: z.string() }),
+        z.object({ provider: z.literal('gcp'), project: z.string() }),
+      ]),
+      availableVars: ['SECRET_KEY'] as const,
+      resolve: async () => ({ SECRET_KEY: 'value' }),
+    });
+
+    expect(() => resolver.resolve(['SECRET_KEY'], { provider: 'azure' })).toThrow();
+  });
+
+  it('accepts z.union as requiredContext', async () => {
+    const resolver = defineEnvResolver({
+      requiredContext: z.union([
+        z.object({ env: z.literal('dev'), debug: z.boolean() }),
+        z.object({ env: z.literal('prod') }),
+      ]),
+      availableVars: ['API_URL'] as const,
+      resolve: async (_keys, ctx) => {
+        return { API_URL: ctx.env === 'dev' ? 'http://localhost' : 'https://api.example.com' };
+      },
+    });
+
+    const devResult = await resolver.resolve(['API_URL'], { env: 'dev', debug: true });
+    expect(devResult).toEqual({ API_URL: 'http://localhost' });
+
+    const prodResult = await resolver.resolve(['API_URL'], { env: 'prod' });
+    expect(prodResult).toEqual({ API_URL: 'https://api.example.com' });
+  });
+
+  it('accepts z.intersection as requiredContext', async () => {
+    const resolver = defineEnvResolver({
+      requiredContext: z.intersection(
+        z.object({ env: z.enum(['dev', 'prod']) }),
+        z.object({ region: z.string() })
+      ),
+      availableVars: ['DB_URL'] as const,
+      resolve: async (_keys, ctx) => {
+        return { DB_URL: `${ctx.env}-${ctx.region}` };
+      },
+    });
+
+    const result = await resolver.resolve(['DB_URL'], { env: 'dev', region: 'us-east-1' });
+    expect(result).toEqual({ DB_URL: 'dev-us-east-1' });
+
+    expect(() => resolver.resolve(['DB_URL'], { env: 'dev' })).toThrow();
+  });
+
+  it('works with discriminatedUnion in composite resolver', async () => {
+    const awsGcpResolver = defineEnvResolver({
+      requiredContext: z.discriminatedUnion('provider', [
+        z.object({ provider: z.literal('aws'), region: z.string() }),
+        z.object({ provider: z.literal('gcp'), project: z.string() }),
+      ]),
+      availableVars: ['CLOUD_SECRET'] as const,
+      resolve: async (_keys, ctx) => {
+        return { CLOUD_SECRET: `${ctx.provider}-secret` };
+      },
+    });
+
+    const staticResolver = createStaticEnvResolver({
+      vars: { STATIC_VAR: 'static-value' },
+    });
+
+    const composite = defineCompositeResolver({
+      resolvers: [awsGcpResolver, staticResolver],
+    });
+
+    const result = await composite.resolve(['CLOUD_SECRET', 'STATIC_VAR'], {
+      provider: 'aws',
+      region: 'us-west-2',
+    });
+
+    expect(result.CLOUD_SECRET).toBe('aws-secret');
+    expect(result.STATIC_VAR).toBe('static-value');
+  });
+});
+
+// =============================================================================
 // defineCompositeResolver Tests
 // =============================================================================
 
