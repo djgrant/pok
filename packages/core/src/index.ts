@@ -235,6 +235,7 @@ export type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  AutocompleteOptions,
   // Raw Prompter (for testing and non-TTY environments)
   PromptCall,
   ResponseProvider,

@@ -20,6 +20,7 @@ export type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  AutocompleteOptions,
 } from './types';
 
 export { isDynamicOptions, withCapabilities } from './types';

@@ -12,6 +12,7 @@ import type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  AutocompleteOptions,
 } from './types';
 import { isDynamicOptions } from './types';
 
@@ -26,7 +27,8 @@ export type PromptCall =
       response: unknown[];
     }
   | { type: 'confirm'; options: ConfirmOptions; response: boolean }
-  | { type: 'text'; options: TextOptions; response: string };
+  | { type: 'text'; options: TextOptions; response: string }
+  | { type: 'autocomplete'; options: AutocompleteOptions<unknown>; response: unknown };
 
 /**
  * Response provider - can be a static value or a function
@@ -243,6 +245,27 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
       const response = getResponse(options.textResponses, textIndex++, textOptions, defaultValue);
 
       const call: PromptCall = { type: 'text', options: textOptions, response };
+      calls.push(call);
+      options.onPrompt?.(call);
+
+      return response;
+    },
+
+    async autocomplete<T>(autocompleteOptions: AutocompleteOptions<T>): Promise<T> {
+      const defaultValue = autocompleteOptions.options[0]?.value;
+
+      const response = getResponse(
+        options.selectResponses,
+        selectIndex++,
+        autocompleteOptions,
+        defaultValue
+      ) as T;
+
+      const call: PromptCall = {
+        type: 'autocomplete',
+        options: autocompleteOptions as AutocompleteOptions<unknown>,
+        response,
+      };
       calls.push(call);
       options.onPrompt?.(call);
 

@@ -251,6 +251,30 @@ export type MultiselectOptions<T> = {
 };
 
 /**
+ * Options for the autocomplete prompt.
+ * A single-select prompt with type-ahead search filtering.
+ *
+ * @template T - The type of values in the options
+ */
+export type AutocompleteOptions<T> = {
+  /** The prompt message displayed to the user */
+  message: string;
+  /**
+   * The list of options to display and filter.
+   * MUST contain at least one option.
+   */
+  options: SelectOption<T>[];
+  /**
+   * Optional placeholder text shown in the search input.
+   */
+  placeholder?: string;
+  /**
+   * Maximum number of items to display at once.
+   */
+  maxItems?: number;
+};
+
+/**
  * Prompter interface for interactive user input.
  */
 export interface Prompter {
@@ -273,4 +297,11 @@ export interface Prompter {
    * Display a text input prompt.
    */
   text(options: TextOptions): Promise<string>;
+
+  /**
+   * Display a single-select prompt with type-ahead search filtering.
+   * Optional — implementations that don't support it can omit this method.
+   * Callers should fall back to `select` when unavailable.
+   */
+  autocomplete?<T>(options: AutocompleteOptions<T>): Promise<T>;
 }
