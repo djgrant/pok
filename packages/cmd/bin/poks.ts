@@ -81,10 +81,14 @@ async function main() {
   const rerunArgs = [...selected.commandPath, ...selected.args];
 
   const { execSync } = await import('child_process');
-  execSync(`pok ${rerunArgs.join(' ')}`, {
-    stdio: 'inherit',
-    cwd: processCwd,
-  });
+  try {
+    execSync(`pok ${rerunArgs.join(' ')}`, {
+      stdio: 'inherit',
+      cwd: processCwd,
+    });
+  } catch (err: any) {
+    process.exit(err?.status ?? 1);
+  }
 }
 
 function findConfigFileSimple(startDir: string): { configPath: string; configDir: string } | null {
