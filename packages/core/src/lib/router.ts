@@ -242,6 +242,13 @@ export async function buildCommandTree(
   }
 }
 
+function rebasePaths(node: CommandNode, parentPath: string[]): void {
+  node.path = [...parentPath, ...node.path];
+  for (const child of node.children.values()) {
+    rebasePaths(child, parentPath);
+  }
+}
+
 async function expandTree(
   tree: CommandTree,
   ctx: MountContext,
@@ -284,6 +291,10 @@ async function expandTree(
 
           // Tag with provenance
           tagNodes(childNode, result.mountSourceId);
+
+          // Fix paths: mounted children have paths relative to the sub-tree,
+          // but need to include the parent's path prefix for correct history replay
+          rebasePaths(childNode, node.path);
 
           node.children.set(childKey, childNode);
         }
