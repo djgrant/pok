@@ -17,6 +17,7 @@ import type {
   OptionsPage,
 } from '@pokit/core';
 import { isDynamicOptions } from '@pokit/core';
+import { patchedAutocomplete } from './autocomplete-prompt.js';
 
 // =============================================================================
 // Constants
@@ -499,13 +500,13 @@ export function createPrompter(): Prompter {
     },
 
     async autocomplete<T>(options: AutocompleteOptions<T>): Promise<T> {
-      const result = await p.autocomplete({
+      const result = await patchedAutocomplete({
         message: options.message,
         options: options.options.map((opt) => ({
           value: opt.value,
           label: opt.label,
           hint: opt.hint,
-        })) as Parameters<typeof p.autocomplete>[0]['options'],
+        })),
         placeholder: options.placeholder,
         maxItems: options.maxItems,
       });
