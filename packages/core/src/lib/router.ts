@@ -262,7 +262,7 @@ async function expandTree(
         const result = await resolveMountable(node.config.mount, childContext);
 
         if (!result.mountSourceId) {
-          throw new Error(`Mount result missing mountSourceId at path "${node.path}"`);
+          throw new Error(`Mount result missing mountSourceId at path "${node.path.join('.')}"`);
         }
 
         if (result.mountSourceId) {
@@ -279,7 +279,7 @@ async function expandTree(
         for (const [childKey, childNode] of result.tree) {
           if (node.children.has(childKey)) {
             // Collision policy: fail fast
-            throw new Error(`Command collision: "${childKey}" already exists in "${node.path}"`);
+            throw new Error(`Command collision: "${childKey}" already exists in "${node.path.join('.')}"`);
           }
 
           // Tag with provenance
@@ -289,7 +289,7 @@ async function expandTree(
         }
       } catch (e) {
         ctx.reporter.error(
-          `Failed to mount plugin at ${node.path}: ${e instanceof Error ? e.message : String(e)}`
+          `Failed to mount plugin at ${node.path.join('.')}: ${e instanceof Error ? e.message : String(e)}`
         );
       }
     }
@@ -528,12 +528,12 @@ async function executeNode(
   const children = Array.from(node.children.values());
 
   if (children.length === 0) {
-    throw new RouterError(`Command "${node.path}" has no implementation or children`);
+    throw new RouterError(`Command "${node.path.join('.')}" has no implementation or children`);
   }
 
   if (ctx.config.noTty) {
     const helpText = generateHelp({
-      commandPath: node.path.split('.'),
+      commandPath: node.path,
       command: config,
       children,
       appName: ctx.appName,
@@ -680,7 +680,7 @@ async function executeLeaf(
   // Build error context for rich error messages
   const errorContext: ErrorContext = {
     appName,
-    commandPath: node.path.split('.'),
+    commandPath: node.path,
   };
 
   // Parse context from args
@@ -748,7 +748,7 @@ async function executeLeaf(
     await config.run(runner, runCtx);
   }
 
-  appendHistory(appName, node.path.split('.'), args);
+  appendHistory(appName, node.path, args);
 }
 
 /**
@@ -782,7 +782,7 @@ async function resolveChildrenContexts(
     const contextDef = leaf.config.context || {};
     const errorContext: ErrorContext = {
       appName,
-      commandPath: leaf.path.split('.'),
+      commandPath: leaf.path,
     };
     const parsed = parseContext(args, contextDef, {
       errorContext,
@@ -922,7 +922,7 @@ async function executeAllChildren(
   const leaves = getLeafNodes(node);
 
   if (leaves.length === 0) {
-    throw new RouterError(`No executable children found under "${node.path}"`);
+    throw new RouterError(`No executable children found under "${node.path.join('.')}"`);
   }
 
   // Close menu if open before running multiple commands
@@ -1009,7 +1009,7 @@ async function executeLeafWithContext(
     await config.run(runner, runCtx);
   }
 
-  appendHistory(ctx.appName, node.path.split('.'), extraArgs);
+  appendHistory(ctx.appName, node.path, extraArgs);
 }
 
 /**
@@ -1035,7 +1035,7 @@ async function executeAllChildrenWithContext(
   const leaves = getLeafNodes(node);
 
   if (leaves.length === 0) {
-    throw new RouterError(`No executable children found under "${node.path}"`);
+    throw new RouterError(`No executable children found under "${node.path.join('.')}"`);
   }
 
   const quiet = node.config.quietRunAll !== false;
@@ -1193,7 +1193,7 @@ async function selectFromMenu(
       const children = Array.from(currentNode.children.values());
 
       if (children.length === 0) {
-        reporter.error(`Command "${currentNode.path}" has no implementation or children`);
+        reporter.error(`Command "${currentNode.path.join('.')}" has no implementation or children`);
         return null;
       }
 
@@ -1247,7 +1247,7 @@ async function selectFromMenu(
     const contextDef = config.context || {};
     const errorContext: ErrorContext = {
       appName,
-      commandPath: currentNode.path.split('.'),
+      commandPath: currentNode.path,
     };
 
     // Parse context from args (empty since we're in menu mode)
@@ -1435,7 +1435,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
       // Show help for the matched command
       const children = Array.from(match.node.children.values());
-      const commandPath = match.node.path.split('.');
+      const commandPath = match.node.path;
       const helpText = generateHelp({
         commandPath,
         command: match.node.config,

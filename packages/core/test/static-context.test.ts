@@ -137,7 +137,7 @@ describe('Static Context (Duck Typing Literals)', () => {
   describe('completions', () => {
     it('excludes static values from completions', () => {
       const node: CommandNode = {
-        path: 'test',
+        path: ['test'],
         segment: 'test',
         config: { label: 'Test', context: contextWithStatic },
         children: new Map(),

@@ -102,11 +102,11 @@ export function tagNodes(node: import('./command').CommandNode, sourceId: string
  */
 function insertIntoTree(tree: CommandTree, segments: string[], config: CommandConfig): void {
   let currentLevel = tree;
-  let currentPath = '';
+  let currentPath: string[] = [];
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]!;
-    currentPath = currentPath ? `${currentPath}.${segment}` : segment;
+    currentPath = [...currentPath, segment];
     const isLast = i === segments.length - 1;
 
     let node = currentLevel.get(segment);

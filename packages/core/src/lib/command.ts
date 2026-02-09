@@ -404,8 +404,8 @@ export type LoadedCommand = {
  * Built at startup for efficient navigation.
  */
 export type CommandNode = {
-  /** Full dot-notation path (e.g., 'generate.types') */
-  path: string;
+  /** Full path segments (e.g., ['generate', 'types']) */
+  path: string[];
   /** Last segment of the path (e.g., 'types') */
   segment: string;
   /** Command configuration */

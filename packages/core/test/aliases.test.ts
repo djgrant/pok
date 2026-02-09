@@ -20,7 +20,7 @@ function createCommandNode(
     childMap.set(child.segment, child);
   }
   return {
-    path: segment,
+    path: [segment],
     segment,
     config,
     children: childMap,
