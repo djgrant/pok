@@ -14,7 +14,8 @@
     "url": "https://github.com/notation-dev/openpok/issues"
   },
   "bin": {
-    "pok": "./bin/pok.ts"
+    "pok": "./bin/pok.ts",
+    "poks": "./bin/poks.ts"
   },
   "exports": {
     ".": {
