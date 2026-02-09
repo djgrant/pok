@@ -290,3 +290,10 @@ export {
   fromPackageCommands,
   resolveMountable,
 } from './lib/plugins';
+
+// =============================================================================
+// History
+// =============================================================================
+
+export { loadHistory, appendHistory, clearHistory, formatEntryLabel } from './lib/history';
+export type { HistoryEntry } from './lib/history';

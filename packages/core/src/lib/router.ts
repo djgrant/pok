@@ -43,6 +43,7 @@ import {
 import { CLIError, type ErrorContext } from './cli-error';
 import { findClosestMatch } from './string-distance';
 import { createRunner, AbortError } from './runner';
+import { appendHistory } from './history';
 import { generateHelp, generateRootHelp, hasHelpFlag, hasVersionFlag } from './help';
 import {
   generateCompletionScript,
@@ -746,6 +747,8 @@ async function executeLeaf(
     });
     await config.run(runner, runCtx);
   }
+
+  appendHistory(appName, node.path.split('.'), args);
 }
 
 /**
