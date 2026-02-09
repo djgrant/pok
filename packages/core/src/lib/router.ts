@@ -743,6 +743,8 @@ async function executeLeaf(
     cwd: projectRoot,
   };
 
+  appendHistory(appName, node.path, args);
+
   // Run main execution with runner and context
   if (config.run) {
     const runner = createRunner({
@@ -758,8 +760,6 @@ async function executeLeaf(
     });
     await config.run(runner, runCtx);
   }
-
-  appendHistory(appName, node.path, args);
 }
 
 /**
@@ -1004,6 +1004,8 @@ async function executeLeafWithContext(
     cwd: projectRoot,
   };
 
+  appendHistory(ctx.appName, node.path, extraArgs);
+
   // Run main execution with runner and context
   if (config.run) {
     const runner = createRunner({
@@ -1019,8 +1021,6 @@ async function executeLeafWithContext(
     });
     await config.run(runner, runCtx);
   }
-
-  appendHistory(ctx.appName, node.path, extraArgs);
 }
 
 /**
