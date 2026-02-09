@@ -39,16 +39,11 @@ function saveHistory(appName: string, entries: HistoryEntry[]): void {
   fs.writeFileSync(historyPath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-export function appendHistory(
-  appName: string,
-  commandPath: string[],
-  args: string[]
-): void {
+export function appendHistory(appName: string, commandPath: string[], args: string[]): void {
   let entries = loadHistory(appName);
 
   const isSame = (a: HistoryEntry) =>
-    a.commandPath.join('.') === commandPath.join('.') &&
-    a.args.join(' ') === args.join(' ');
+    a.commandPath.join('.') === commandPath.join('.') && a.args.join(' ') === args.join(' ');
 
   entries = entries.filter((e) => !isSame(e));
 

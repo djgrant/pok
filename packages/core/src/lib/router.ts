@@ -1008,6 +1008,8 @@ async function executeLeafWithContext(
     });
     await config.run(runner, runCtx);
   }
+
+  appendHistory(ctx.appName, node.path.split('.'), extraArgs);
 }
 
 /**
