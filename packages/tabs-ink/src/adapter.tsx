@@ -31,8 +31,11 @@ export function createTabsAdapter(): TabsAdapter {
         return;
       }
 
+      // Clear the main screen before switching to alternate screen buffer.
+      // This ensures the menu output is not visible when we return from alternate screen.
+      process.stdout.write('\x1b[2J\x1b[H');
+
       // Switch to alternate screen buffer (like vim/less)
-      // This preserves the main terminal content and provides a clean canvas
       process.stdout.write('\x1b[?1049h\x1b[H');
 
       // Ensure stdin is not paused - previous CLI operations (prompts, spinners)

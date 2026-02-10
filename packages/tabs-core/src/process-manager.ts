@@ -8,6 +8,15 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import type { TabStatus, TabProcess } from './types.js';
 
+function killProcessTree(proc: ChildProcess): void {
+  if (proc.killed || proc.pid == null) return;
+  try {
+    process.kill(-proc.pid, 'SIGTERM');
+  } catch {
+    // Process may have already exited
+  }
+}
+
 export const OUTPUT_BATCH_MS = 16;
 
 // =============================================================================
@@ -106,9 +115,7 @@ export class ProcessManager {
 
     // Kill existing process
     const existingProc = this.processes[index];
-    if (existingProc && !existingProc.killed) {
-      existingProc.kill('SIGTERM');
-    }
+    if (existingProc) killProcessTree(existingProc);
 
     // Clear output buffer
     this.outputBuffers.delete(index);
@@ -130,9 +137,7 @@ export class ProcessManager {
    */
   kill(index: number): void {
     const proc = this.processes[index];
-    if (proc && !proc.killed) {
-      proc.kill('SIGTERM');
-    }
+    if (proc) killProcessTree(proc);
 
     this.options.callbacks.onOutputUpdate(index, ['', 'Stopped']);
     this.options.callbacks.onStatusChange(index, 'stopped');
@@ -143,9 +148,7 @@ export class ProcessManager {
    */
   killAll(): void {
     for (const proc of this.processes) {
-      if (proc && !proc.killed) {
-        proc.kill('SIGTERM');
-      }
+      if (proc) killProcessTree(proc);
     }
   }
 
@@ -173,6 +176,7 @@ export class ProcessManager {
         FORCE_COLOR: '1',
       } as NodeJS.ProcessEnv,
       stdio: ['inherit', 'pipe', 'pipe'],
+      detached: true,
     });
 
     this.processes[index] = proc;

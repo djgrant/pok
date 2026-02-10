@@ -10,6 +10,15 @@ import {
 import type { TabProcess } from './types.js';
 import type { TabSpec, TabsOptions } from '@pokit/core';
 
+function killProcessTree(proc: ChildProcess): void {
+  if (proc.killed || proc.pid == null) return;
+  try {
+    process.kill(-proc.pid, 'SIGTERM');
+  } catch {
+    // Process may have already exited
+  }
+}
+
 const OUTPUT_BATCH_MS = 16;
 
 type TabsAppProps = {
@@ -132,6 +141,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
           FORCE_COLOR: '1',
         } as NodeJS.ProcessEnv,
         stdio: ['pipe', 'pipe', 'pipe'],
+        detached: true,
       });
 
       const handleData = (data: Buffer) => appendOutput(index, data);
@@ -179,27 +189,21 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
 
     return () => {
       for (const proc of processesRef.current) {
-        if (proc && !proc.killed) {
-          proc.kill('SIGTERM');
-        }
+        if (proc) killProcessTree(proc);
       }
     };
   }, [items, spawnProcess]);
 
   const killAll = useCallback(() => {
     for (const proc of processesRef.current) {
-      if (proc && !proc.killed) {
-        proc.kill('SIGTERM');
-      }
+      if (proc) killProcessTree(proc);
     }
   }, []);
 
   const handleRestart = useCallback(
     (index: number) => {
       const existingProc = processesRef.current[index];
-      if (existingProc && !existingProc.killed) {
-        existingProc.kill('SIGTERM');
-      }
+      if (existingProc) killProcessTree(existingProc);
 
       // Clear both batch buffer and ring buffer
       batchBuffersRef.current.delete(index);
@@ -229,9 +233,7 @@ export function TabsApp({ items, options, onExit }: TabsAppProps) {
 
   const handleKill = useCallback((index: number) => {
     const proc = processesRef.current[index];
-    if (proc && !proc.killed) {
-      proc.kill('SIGTERM');
-    }
+    if (proc) killProcessTree(proc);
 
     setTabs((prev) => {
       const next = [...prev];
