@@ -183,6 +183,17 @@ See [Terminal Requirements](./terminal-requirements.md) for details.
 
 If you experience display issues, try `--no-unicode` mode.
 
+## The `poks` Binary
+
+Along with `pok`, you also get `poks`, which provides an interactive history menu to quickly rerun your most recent successful commands.
+
+```bash
+# Rerun recent commands
+poks
+```
+
+See [Command History](./concepts/history.md) for more details.
+
 ## Next Steps
 
 - [Architecture](./architecture.md) - Understand how pok works

@@ -33,6 +33,24 @@ commands/
 
 Then `mycli db` will show a submenu with just "migrate".
 
+## Interactive Menus
+
+When a command has subcommands but no `run` function, or when the CLI is invoked without arguments, pok displays an interactive menu.
+
+### Search-ahead
+
+Interactive menus support search-ahead filtering. Start typing any part of a command's label or name to filter the list. This makes navigating large command trees very fast.
+
+```bash
+$ mycli
+◆  mycli
+│  ○ What would you like to do?
+│  ● build - Build the project
+│  ○ deploy - Deploy to environment
+│  ○ db - Database operations
+# Typing 'dep' will filter to 'deploy'
+```
+
 ## Plugin System & Mounting
 
 You can build complex command trees by composing commands from multiple sources (plugins, directories, or scripts).

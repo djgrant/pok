@@ -153,8 +153,23 @@ export const command = defineCommand({
 
 See [defineCommand](./api/define-command.md) for full details on defining command flags.
 
+## The `poks` Binary
+
+In addition to the main `pok` binary, the `poks` binary is provided to help you quickly rerun commands from your history.
+
+```bash
+# Open interactive history menu
+poks
+
+# Clear command history
+poks --clear
+```
+
+See [Command History](./concepts/history.md) for more details.
+
 ## Related
 
 - [defineCommand](./api/define-command.md) - Command definition API
+- [Command History](./concepts/history.md) - Rerunning recent commands
 - [Shell Completion](./api/completion.md) - Tab completion for flags
 - [Terminal Requirements](./terminal-requirements.md) - TTY compatibility

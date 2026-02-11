@@ -79,4 +79,5 @@ $ mycli deploy
 - [Standalone CLI](./guides/standalone-cli.md) - Building your own binary
 - [Commands](./concepts/commands.md) - Defining commands
 - [Tasks](./concepts/tasks.md) - Reusable tasks
+- [Command History](./concepts/history.md) - Rerunning recent commands
 - [API Reference](./api/define-command.md) - Full API documentation

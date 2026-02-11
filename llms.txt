@@ -17,6 +17,7 @@
 - [Tasks](https://github.com/djgrant/pok/blob/main/docs/concepts/tasks.md): Creating reusable, composable units of work
 - [Checks](https://github.com/djgrant/pok/blob/main/docs/concepts/checks.md): Validation and pre-flight checks
 - [Events](https://github.com/djgrant/pok/blob/main/docs/concepts/events.md): Event system for inter-component communication
+- [Command History](https://github.com/djgrant/pok/blob/main/docs/concepts/history.md): Rerunning recent commands with `poks`
 - [Dry Run](https://github.com/djgrant/pok/blob/main/docs/concepts/dry-run.md): Understanding and implementing dry-run modes
 
 ## API Reference

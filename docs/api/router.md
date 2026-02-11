@@ -25,20 +25,42 @@ function runCli(args: string[], config: RunCliConfig): Promise<void>;
 
 ### RunCliConfig
 
+| Property          | Type                            | Description                                        |
+| ----------------- | ------------------------------- | -------------------------------------------------- |
+| `commandsDir`     | `string`                        | Absolute path to command files                     |
+| `projectRoot`     | `string`                        | Absolute path to project root                      |
+| `appName`         | `string`                        | App name for display and history                   |
+| `version`         | `string`                        | Version string for --version flag                  |
+| `reporterAdapter` | `ReporterAdapter`               | Adapter for rendering output                       |
+| `prompter`        | `Prompter`                      | Adapter for interactive input                      |
+| `tabs`            | `TabsAdapter`                   | Optional adapter for tabbed UI                     |
+| `pmScripts`       | `boolean \| string[]`           | Include package manager scripts (e.g., npm scripts) |
+| `pmCommands`      | `boolean \| string[]`           | Include package manager commands                   |
+| `extraCommands`   | `Record<string, CommandConfig>` | Manual command overrides                           |
+| `plugins`         | `MountableLike[]`               | Dynamic command sources to mount at root           |
+
+## MountableLike
+
+A `MountableLike` is any object that can be resolved into a command tree. The following helper functions return mountables:
+
+- **`fromDirectory(baseUrl: string, relativePath: string)`**: Mounts all `.ts` and `.tsx` files from a directory.
+- **`fromConfig(baseUrl: string, relativePath: string)`**: Mounts an entire pok application from its `pok.config.ts` file or directory.
+- **`fromObject(tree: CommandTree)`**: Mounts a pre-built command tree.
+
+## Plugins
+
+Plugins allow you to extend your CLI with commands from other packages or local directories. You can provide them in the `plugins` array of `RunCliConfig`:
+
 ```typescript
-type RunCliConfig = {
-  commandsDir: string;      // Absolute path to command files
-  projectRoot: string;      // Absolute path to project root
-  appName?: string;         // App name for display
-  version?: string;         // Version string for --version flag
-  reporterAdapter: ReporterAdapter;
-  prompter: Prompter;
-  tabs?: TabsAdapter;       // Optional tabs adapter
-  pmScripts?: boolean | string[];   // Include package manager scripts
-  pmCommands?: boolean | string[];  // Include package manager commands
-  extraCommands?: Record<string, CommandConfig>; // Inject manual commands
-  plugins?: MountableLike[]; // Mount dynamic command sources
-};
+import { fromDirectory } from '@pokit/core';
+
+await runCli(process.argv.slice(2), {
+  // ...
+  plugins: [
+    // Mount internal tools at the root level
+    fromDirectory(import.meta.url, './tools'),
+  ],
+});
 ```
 
 ### Example (Standalone CLI)
@@ -161,6 +183,8 @@ const tree = await buildCommandTree('/path/to/commands');
 
 ### No Arguments → Interactive Menu
 
+When you run your CLI without any arguments, pok opens an interactive menu showing all top-level commands.
+
 ```bash
 $ mycli
 ◆  mycli
@@ -169,6 +193,8 @@ $ mycli
 │  ○ deploy - Deploy to environment
 │  ○ db - Database operations
 ```
+
+**Search-ahead**: Interactive menus support autocomplete search-ahead. You can start typing to filter the available commands and press `Enter` to select.
 
 ### With Arguments → Direct Execution
 

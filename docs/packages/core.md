@@ -45,8 +45,10 @@ Validate preconditions before command execution.
 ### Router
 
 ```typescript
-import { run, buildCommandTree } from '@pokit/core';
+import { run, buildCommandTree, fromDirectory, fromConfig, fromObject } from '@pokit/core';
 ```
+
+File-based command discovery and routing.
 
 File-based command discovery and routing.
 
@@ -73,6 +75,14 @@ import { commandExists, getVersion, getNodeMajorVersion, getPackageManager } fro
 ```
 
 Helpers for shell operations and environment checks.
+
+### History Utilities
+
+```typescript
+import { loadHistory, clearHistory, formatEntryLabel } from '@pokit/core';
+```
+
+Utilities for managing command execution history.
 
 ### Raw Adapters (Testing)
 
