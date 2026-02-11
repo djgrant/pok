@@ -21,12 +21,18 @@
 
 ## API Reference
 
+- [runCli](https://github.com/djgrant/pok/blob/main/docs/api/router.md#runcli): Recommended entry point for production CLIs
 - [defineCommand](https://github.com/djgrant/pok/blob/main/docs/api/define-command.md): API for defining new commands
 - [defineTask](https://github.com/djgrant/pok/blob/main/docs/api/define-task.md): API for defining tasks
 - [defineEnv](https://github.com/djgrant/pok/blob/main/docs/api/define-env.md): API for defining environments
-- [Router](https://github.com/djgrant/pok/blob/main/docs/api/router.md): Routing system API
+- [Router](https://github.com/djgrant/pok/blob/main/docs/api/router.md): Routing system API (run, buildCommandTree)
 - [Runner](https://github.com/djgrant/pok/blob/main/docs/api/runner.md): Task execution runner API
 - [Tabs](https://github.com/djgrant/pok/blob/main/docs/api/tabs.md): Tabbed interface API
+
+## Guides
+
+- [Standalone CLI](https://github.com/djgrant/pok/blob/main/docs/guides/standalone-cli.md): Building and distributing your own CLI applications
+- [Dynamic Menus](https://github.com/djgrant/pok/blob/main/docs/guides/dynamic-menus-piq.md): Implementing dynamic submenus
 
 ## Optional
 

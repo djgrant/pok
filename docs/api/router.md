@@ -5,12 +5,64 @@ The router is the entry point for pok CLIs. It discovers commands from the files
 ## Import
 
 ```typescript
-import { run, buildCommandTree } from '@pokit/core';
+import { run, runCli, buildCommandTree } from '@pokit/core';
+```
+
+## runCli
+
+The recommended entry point for production CLIs. It handles the full lifecycle including:
+- Command line argument parsing
+- Output configuration detection (TTY, flags)
+- Version handling (`--version`)
+- Error reporting with clean messages
+- Process exit codes
+
+### Signature
+
+```typescript
+function runCli(args: string[], config: RunCliConfig): Promise<void>;
+```
+
+### RunCliConfig
+
+```typescript
+type RunCliConfig = {
+  commandsDir: string;      // Absolute path to command files
+  projectRoot: string;      // Absolute path to project root
+  appName?: string;         // App name for display
+  version?: string;         // Version string for --version flag
+  reporterAdapter: ReporterAdapter;
+  prompter: Prompter;
+  tabs?: TabsAdapter;       // Optional tabs adapter
+  pmScripts?: boolean | string[];   // Include package manager scripts
+  pmCommands?: boolean | string[];  // Include package manager commands
+  extraCommands?: Record<string, CommandConfig>; // Inject manual commands
+  plugins?: MountableLike[]; // Mount dynamic command sources
+};
+```
+
+### Example (Standalone CLI)
+
+```typescript
+#!/usr/bin/env bun
+import { runCli } from '@pokit/core';
+import { createPrompter } from '@pokit/prompter-clack';
+import { createReporterAdapter } from '@pokit/reporter-clack';
+import * as path from 'path';
+
+await runCli(process.argv.slice(2), {
+  commandsDir: path.resolve(import.meta.dir, 'commands'),
+  projectRoot: path.resolve(import.meta.dir),
+  appName: 'my-cli',
+  version: '1.0.0',
+  prompter: createPrompter(),
+  reporterAdapter: createReporterAdapter(),
+});
 ```
 
 ## run
 
-Main entry point for the CLI.
+Lower-level entry point used internally by `runCli`. Use this if you need custom control over the execution lifecycle or want to bypass the standard CLI behavior.
 
 ### Signature
 
@@ -22,34 +74,18 @@ function run(args: string[], config: RouterConfig): Promise<void>;
 
 ```typescript
 type RouterConfig = {
-  commandsDir: string; // Directory containing command files
-  projectRoot: string; // Project root for shell commands
-  appName?: string; // App name for intro (defaults to dir name)
+  commandsDir: string;
+  projectRoot: string;
+  appName?: string;
+  version?: string;
   reporterAdapter: ReporterAdapter;
   prompter: Prompter;
-  tabs?: TabsAdapter; // Optional tabs adapter
+  tabs?: TabsAdapter;
+  noTty?: boolean; // Disable interactivity
+  // ... other internal flags
 };
 ```
 
-### Example
-
-```typescript
-#!/usr/bin/env bun
-import { run } from '@pokit/core';
-import { createPrompter } from '@pokit/prompter-clack';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createTabsAdapter } from '@pokit/tabs-ink';
-import * as path from 'path';
-
-await run(process.argv.slice(2), {
-  commandsDir: path.resolve(import.meta.dir, 'commands'),
-  projectRoot: path.resolve(import.meta.dir),
-  appName: 'mycli',
-  prompter: createPrompter(),
-  reporterAdapter: createReporterAdapter(),
-  tabs: createTabsAdapter(),
-});
-```
 
 ## File-Based Routing
 
