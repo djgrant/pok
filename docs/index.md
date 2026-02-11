@@ -76,6 +76,7 @@ $ mycli deploy
 
 - [Getting Started](./getting-started.md) - Installation and first steps
 - [Architecture](./architecture.md) - How pok works
+- [Standalone CLI](./guides/standalone-cli.md) - Building your own binary
 - [Commands](./concepts/commands.md) - Defining commands
 - [Tasks](./concepts/tasks.md) - Reusable tasks
 - [API Reference](./api/define-command.md) - Full API documentation
