@@ -1,6 +1,6 @@
 {
   "name": "@pokit/reporter-web",
-  "version": "0.0.40",
+  "version": "0.0.41",
   "description": "Web/React event reporter for pok CLI applications",
   "keywords": [
     "cli",
