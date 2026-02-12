@@ -235,6 +235,22 @@ describe('ProcessManager - kill', () => {
 
     manager.destroy();
   });
+
+  it('does not overwrite stopped status with error after process closes', async () => {
+    const { manager, captured } = createTestManager([{ label: 'Long running', exec: 'sleep 1' }]);
+
+    manager.start();
+    await waitForBatch();
+
+    manager.kill(0);
+    await waitForCompletion(300);
+
+    const statusesForTab = captured.statuses.filter((s) => s.index === 0).map((s) => s.status);
+    expect(statusesForTab).toContain('stopped');
+    expect(statusesForTab).not.toContain('error');
+
+    manager.destroy();
+  });
 });
 
 describe('ProcessManager - killAll', () => {

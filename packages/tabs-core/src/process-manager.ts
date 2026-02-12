@@ -71,6 +71,7 @@ export class ProcessManager {
   private options: ProcessManagerOptions;
   private processes: (ChildProcess | null)[] = [];
   private outputBuffers: Map<number, OutputBuffer> = new Map();
+  private expectedStops = new Set<number>();
   private flushScheduled = false;
   private destroyed = false;
 
@@ -115,7 +116,10 @@ export class ProcessManager {
 
     // Kill existing process
     const existingProc = this.processes[index];
-    if (existingProc) killProcessTree(existingProc);
+    if (existingProc) {
+      this.expectedStops.add(index);
+      killProcessTree(existingProc);
+    }
 
     // Clear output buffer
     this.outputBuffers.delete(index);
@@ -137,7 +141,10 @@ export class ProcessManager {
    */
   kill(index: number): void {
     const proc = this.processes[index];
-    if (proc) killProcessTree(proc);
+    if (proc) {
+      this.expectedStops.add(index);
+      killProcessTree(proc);
+    }
 
     this.options.callbacks.onOutputUpdate(index, ['', 'Stopped']);
     this.options.callbacks.onStatusChange(index, 'stopped');
@@ -147,8 +154,11 @@ export class ProcessManager {
    * Kill all processes
    */
   killAll(): void {
-    for (const proc of this.processes) {
-      if (proc) killProcessTree(proc);
+    for (const [index, proc] of this.processes.entries()) {
+      if (proc) {
+        this.expectedStops.add(index);
+        killProcessTree(proc);
+      }
     }
   }
 
@@ -188,6 +198,13 @@ export class ProcessManager {
 
     proc.on('close', (code) => {
       this.flushOutput();
+      this.processes[index] = null;
+
+      // Ignore close transitions for intentional stops (kill/restart/destroy).
+      if (this.expectedStops.delete(index)) {
+        return;
+      }
+
       const status: TabStatus = code === 0 ? 'done' : 'error';
       this.options.callbacks.onStatusChange(index, status, code ?? undefined);
     });

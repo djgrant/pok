@@ -67,6 +67,33 @@ describe('parseContext', () => {
       expect(context.verbose).toBe(true);
       expect(context.tag).toBe('v1.0');
     });
+
+    it('preserves parsed schema output for coerced values', () => {
+      const coerceContextDef = {
+        count: {
+          from: 'flag' as const,
+          schema: z.coerce.number().int(),
+          description: 'Count',
+        },
+      } satisfies ContextDef;
+
+      const { context } = parseContext(['--count', '42'], coerceContextDef);
+      expect(context.count).toBe(42);
+      expect(typeof context.count).toBe('number');
+    });
+
+    it('preserves parsed schema output for transformed values', () => {
+      const transformContextDef = {
+        name: {
+          from: 'flag' as const,
+          schema: z.string().transform((v) => v.toUpperCase()),
+          description: 'Name',
+        },
+      } satisfies ContextDef;
+
+      const { context } = parseContext(['--name', 'alice'], transformContextDef);
+      expect(context.name).toBe('ALICE');
+    });
   });
 
   describe('--flag=value syntax', () => {
