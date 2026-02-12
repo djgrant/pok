@@ -1,20 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { loadHistory, appendHistory, clearHistory, formatEntryLabel } from '../src/lib/history';
 
 const TEST_APP = `pok-history-test-${process.pid}`;
+const TEST_HISTORY_ROOT = path.join(
+  os.tmpdir(),
+  'pok-history-tests',
+  `${process.pid}-${Date.now().toString(36)}`
+);
+const ORIGINAL_HISTORY_DIR = process.env.POK_HISTORY_DIR;
 
 function getHistoryPath() {
-  const dataDir =
-    process.platform === 'darwin'
-      ? path.join(os.homedir(), 'Library', 'Application Support')
-      : path.join(os.homedir(), '.local', 'share');
+  const dataDir = process.env.POK_HISTORY_DIR ?? TEST_HISTORY_ROOT;
   return path.join(dataDir, 'pok', TEST_APP, 'history.json');
 }
 
 beforeEach(() => {
+  process.env.POK_HISTORY_DIR = TEST_HISTORY_ROOT;
   clearHistory(TEST_APP);
 });
 
@@ -24,6 +28,21 @@ afterEach(() => {
   const dir = path.dirname(historyPath);
   try {
     fs.rmdirSync(dir);
+  } catch {}
+});
+
+beforeAll(() => {
+  process.env.POK_HISTORY_DIR = TEST_HISTORY_ROOT;
+});
+
+afterAll(() => {
+  if (ORIGINAL_HISTORY_DIR === undefined) {
+    delete process.env.POK_HISTORY_DIR;
+  } else {
+    process.env.POK_HISTORY_DIR = ORIGINAL_HISTORY_DIR;
+  }
+  try {
+    fs.rmSync(TEST_HISTORY_ROOT, { recursive: true, force: true });
   } catch {}
 });
 
