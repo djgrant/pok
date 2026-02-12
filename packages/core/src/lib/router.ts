@@ -1331,8 +1331,10 @@ async function runMenu(tree: CommandTree, ctx: RouterContext): Promise<void> {
 
   // Phase 2: Execution (happens OUTSIDE the menu group)
   // Check if this is a "run all children" scenario
-  if (runAll && !node.config.run && node.config.enableRunAllChildren) {
-    await executeAllChildren(node, extraArgs, ctx, true);
+  if (runAll) {
+    if (!node.config.run && node.config.enableRunAllChildren) {
+      await executeAllChildren(node, extraArgs, ctx, true);
+    }
     return;
   }
 
