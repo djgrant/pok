@@ -34,6 +34,10 @@ export function stableStringify(obj: unknown): string {
   return `{${entries.join(',')}}`;
 }
 
+function shellEscape(arg: string): string {
+  return `'${arg.replace(/'/g, `'\\''`)}'`;
+}
+
 /**
  * Resolve a MountableLike to a MountResult
  */
@@ -495,8 +499,11 @@ export function fromPackageScripts(config: boolean | string[], projectRoot: stri
                   description: typeof childScript === 'string' ? childScript : `Run ${childName}`,
                   ignoreUnknownFlags: true,
                   run: async (r, ctx) => {
-                    const args = ctx.extraArgs.length > 0 ? ` ${ctx.extraArgs.join(' ')}` : '';
-                    const fullCmd = `${info.scriptContent} ${childName}${args}`;
+                    const escapedArgs =
+                      ctx.extraArgs.length > 0
+                        ? ` ${ctx.extraArgs.map((arg) => shellEscape(arg)).join(' ')}`
+                        : '';
+                    const fullCmd = `${info.scriptContent} ${childName}${escapedArgs}`;
                     await r.exec(fullCmd, {
                       interactive: true,
                       cwd: info.cwd,

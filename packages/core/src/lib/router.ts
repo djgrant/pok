@@ -286,7 +286,9 @@ async function expandTree(
         for (const [childKey, childNode] of result.tree) {
           if (node.children.has(childKey)) {
             // Collision policy: fail fast
-            throw new Error(`Command collision: "${childKey}" already exists in "${node.path.join('.')}"`);
+            throw new Error(
+              `Command collision: "${childKey}" already exists in "${node.path.join('.')}"`
+            );
           }
 
           // Tag with provenance
@@ -1004,7 +1006,7 @@ async function executeLeafWithContext(
     cwd: projectRoot,
   };
 
-  appendHistory(ctx.appName, node.path, extraArgs);
+  appendHistory(ctx.appName, node.path, finalArgs);
 
   // Run main execution with runner and context
   if (config.run) {
@@ -1336,6 +1338,59 @@ async function discoverVersion(projectRoot: string): Promise<string | undefined>
   }
 }
 
+async function maybeHandleVersionFlag(
+  args: string[],
+  config: RouterConfig,
+  resolvedAppName: string
+): Promise<boolean> {
+  if (!hasVersionFlag(args)) return false;
+
+  const version = config.version ?? (await discoverVersion(config.projectRoot));
+  if (version) {
+    console.log(`${resolvedAppName} ${version}`);
+  } else {
+    console.log(resolvedAppName);
+  }
+  return true;
+}
+
+function maybeHandleCompletionCommand(
+  args: string[],
+  tree: CommandTree,
+  resolvedAppName: string
+): boolean {
+  // Handle hidden __complete command for dynamic shell completions
+  if (args[0] === '__complete') {
+    const completionArgs = args.slice(1);
+    const completions = generateCompletions(completionArgs, tree);
+    console.log(completions.join('\n'));
+    return true;
+  }
+
+  // Handle completion script generation command
+  if (args[0] === 'completion') {
+    const shellArg = args[1];
+    const shell: Shell = shellArg && isValidShell(shellArg) ? shellArg : detectShell();
+
+    const script = generateCompletionScript(resolvedAppName, shell);
+    console.log(script);
+    console.error('');
+    console.error(getInstallInstructions(resolvedAppName, shell));
+    return true;
+  }
+
+  return false;
+}
+
+function renderRootHelp(tree: CommandTree, appName: string): void {
+  const topLevelCommands = Array.from(tree.values());
+  const helpText = generateRootHelp({
+    appName,
+    commands: topLevelCommands,
+  });
+  console.log(helpText);
+}
+
 /**
  * Main router entry point
  *
@@ -1344,18 +1399,10 @@ async function discoverVersion(projectRoot: string): Promise<string | undefined>
  */
 export async function run(args: string[], config: RouterConfig): Promise<void> {
   const { commandsDir, projectRoot, appName, reporterAdapter } = config;
+  const resolvedAppName = appName ?? path.basename(projectRoot);
 
   // Version check first - before any reporter setup or command tree building
-  if (hasVersionFlag(args)) {
-    const resolvedAppName = appName ?? path.basename(projectRoot);
-    const version = config.version ?? (await discoverVersion(projectRoot));
-
-    if (version) {
-      console.log(`${resolvedAppName} ${version}`);
-    } else {
-      console.log(resolvedAppName);
-    }
-
+  if (await maybeHandleVersionFlag(args, config, resolvedAppName)) {
     return;
   }
 
@@ -1363,7 +1410,6 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
   const eventBus = createEventBus();
   const adapterController = reporterAdapter.start(eventBus);
   const reporter = new ScopedReporter(eventBus, 'root', 'root');
-  const resolvedAppName = appName ?? path.basename(projectRoot);
 
   // Build the router context with all runtime state
   const ctx: RouterContext = {
@@ -1381,23 +1427,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     // Build command tree
     const tree = await buildCommandTree(commandsDir, ctx);
 
-    // Handle hidden __complete command for dynamic shell completions
-    if (args[0] === '__complete') {
-      const completionArgs = args.slice(1);
-      const completions = generateCompletions(completionArgs, tree);
-      console.log(completions.join('\n'));
-      return;
-    }
-
-    // Handle completion script generation command
-    if (args[0] === 'completion') {
-      const shellArg = args[1];
-      const shell: Shell = shellArg && isValidShell(shellArg) ? shellArg : detectShell();
-
-      const script = generateCompletionScript(resolvedAppName, shell);
-      console.log(script);
-      console.error('');
-      console.error(getInstallInstructions(resolvedAppName, shell));
+    if (maybeHandleCompletionCommand(args, tree, resolvedAppName)) {
       return;
     }
 
@@ -1405,21 +1435,11 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
       // No command specified, just --help - show root help
       if (hasHelpFlag(args)) {
-        const topLevelCommands = Array.from(tree.values());
-        const helpText = generateRootHelp({
-          appName: resolvedAppName,
-          commands: topLevelCommands,
-        });
-        console.log(helpText);
+        renderRootHelp(tree, resolvedAppName);
         return;
       }
       if (args.length === 0 && config.noTty) {
-        const topLevelCommands = Array.from(tree.values());
-        const helpText = generateRootHelp({
-          appName: resolvedAppName,
-          commands: topLevelCommands,
-        });
-        console.log(helpText);
+        renderRootHelp(tree, resolvedAppName);
         return;
       }
       // No arguments - show interactive menu
@@ -1435,12 +1455,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     if (hasHelpFlag(args)) {
       if (!match) {
         // Unknown command with --help - show root help
-        const topLevelCommands = Array.from(tree.values());
-        const helpText = generateRootHelp({
-          appName: resolvedAppName,
-          commands: topLevelCommands,
-        });
-        console.log(helpText);
+        renderRootHelp(tree, resolvedAppName);
         return;
       }
 

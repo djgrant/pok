@@ -34,7 +34,19 @@ export function tokenizeCommand(input: string): string[] {
     }
 
     if (char === '\\') {
-      escaped = true;
+      const next = input[i + 1];
+      if (next === undefined) {
+        current += char;
+        continue;
+      }
+
+      // In shell syntax, backslash escapes whitespace/quotes/backslash.
+      // Keep literal backslashes (e.g. Windows paths) when not escaping.
+      if (quote || /\s|["'\\]/.test(next)) {
+        escaped = true;
+      } else {
+        current += char;
+      }
       continue;
     }
 
@@ -78,11 +90,13 @@ export function parsePmCommand(scriptContent: string): ParsedPmCommand | null {
     const targetName = tokens[2];
     if (!targetName) return null;
     const commandToken = tokens[3] ?? null;
+    const scriptToken =
+      commandToken === 'run' || commandToken === 'run-script' ? (tokens[4] ?? null) : commandToken;
     return {
       pm,
       targetName,
       commandToken,
-      scriptToken: commandToken,
+      scriptToken,
     };
   }
 
@@ -350,7 +364,7 @@ export function createPmAction(
 
   // Map logical command names to PM-specific commands
   let actualName = name;
-  let flags = '';
+  const flagTokens: string[] = [];
 
   if (type === 'exec') {
     if (pm === 'npm') {
@@ -360,19 +374,22 @@ export function createPmAction(
       if (name === 'update') actualName = 'upgrade';
       // Yarn v1 needs -W for root commands in workspace
       if (isYarnWorkspace && ['add', 'remove', 'upgrade', 'install'].includes(actualName)) {
-        flags = ' -W';
+        flagTokens.push('-W');
       }
     } else if (pm === 'bun') {
       if (name === 'audit') actualName = 'pm audit';
     } else if (pm === 'pnpm') {
       // pnpm needs -w for root commands in workspace
       if (isPnpmWorkspace && ['add', 'install', 'remove', 'update'].includes(actualName)) {
-        flags = ' -w';
+        flagTokens.push('-w');
       }
     }
   }
 
-  const description = type === 'run' ? `${pm} run ${name}` : `${pm} ${actualName}${flags}`;
+  const description =
+    type === 'run'
+      ? `${pm} run ${name}`
+      : `${pm} ${actualName}${flagTokens.length > 0 ? ` ${flagTokens.join(' ')}` : ''}`;
 
   return {
     label: name,
@@ -381,15 +398,11 @@ export function createPmAction(
     requestArgs,
     run: async (r, ctx) => {
       const pm = getPackageManager(cwd);
-      // Ensure we have args if requested (handled by executeLeaf logic now)
-      const args =
-        ctx.extraArgs.length > 0
-          ? type === 'run'
-            ? ` -- ${ctx.extraArgs.join(' ')}`
-            : ` ${ctx.extraArgs.join(' ')}`
-          : '';
+      const actualCommandTokens = actualName.split(' ');
       const cmd =
-        type === 'run' ? `${pm} run ${name}${args}` : `${pm} ${actualName}${flags}${args}`;
+        type === 'run'
+          ? [pm, 'run', name, ...(ctx.extraArgs.length > 0 ? ['--', ...ctx.extraArgs] : [])]
+          : [pm, ...actualCommandTokens, ...flagTokens, ...ctx.extraArgs];
       await r.exec(cmd, {
         interactive: true,
         cwd,

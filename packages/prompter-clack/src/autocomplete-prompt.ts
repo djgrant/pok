@@ -4,8 +4,8 @@
  * Copies the autocomplete function from @clack/prompts but uses a patched
  * AutocompletePrompt that wraps the cursor instead of clamping it.
  *
- * Upstream issue: https://github.com/bombshell-dev/clack/issues/XXX
- * TODO: Remove this file once the fix is released upstream
+ * Upstream tracking: https://github.com/bombshell-dev/clack/issues
+ * TODO: Remove this file once cursor wrapping is available upstream.
  */
 
 import type { Key } from 'node:readline';
@@ -45,16 +45,16 @@ function defaultFilter<T extends OptionLike>(input: string, option: T): boolean 
   return label.toLowerCase().includes(input.toLowerCase());
 }
 
-interface AutocompletePromptOptions<T extends OptionLike>
-  extends PromptOptions<T['value'] | T['value'][], PatchedAutocompletePrompt<T>> {
+interface AutocompletePromptOptions<T extends OptionLike> extends PromptOptions<
+  T['value'] | T['value'][],
+  PatchedAutocompletePrompt<T>
+> {
   options: T[] | ((this: PatchedAutocompletePrompt<T>) => T[]);
   filter?: FilterFunction<T>;
   multiple?: boolean;
 }
 
-class PatchedAutocompletePrompt<T extends OptionLike> extends Prompt<
-  T['value'] | T['value'][]
-> {
+class PatchedAutocompletePrompt<T extends OptionLike> extends Prompt<T['value'] | T['value'][]> {
   filteredOptions: T[];
   multiple: boolean;
   isNavigating = false;
@@ -98,9 +98,7 @@ class PatchedAutocompletePrompt<T extends OptionLike> extends Prompt<
 
     let initialValues: unknown[] | undefined;
     if (opts.initialValue && Array.isArray(opts.initialValue)) {
-      initialValues = this.multiple
-        ? opts.initialValue
-        : opts.initialValue.slice(0, 1);
+      initialValues = this.multiple ? opts.initialValue : opts.initialValue.slice(0, 1);
     } else if (!this.multiple && this.options.length > 0) {
       initialValues = [this.options[0].value];
     }
@@ -139,7 +137,7 @@ class PatchedAutocompletePrompt<T extends OptionLike> extends Prompt<
     if (isUpKey || isDownKey) {
       const length = this.filteredOptions.length;
       if (length > 0) {
-        this.#cursor = ((this.#cursor + (isUpKey ? -1 : 1)) % length + length) % length;
+        this.#cursor = (((this.#cursor + (isUpKey ? -1 : 1)) % length) + length) % length;
       }
       this.focusedValue = this.filteredOptions[this.#cursor]?.value;
       if (!this.multiple) {
@@ -252,9 +250,7 @@ export const patchedAutocomplete = <Value>(opts: AutocompleteOpts<Value>) => {
     options: opts.options,
     initialValue: opts.initialValue ? [opts.initialValue] : undefined,
     initialUserInput: opts.initialUserInput,
-    filter:
-      opts.filter ??
-      ((search: string, opt: Option<Value>) => getFilteredOption(search, opt)),
+    filter: opts.filter ?? ((search: string, opt: Option<Value>) => getFilteredOption(search, opt)),
     signal: opts.signal,
     input: opts.input,
     output: opts.output,
@@ -274,9 +270,7 @@ export const patchedAutocomplete = <Value>(opts: AutocompleteOpts<Value>) => {
           return `${headings.join('\n')}\n${color.gray(S_BAR)}${label}`;
         }
         case 'cancel': {
-          const userInputText = userInput
-            ? `  ${color.strikethrough(color.dim(userInput))}`
-            : '';
+          const userInputText = userInput ? `  ${color.strikethrough(color.dim(userInput))}` : '';
           return `${headings.join('\n')}\n${color.gray(S_BAR)}${userInputText}`;
         }
         default: {
@@ -320,10 +314,7 @@ export const patchedAutocomplete = <Value>(opts: AutocompleteOpts<Value>) => {
             `${color.dim('Type:')} to search`,
           ];
 
-          const footers = [
-            `${guidePrefix}${instructions.join(' • ')}`,
-            guidePrefixEnd,
-          ];
+          const footers = [`${guidePrefix}${instructions.join(' • ')}`, guidePrefixEnd];
 
           const displayOptions =
             this.filteredOptions.length === 0
