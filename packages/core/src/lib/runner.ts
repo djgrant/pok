@@ -512,6 +512,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     cwd,
     context,
     extraArgs: forwardedArgs,
+    timeout: defaultTimeout,
     quiet = false,
     signal,
     tabs: tabsAdapter,
@@ -594,6 +595,46 @@ export function createRunner<TContext extends Record<string, unknown>>(
     }
     const decoder = new TextDecoder();
     return chunks.map((chunk) => decoder.decode(chunk)).join('');
+  };
+
+  /**
+   * Run an operation with optional timeout support.
+   * Timeout cancellation is implemented via AbortSignal and normalized to TimeoutError.
+   */
+  const withTimeout = async <T>(
+    cmdLabel: string,
+    timeoutMs: number | undefined,
+    parentSignal: AbortSignal | undefined,
+    fn: (runSignal: AbortSignal | undefined) => Promise<T>
+  ): Promise<T> => {
+    if (timeoutMs === undefined) {
+      return fn(parentSignal);
+    }
+
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new TimeoutError(cmdLabel, timeoutMs);
+    }
+
+    const controller = new AbortController();
+    const runSignal = parentSignal
+      ? AbortSignal.any([parentSignal, controller.signal])
+      : controller.signal;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+
+    try {
+      return await fn(runSignal);
+    } catch (error) {
+      if (timedOut && error instanceof AbortError) {
+        throw new TimeoutError(cmdLabel, timeoutMs);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   };
 
   /* Shared command execution helper */
@@ -713,7 +754,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
           new Promise((resolve) => setTimeout(resolve, 100)),
         ]);
 
-        if (exitCode !== 0 && exitCode !== null) {
+        if (exitCode !== 0) {
           const decoder = new TextDecoder();
           const stdout = stdoutChunks
             .map((c) => decoder.decode(c))
@@ -746,7 +787,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
             throw new AbortError();
           }
 
-          if (exitCode !== 0 && exitCode !== null) {
+          if (exitCode !== 0) {
             throw new CommandError(`Command failed: ${finalCmd}`, '');
           }
         } else {
@@ -838,7 +879,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
             new Promise((resolve) => setTimeout(resolve, 100)),
           ]);
 
-          if (exitCode !== 0 && exitCode !== null) {
+          if (exitCode !== 0) {
             const decoder = new TextDecoder();
             const stdout = stdoutChunks
               .map((c) => decoder.decode(c))
@@ -886,21 +927,25 @@ export function createRunner<TContext extends Record<string, unknown>>(
         const execute = async (): Promise<void> => {
           const allEnv = getAllCachedEnv();
           const mergedEnv = { ...allEnv, ...opts?.env };
+          const timeout = opts?.timeout ?? defaultTimeout;
+          const cmdLabel = execInputToString(cmd);
 
-          await executeWithRetry(
-            () =>
-              executeCmd(cmd, {
-                cwd: opts?.cwd || cwd,
-                env: mergeEnv(mergedEnv),
-                quiet,
-                signal,
-                interactive: opts?.interactive,
-              }),
-            opts?.retry,
-            signal,
-            (attempt, max) => {
-              reporter.warn(`Retrying command (${attempt}/${max})...`);
-            }
+          await withTimeout(cmdLabel, timeout, signal, async (runSignal) =>
+            executeWithRetry(
+              () =>
+                executeCmd(cmd, {
+                  cwd: opts?.cwd || cwd,
+                  env: mergeEnv(mergedEnv),
+                  quiet,
+                  signal: runSignal,
+                  interactive: opts?.interactive,
+                }),
+              opts?.retry,
+              runSignal,
+              (attempt, max) => {
+                reporter.warn(`Retrying command (${attempt}/${max})...`);
+              }
+            )
           );
         };
 
@@ -920,19 +965,23 @@ export function createRunner<TContext extends Record<string, unknown>>(
   ): Promise<void> => {
     if (isCommand(item)) {
       const retryConfig = item.opts?.retry;
-      await executeWithRetry(
-        () =>
-          executeCmd(item.cmd, {
-            cwd: item.opts?.cwd || cwd,
-            env: envVars,
-            quiet: false,
-            signal: itemSignal,
-          }),
-        retryConfig,
-        itemSignal,
-        (attempt, max) => {
-          reporter.warn(`Retrying command (${attempt}/${max})...`);
-        }
+      const timeout = item.opts?.timeout ?? defaultTimeout;
+      const cmdLabel = execInputToString(item.cmd);
+      await withTimeout(cmdLabel, timeout, itemSignal, async (runSignal) =>
+        executeWithRetry(
+          () =>
+            executeCmd(item.cmd, {
+              cwd: item.opts?.cwd || cwd,
+              env: envVars,
+              quiet: false,
+              signal: runSignal,
+            }),
+          retryConfig,
+          runSignal,
+          (attempt, max) => {
+            reporter.warn(`Retrying command (${attempt}/${max})...`);
+          }
+        )
       );
     } else if (isDeferredTask(item)) {
       await executeTask(item.task, item.params, itemSignal);
@@ -1128,21 +1177,24 @@ export function createRunner<TContext extends Record<string, unknown>>(
         typeof execTask.exec === 'function' ? execTask.exec(taskContext as any) : execTask.exec;
 
       const allEnv = getAllCachedEnv();
+      const timeout = defaultTimeout;
 
       try {
-        await executeWithRetry(
-          () =>
-            executeCmd(cmd, {
-              cwd,
-              env: mergeEnv(allEnv),
-              quiet,
-              signal: runSignal,
-            }),
-          task.retry,
-          runSignal,
-          (attempt, max) => {
-            reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
-          }
+        await withTimeout(execInputToString(cmd), timeout, runSignal, async (taskExecSignal) =>
+          executeWithRetry(
+            () =>
+              executeCmd(cmd, {
+                cwd,
+                env: mergeEnv(allEnv),
+                quiet,
+                signal: taskExecSignal,
+              }),
+            task.retry,
+            taskExecSignal,
+            (attempt, max) => {
+              reporter.warn(`Retrying task "${task.label}" (${attempt}/${max})...`);
+            }
+          )
         );
       } catch (error) {
         if (error instanceof CommandError || error instanceof AbortError) {

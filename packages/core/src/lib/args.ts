@@ -427,7 +427,7 @@ export function parseContext<C extends ContextDef>(
           );
         }
 
-        context[flagName] = value;
+        context[flagName] = result.data;
         i += advance;
       }
     } else {

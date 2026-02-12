@@ -15,7 +15,11 @@ import type { Runner } from '../src';
 
 const TEST_CWD = process.cwd();
 
-function createTestRunner(options?: { quiet?: boolean; signal?: AbortSignal }): Runner {
+function createTestRunner(options?: {
+  quiet?: boolean;
+  signal?: AbortSignal;
+  timeout?: number;
+}): Runner {
   const eventBus = createEventBus();
   const prompter = createRawPrompter({});
 
@@ -23,6 +27,7 @@ function createTestRunner(options?: { quiet?: boolean; signal?: AbortSignal }): 
     cwd: TEST_CWD,
     context: {},
     extraArgs: [],
+    timeout: options?.timeout,
     quiet: options?.quiet ?? false,
     signal: options?.signal,
     eventBus,
@@ -116,6 +121,36 @@ describe('runner.exec()', () => {
 
     expect(command._type).toBe('command');
     expect(typeof command.then).toBe('function');
+  });
+
+  it('throws on spawn failure for missing binary in array form', async () => {
+    const runner = createTestRunner({ quiet: true });
+    try {
+      await runner.exec(['definitely-not-a-real-binary-xyz']);
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toBeInstanceOf(CommandError);
+    }
+  });
+
+  it('enforces per-command timeout option', async () => {
+    const runner = createTestRunner({ quiet: true });
+    try {
+      await runner.exec('sleep 0.2', { timeout: 10 });
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toMatchObject({ name: 'TimeoutError' });
+    }
+  });
+
+  it('enforces runner default timeout when command timeout is not set', async () => {
+    const runner = createTestRunner({ quiet: true, timeout: 10 });
+    try {
+      await runner.exec('sleep 0.2');
+      expect(true).toBe(false);
+    } catch (error) {
+      expect(error).toMatchObject({ name: 'TimeoutError' });
+    }
   });
 });
 

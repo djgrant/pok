@@ -1130,11 +1130,18 @@ async function executeAllChildrenWithContext(
 /**
  * Result of menu selection - contains the selected node and resolved context
  */
-type MenuSelectionResult = {
-  node: CommandNode;
-  context: any;
-  extraArgs: string[];
-};
+type MenuSelectionResult =
+  | {
+      node: CommandNode;
+      extraArgs: string[];
+      runAll: true;
+    }
+  | {
+      node: CommandNode;
+      context: any;
+      extraArgs: string[];
+      runAll: false;
+    };
 
 /**
  * Format a breadcrumb trail for display.
@@ -1256,6 +1263,16 @@ async function selectFromMenu(
     }
 
     // Now resolve context for the selected command
+    if (runAll) {
+      // Context for children is resolved in executeAllChildren per leaf command
+      reporter.success('Selected');
+      return {
+        node: currentNode,
+        extraArgs: [],
+        runAll: true,
+      };
+    }
+
     const config = currentNode.config;
     const contextDef = config.context || {};
     const errorContext: ErrorContext = {
@@ -1294,6 +1311,7 @@ async function selectFromMenu(
       node: currentNode,
       context: resolvedContext,
       extraArgs: parsed.rest,
+      runAll: false,
     };
   });
 }
@@ -1309,17 +1327,17 @@ async function runMenu(tree: CommandTree, ctx: RouterContext): Promise<void> {
     throw new RouterError('No command selected');
   }
 
-  const { node, context, extraArgs } = selection;
+  const { node, extraArgs, runAll } = selection;
 
   // Phase 2: Execution (happens OUTSIDE the menu group)
   // Check if this is a "run all children" scenario
-  if (!node.config.run && node.config.enableRunAllChildren) {
-    await executeAllChildrenWithContext(node, context, extraArgs, ctx);
+  if (runAll && !node.config.run && node.config.enableRunAllChildren) {
+    await executeAllChildren(node, extraArgs, ctx, true);
     return;
   }
 
   // Execute the leaf command with pre-resolved context
-  await executeLeafWithContext(node, context, extraArgs, ctx);
+  await executeLeafWithContext(node, selection.context, extraArgs, ctx);
 }
 
 /**

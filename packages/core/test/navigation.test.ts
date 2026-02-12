@@ -92,6 +92,14 @@ describe('Navigation', () => {
       expect(error).toBeUndefined();
       expect(events.length).toBeLessThan(fixtures.runAllChildren.events.length);
     });
+
+    it('resolves each child context when selecting __all__ from menu', async () => {
+      const { error } = await captureEvents([], {
+        selectResponses: ['run-all-context', '__all__', 'dev'],
+        textResponses: ['alice'],
+      });
+      expect(error).toBeUndefined();
+    });
   });
 
   describe('parent commands', () => {
