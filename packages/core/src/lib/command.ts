@@ -85,14 +85,26 @@ export type ContextSource = 'flag';
 
  */
 
-export type ContextFieldDef = {
+export type ContextFieldDef<TSchema extends z.ZodType = z.ZodType> = {
   /** Where the value comes from */
 
   from: 'flag';
 
   /** Zod schema for validation and type inference */
 
-  schema: z.ZodType;
+  schema: TSchema;
+
+  /**
+   * Optional dynamic resolver for the flag value.
+   *
+   * Called when the flag was not explicitly provided on the CLI.
+   * The returned value is validated through `schema`.
+   */
+  resolve?: (ctx: {
+    args: string[];
+    context: Record<string, unknown>;
+    flag: string;
+  }) => z.input<TSchema> | undefined | Promise<z.input<TSchema> | undefined>;
 
   /** Human-readable description for help text */
 

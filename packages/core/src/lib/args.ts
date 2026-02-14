@@ -34,6 +34,8 @@ export type ParsedArgs<C extends ContextDef> = {
   context: InferContext<C>;
   /** Remaining positional arguments */
   rest: string[];
+  /** Flags that were explicitly provided on the CLI */
+  providedFlags: Set<string>;
 };
 
 /**
@@ -301,6 +303,7 @@ export function parseContext<C extends ContextDef>(
 ): ParsedArgs<C> {
   const context: Record<string, unknown> = {};
   const rest: string[] = [];
+  const providedFlags = new Set<string>();
   const errorContext = options?.errorContext;
 
   // Build schema info cache and known flag names for typo detection
@@ -398,6 +401,7 @@ export function parseContext<C extends ContextDef>(
           );
         }
         context[flagName] = !isNegated;
+        providedFlags.add(flagName);
         i++;
       } else {
         // String/enum flag - use inline value (--flag=value) or next arg (--flag value)
@@ -428,6 +432,7 @@ export function parseContext<C extends ContextDef>(
         }
 
         context[flagName] = result.data;
+        providedFlags.add(flagName);
         i += advance;
       }
     } else {
@@ -437,7 +442,72 @@ export function parseContext<C extends ContextDef>(
     }
   }
 
-  return { context: context as InferContext<C>, rest };
+  return { context: context as InferContext<C>, rest, providedFlags };
+}
+
+/**
+ * Options for dynamic context resolution
+ */
+export type ResolveDynamicContextOptions = {
+  /** Error context for rich error messages */
+  errorContext?: ErrorContext;
+  /** Original command arguments */
+  args?: string[];
+  /** Flags that were explicitly provided on the CLI */
+  providedFlags?: Set<string>;
+};
+
+/**
+ * Resolve context values from async/sync field resolvers.
+ *
+ * Dynamic resolvers run only for fields that were not explicitly provided
+ * as CLI flags. Any resolved value is validated through the field schema.
+ */
+export async function resolveDynamicContext<C extends ContextDef>(
+  context: InferContext<C>,
+  contextDef: C,
+  options?: ResolveDynamicContextOptions
+): Promise<InferContext<C>> {
+  const errorContext = options?.errorContext;
+  const args = options?.args ?? [];
+  const providedFlags = options?.providedFlags ?? new Set<string>();
+  const resolved = { ...context } as Record<string, unknown>;
+
+  for (const [name, fieldDef] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(fieldDef) || !fieldDef.resolve) {
+      continue;
+    }
+
+    // Explicit CLI values always win.
+    if (providedFlags.has(name)) {
+      continue;
+    }
+
+    const nextValue = await fieldDef.resolve({
+      args,
+      context: resolved,
+      flag: name,
+    });
+
+    if (nextValue === undefined) {
+      continue;
+    }
+
+    const parseResult = fieldDef.schema.safeParse(nextValue);
+    if (!parseResult.success) {
+      const info = getSchemaInfo(fieldDef.schema);
+      const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
+      throw createError(
+        `Invalid dynamic value for --${name}: ${String(nextValue)}.${choicesMsg}`,
+        contextDef,
+        errorContext
+      );
+    }
+
+    resolved[name] = parseResult.data;
+  }
+
+  return resolved as InferContext<C>;
 }
 
 /**

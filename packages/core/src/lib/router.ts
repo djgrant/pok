@@ -36,6 +36,7 @@ import type { CheckConfig } from './check';
 import { CheckError } from './check';
 import {
   parseContext,
+  resolveDynamicContext,
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
@@ -701,6 +702,11 @@ async function executeLeaf(
     errorContext,
     ignoreUnknownFlags: config.ignoreUnknownFlags,
   });
+  const dynamicContext = await resolveDynamicContext(parsed.context, contextDef, {
+    errorContext,
+    args,
+    providedFlags: parsed.providedFlags,
+  });
 
   // Extract choices for interactive prompts
   const choices = extractChoices(contextDef);
@@ -709,7 +715,7 @@ async function executeLeaf(
 
   // Resolve interactive context (prompts appear inside menu box if menuOpen)
   const resolvedContext = await resolveInteractiveContext(
-    parsed.context,
+    dynamicContext,
     contextDef,
     choices,
     prompter,
@@ -801,10 +807,15 @@ async function resolveChildrenContexts(
       errorContext,
       ignoreUnknownFlags: leaf.config.ignoreUnknownFlags,
     });
+    const dynamicContext = await resolveDynamicContext(parsed.context, contextDef, {
+      errorContext,
+      args,
+      providedFlags: parsed.providedFlags,
+    });
     const choices = extractChoices(contextDef);
     const allowPrompt = !ctx.config.noTty;
     const resolvedContext = await resolveInteractiveContext(
-      parsed.context,
+      dynamicContext,
       contextDef,
       choices,
       prompter,
@@ -1285,6 +1296,11 @@ async function selectFromMenu(
       errorContext,
       ignoreUnknownFlags: config.ignoreUnknownFlags,
     });
+    const dynamicContext = await resolveDynamicContext(parsed.context, contextDef, {
+      errorContext,
+      args: [],
+      providedFlags: parsed.providedFlags,
+    });
 
     // Extract choices for interactive prompts
     const choices = extractChoices(contextDef);
@@ -1293,7 +1309,7 @@ async function selectFromMenu(
 
     // Resolve interactive context (prompts appear inside menu box)
     const resolvedContext = await resolveInteractiveContext(
-      parsed.context,
+      dynamicContext,
       contextDef,
       choices,
       prompter,
