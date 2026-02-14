@@ -2,6 +2,7 @@ import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
 import {
   parseContext,
+  resolveDynamicContext,
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
@@ -382,6 +383,84 @@ describe('parseContext', () => {
         expect(error).not.toBeInstanceOf(CLIError);
       }
     });
+  });
+});
+
+// =============================================================================
+// resolveDynamicContext Tests
+// =============================================================================
+
+describe('resolveDynamicContext', () => {
+  it('resolves missing values from async resolver', async () => {
+    const contextDef = {
+      env: {
+        from: 'flag' as const,
+        schema: z.enum(['dev', 'staging', 'prod']),
+        resolve: async () => 'staging',
+      },
+    } satisfies ContextDef;
+
+    const parsed = parseContext([], contextDef);
+    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
+      args: [],
+      providedFlags: parsed.providedFlags,
+    });
+
+    expect(resolved.env).toBe('staging');
+  });
+
+  it('does not override explicit CLI values', async () => {
+    const contextDef = {
+      env: {
+        from: 'flag' as const,
+        schema: z.enum(['dev', 'staging', 'prod']),
+        resolve: async () => 'staging',
+      },
+    } satisfies ContextDef;
+
+    const parsed = parseContext(['--env', 'prod'], contextDef);
+    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
+      args: ['--env', 'prod'],
+      providedFlags: parsed.providedFlags,
+    });
+
+    expect(resolved.env).toBe('prod');
+  });
+
+  it('validates dynamic values through schema', async () => {
+    const contextDef = {
+      env: {
+        from: 'flag' as const,
+        schema: z.enum(['dev', 'staging', 'prod']),
+        resolve: async () => 'invalid',
+      },
+    } satisfies ContextDef;
+
+    const parsed = parseContext([], contextDef);
+    await expect(
+      resolveDynamicContext(parsed.context, contextDef, {
+        args: [],
+        providedFlags: parsed.providedFlags,
+      })
+    ).rejects.toThrow('Invalid dynamic value for --env: invalid');
+  });
+
+  it('keeps existing value when resolver returns undefined', async () => {
+    const contextDef = {
+      env: {
+        from: 'flag' as const,
+        schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
+        resolve: async () => undefined,
+      },
+    } satisfies ContextDef;
+
+    const parsed = parseContext([], contextDef);
+    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
+      args: [],
+      providedFlags: parsed.providedFlags,
+    });
+
+    expect(resolved.env).toBe('dev');
   });
 });
 
