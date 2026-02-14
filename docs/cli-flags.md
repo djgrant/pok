@@ -151,6 +151,9 @@ export const command = defineCommand({
 });
 ```
 
+Flags can also define a `resolve` function for runtime values when the flag is not explicitly passed.
+Explicit CLI flags always take precedence over `resolve`.
+
 See [defineCommand](./api/define-command.md) for full details on defining command flags.
 
 ## The `poks` Binary
