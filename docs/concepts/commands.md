@@ -184,6 +184,26 @@ pre: (ctx) => {
 },
 ```
 
+### Dynamic Flag Values
+
+Use `resolve` to compute a flag value dynamically when the user does not pass that flag.
+
+```typescript
+context: {
+  env: {
+    from: 'flag',
+    schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
+    resolve: async () => process.env.DEFAULT_ENV ?? undefined,
+  },
+},
+```
+
+Resolution priority:
+
+1. Explicit CLI flag value
+2. `resolve` return value
+3. Zod default / normal missing-value behavior
+
 ## Pre-flight Check Patterns
 
 ### Static Checks

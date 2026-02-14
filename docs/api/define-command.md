@@ -37,7 +37,47 @@ type ContextFieldDef = {
   from: 'flag'; // Currently only 'flag' is supported
   schema: z.ZodType; // Zod schema for validation
   description?: string; // Help text
+  resolve?: (ctx: {
+    args: string[];
+    context: Record<string, unknown>;
+    flag: string;
+  }) => unknown | undefined | Promise<unknown | undefined>;
 };
+```
+
+### Dynamic Flag Resolution
+
+Use `resolve` when a flag value should be computed at runtime (for example from env, config files, or external state).
+
+`resolve` runs only when that flag was not explicitly provided on the CLI.
+
+Priority order for a flag value:
+
+1. Explicit CLI flag value
+2. `resolve` return value
+3. Zod default (`.default(...)`) / regular missing-value behavior
+
+```typescript
+import { z } from 'zod';
+import { defineCommand } from '@pokit/core';
+
+export const command = defineCommand({
+  label: 'Deploy',
+  context: {
+    env: {
+      from: 'flag',
+      schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
+      resolve: async () => {
+        // Optional dynamic source
+        return process.env.DEFAULT_ENV ?? undefined;
+      },
+      description: 'Target environment',
+    },
+  },
+  run: async (r, ctx) => {
+    await r.exec(`deploy --env ${ctx.context.env}`);
+  },
+});
 ```
 
 ### Static Context Values
@@ -245,6 +285,7 @@ When a required context field is missing, pok prompts for it:
 - **Strings/Numbers** → Text input
 
 Fields with `.default()` or `.optional()` don't prompt.
+Fields resolved via `resolve` also won't prompt if the resolver returns a valid value.
 
 ## Related
 
