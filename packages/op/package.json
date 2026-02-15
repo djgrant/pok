@@ -1,6 +1,6 @@
 {
   "name": "@pokit/op",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "description": "Operation utilities for pok CLI applications",
   "keywords": [
     "cli",
