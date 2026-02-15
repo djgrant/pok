@@ -213,6 +213,7 @@ context: {
 `resolve` supports primitive arrays (`string[]`, `number[]`, `boolean[]`), paginated pages, and async iterators.
 If the schema is an array (`z.array(...)`), the prompt becomes multi-select.
 Otherwise, it is single-select. Resolver output provides values only.
+Single-select resolve prompts use typeahead with incremental `filter` and `cursor` requests.
 
 ## Pre-flight Check Patterns
 

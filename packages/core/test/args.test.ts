@@ -624,7 +624,11 @@ describe('resolveInteractiveContext', () => {
       let optionValues: unknown[] = [];
       const prompter: Prompter = {
         async select<T>(options): Promise<T> {
-          optionValues = options.options.map((option) => option.value);
+          if (!('provider' in options)) {
+            throw new Error('Expected dynamic provider options');
+          }
+          const page = await options.provider({ signal: new AbortController().signal });
+          optionValues = page.options.map((option) => option.value);
           return 2 as T;
         },
         async multiselect<T>(): Promise<T[]> {
@@ -640,6 +644,69 @@ describe('resolveInteractiveContext', () => {
 
       await resolveInteractiveContext({ count: undefined } as any, contextDef, new Map(), prompter, false);
       expect(optionValues).toEqual([1, 2, 3]);
+    });
+
+    it('forwards filter and cursor through dynamic provider requests', async () => {
+      const seenRequests: Array<{ cursor?: string; filter?: string }> = [];
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async ({ cursor, filter }) => {
+            seenRequests.push({ cursor, filter });
+            if (cursor === 'page-2') {
+              return { options: ['TASK-002'] };
+            }
+            if (filter) {
+              return { options: ['TASK-001'], nextCursor: 'page-2' };
+            }
+            return { options: ['TASK-000'] };
+          },
+        },
+      } satisfies ContextDef;
+
+      const prompter: Prompter = {
+        async select<T>(options): Promise<T> {
+          if (!('provider' in options)) {
+            throw new Error('Expected dynamic provider options');
+          }
+          await options.provider({
+            signal: new AbortController().signal,
+            filter: 'task',
+          });
+          await options.provider({
+            signal: new AbortController().signal,
+            filter: 'task',
+            cursor: 'page-2',
+          });
+          return 'TASK-002' as T;
+        },
+        async multiselect<T>(): Promise<T[]> {
+          return [] as T[];
+        },
+        async confirm(): Promise<boolean> {
+          return false;
+        },
+        async text(): Promise<string> {
+          return '';
+        },
+      };
+
+      const result = await resolveInteractiveContext(
+        { id: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.id).toBe('TASK-002');
+      expect(seenRequests).toEqual([
+        { cursor: undefined, filter: undefined },
+        { cursor: undefined, filter: 'task' },
+        { cursor: 'page-2', filter: 'task' },
+      ]);
     });
 
     it('preserves boolean option values as booleans', async () => {
@@ -780,13 +847,30 @@ describe('resolveInteractiveContext', () => {
           schema: z.string(),
           description: 'Task id',
           resolve: async ({ cursor }) => ({
-            options: ['TASK-001'],
+            options: cursor ? ['TASK-002'] : ['TASK-001'],
             nextCursor: cursor ? 'loop' : 'loop',
           }),
         },
       } satisfies ContextDef;
 
-      const prompter = createMockPrompter({ select: ['TASK-001'] });
+      const prompter: Prompter = {
+        async select<T>(options): Promise<T> {
+          if (!('provider' in options)) {
+            throw new Error('Expected dynamic provider options');
+          }
+          await options.provider({ signal: new AbortController().signal, cursor: 'loop' });
+          return 'TASK-001' as T;
+        },
+        async multiselect<T>(): Promise<T[]> {
+          return [] as T[];
+        },
+        async confirm(): Promise<boolean> {
+          return false;
+        },
+        async text(): Promise<string> {
+          return '';
+        },
+      };
       await expect(
         resolveInteractiveContext({ id: undefined } as any, contextDef, new Map(), prompter, false)
       ).rejects.toThrow('Context resolve() returned repeated cursor "loop"');

@@ -107,6 +107,7 @@ export const command = defineCommand({
 If the schema is an array (for example `z.array(z.string())`), pok prompts with multi-select.
 Otherwise, pok prompts with single-select.
 Resolver output only provides values; prompt mode is determined by the schema.
+For single-select fields, pok passes `request.filter` and `request.cursor` through to `resolve` so typeahead + pagination can load incrementally.
 
 ### Static Context Values
 
