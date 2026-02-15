@@ -186,23 +186,33 @@ pre: (ctx) => {
 
 ### Dynamic Flag Values
 
-Use `resolve` to compute a flag value dynamically when the user does not pass that flag.
+Use `resolve` to load interactive options for a missing flag.
 
 ```typescript
 context: {
   env: {
     from: 'flag',
-    schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
-    resolve: async () => process.env.DEFAULT_ENV ?? undefined,
+    schema: z.enum(['dev', 'prod']),
+    resolve: async () => ['dev', 'prod'],
+  },
+  id: {
+    from: 'flag',
+    schema: z.string(),
+    dependsOn: ['env'],
+    resolve: async ({ cursor, filter, signal }, ctx) =>
+      listTaskOptionPage({
+        env: String(ctx.env),
+        cursor,
+        filter,
+        signal,
+      }), // { options, nextCursor }
   },
 },
 ```
 
-Resolution priority:
-
-1. Explicit CLI flag value
-2. `resolve` return value
-3. Zod default / normal missing-value behavior
+`resolve` supports primitive arrays (`string[]`, `number[]`, `boolean[]`), paginated pages, and async iterators.
+If the schema is an array (`z.array(...)`), the prompt becomes multi-select.
+Otherwise, it is single-select. Resolver output provides values only.
 
 ## Pre-flight Check Patterns
 

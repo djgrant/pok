@@ -2,7 +2,6 @@ import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
 import {
   parseContext,
-  resolveDynamicContext,
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
@@ -387,84 +386,6 @@ describe('parseContext', () => {
 });
 
 // =============================================================================
-// resolveDynamicContext Tests
-// =============================================================================
-
-describe('resolveDynamicContext', () => {
-  it('resolves missing values from async resolver', async () => {
-    const contextDef = {
-      env: {
-        from: 'flag' as const,
-        schema: z.enum(['dev', 'staging', 'prod']),
-        resolve: async () => 'staging',
-      },
-    } satisfies ContextDef;
-
-    const parsed = parseContext([], contextDef);
-    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
-      args: [],
-      providedFlags: parsed.providedFlags,
-    });
-
-    expect(resolved.env).toBe('staging');
-  });
-
-  it('does not override explicit CLI values', async () => {
-    const contextDef = {
-      env: {
-        from: 'flag' as const,
-        schema: z.enum(['dev', 'staging', 'prod']),
-        resolve: async () => 'staging',
-      },
-    } satisfies ContextDef;
-
-    const parsed = parseContext(['--env', 'prod'], contextDef);
-    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
-      args: ['--env', 'prod'],
-      providedFlags: parsed.providedFlags,
-    });
-
-    expect(resolved.env).toBe('prod');
-  });
-
-  it('validates dynamic values through schema', async () => {
-    const contextDef = {
-      env: {
-        from: 'flag' as const,
-        schema: z.enum(['dev', 'staging', 'prod']),
-        resolve: async () => 'invalid',
-      },
-    } satisfies ContextDef;
-
-    const parsed = parseContext([], contextDef);
-    await expect(
-      resolveDynamicContext(parsed.context, contextDef, {
-        args: [],
-        providedFlags: parsed.providedFlags,
-      })
-    ).rejects.toThrow('Invalid dynamic value for --env: invalid');
-  });
-
-  it('keeps existing value when resolver returns undefined', async () => {
-    const contextDef = {
-      env: {
-        from: 'flag' as const,
-        schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
-        resolve: async () => undefined,
-      },
-    } satisfies ContextDef;
-
-    const parsed = parseContext([], contextDef);
-    const resolved = await resolveDynamicContext(parsed.context, contextDef, {
-      args: [],
-      providedFlags: parsed.providedFlags,
-    });
-
-    expect(resolved.env).toBe('dev');
-  });
-});
-
-// =============================================================================
 // resolveInteractiveContext Tests
 // =============================================================================
 
@@ -472,10 +393,12 @@ describe('resolveInteractiveContext', () => {
   // Mock prompter for testing
   function createMockPrompter(responses: {
     select?: unknown[];
+    multiselect?: unknown[][];
     confirm?: boolean[];
     text?: string[];
   }): Prompter {
     let selectIdx = 0;
+    let multiselectIdx = 0;
     let confirmIdx = 0;
     let textIdx = 0;
 
@@ -484,7 +407,7 @@ describe('resolveInteractiveContext', () => {
         return (responses.select?.[selectIdx++] ?? 'dev') as T;
       },
       async multiselect<T>(): Promise<T[]> {
-        return [] as T[];
+        return (responses.multiselect?.[multiselectIdx++] ?? []) as T[];
       },
       async confirm(): Promise<boolean> {
         return responses.confirm?.[confirmIdx++] ?? false;
@@ -597,6 +520,382 @@ describe('resolveInteractiveContext', () => {
       );
 
       expect(result.name).toBe('existing');
+    });
+  });
+
+  describe('dynamic resolve options', () => {
+    const tasks = [
+      { id: 'TASK-001', title: 'First task' },
+      { id: 'TASK-002', title: 'Second task' },
+    ] as const;
+
+    async function listTaskOptionPage({ cursor }: { cursor?: string }) {
+      const start = cursor ? Number(cursor) : 0;
+      const pageSize = 1;
+      const page = tasks.slice(start, start + pageSize);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      return {
+        options: page.map((task) => task.id),
+        nextCursor: start + pageSize < tasks.length ? String(start + pageSize) : undefined,
+      };
+    }
+
+    it('uses resolve() options for single selection', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async () => ({
+            options: ['TASK-001', 'TASK-002'],
+          }),
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['TASK-002'] });
+      const result = await resolveInteractiveContext(
+        { id: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.id).toBe('TASK-002');
+    });
+
+    it('accepts primitive option arrays from resolve()', async () => {
+      const contextDef = {
+        branch: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Git branch',
+          resolve: async () => ['main', 'release'],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['release'] });
+      const result = await resolveInteractiveContext(
+        { branch: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.branch).toBe('release');
+    });
+
+    it('preserves number option values as numbers', async () => {
+      const contextDef = {
+        count: {
+          from: 'flag' as const,
+          schema: z.number().int(),
+          description: 'Item count',
+          resolve: async () => [1, 2, 3],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: [2] });
+      const result = await resolveInteractiveContext(
+        { count: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.count).toBe(2);
+      expect(typeof result.count).toBe('number');
+    });
+
+    it('passes typed primitive values to the prompter options', async () => {
+      const contextDef = {
+        count: {
+          from: 'flag' as const,
+          schema: z.number().int(),
+          description: 'Item count',
+          resolve: async () => [1, 2, 3],
+        },
+      } satisfies ContextDef;
+
+      let optionValues: unknown[] = [];
+      const prompter: Prompter = {
+        async select<T>(options): Promise<T> {
+          optionValues = options.options.map((option) => option.value);
+          return 2 as T;
+        },
+        async multiselect<T>(): Promise<T[]> {
+          return [] as T[];
+        },
+        async confirm(): Promise<boolean> {
+          return false;
+        },
+        async text(): Promise<string> {
+          return '';
+        },
+      };
+
+      await resolveInteractiveContext({ count: undefined } as any, contextDef, new Map(), prompter, false);
+      expect(optionValues).toEqual([1, 2, 3]);
+    });
+
+    it('preserves boolean option values as booleans', async () => {
+      const contextDef = {
+        approved: {
+          from: 'flag' as const,
+          schema: z.boolean(),
+          description: 'Approval state',
+          resolve: async () => [true, false],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: [true] });
+      const result = await resolveInteractiveContext(
+        { approved: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.approved).toBe(true);
+      expect(typeof result.approved).toBe('boolean');
+    });
+
+    it('uses resolve() options for multi selection when schema is array', async () => {
+      const contextDef = {
+        ids: {
+          from: 'flag' as const,
+          schema: z.array(z.string()),
+          description: 'Task ids',
+          resolve: async () => ({
+            options: ['TASK-001', 'TASK-002'],
+          }),
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ multiselect: [['TASK-001', 'TASK-002']] });
+      const result = await resolveInteractiveContext(
+        { ids: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.ids).toEqual(['TASK-001', 'TASK-002']);
+    });
+
+    it('validates single-select result against schema before storing it', async () => {
+      const contextDef = {
+        count: {
+          from: 'flag' as const,
+          schema: z.number().int(),
+          description: 'Count',
+          resolve: async () => [1, 2, 3],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['not-a-number'] });
+      await expect(
+        resolveInteractiveContext({ count: undefined } as any, contextDef, new Map(), prompter, false)
+      ).rejects.toThrow('Invalid selected value for --count');
+    });
+
+    it('validates multi-select result against schema before storing it', async () => {
+      const contextDef = {
+        ids: {
+          from: 'flag' as const,
+          schema: z.array(z.number().int()),
+          description: 'Numeric ids',
+          resolve: async () => [1, 2, 3],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ multiselect: [['bad', 2]] });
+      await expect(
+        resolveInteractiveContext({ ids: undefined } as any, contextDef, new Map(), prompter, false)
+      ).rejects.toThrow('Invalid selected value for --ids');
+    });
+
+    it('supports async iterator pagination in resolve()', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async function* () {
+            yield {
+              options: ['TASK-001'],
+              nextCursor: 'page-2',
+            };
+            yield {
+              options: ['TASK-002'],
+            };
+          },
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['TASK-002'] });
+      const result = await resolveInteractiveContext(
+        { id: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.id).toBe('TASK-002');
+    });
+
+    it('selects from later pages with async paginated resolve()', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async ({ cursor }) => listTaskOptionPage({ cursor }),
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['TASK-002'] });
+      const result = await resolveInteractiveContext(
+        { id: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.id).toBe('TASK-002');
+    });
+
+    it('rejects repeated cursors in paginated resolve() to avoid infinite loops', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async ({ cursor }) => ({
+            options: ['TASK-001'],
+            nextCursor: cursor ? 'loop' : 'loop',
+          }),
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['TASK-001'] });
+      await expect(
+        resolveInteractiveContext({ id: undefined } as any, contextDef, new Map(), prompter, false)
+      ).rejects.toThrow('Context resolve() returned repeated cursor "loop"');
+    });
+
+    it('rejects non-primitive option values from resolve()', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async () => [{ nested: true }] as any,
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['TASK-001'] });
+      await expect(
+        resolveInteractiveContext({ id: undefined } as any, contextDef, new Map(), prompter, false)
+      ).rejects.toThrow('Context resolve() must return primitive option values');
+    });
+
+    it('supports cascading resolve() via dependsOn', async () => {
+      const contextDef = {
+        env: {
+          from: 'flag' as const,
+          schema: z.enum(['dev', 'prod']),
+          description: 'Environment',
+          resolve: async () => ['dev', 'prod'],
+        },
+        db: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Database',
+          dependsOn: ['env'],
+          resolve: async (_req, ctx) => {
+            if (ctx.env === 'prod') {
+              return ['prod-users', 'prod-analytics'];
+            }
+            return ['dev-users', 'dev-analytics'];
+          },
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['prod', 'prod-analytics'] });
+      const result = await resolveInteractiveContext(
+        { env: undefined, db: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.env).toBe('prod');
+      expect(result.db).toBe('prod-analytics');
+    });
+
+    it('rejects unknown dependsOn field names', async () => {
+      const contextDef = {
+        env: {
+          from: 'flag' as const,
+          schema: z.string(),
+          resolve: async () => ['dev'],
+        },
+        db: {
+          from: 'flag' as const,
+          schema: z.string(),
+          dependsOn: ['missing'],
+          resolve: async () => ['db1'],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['dev', 'db1'] });
+      await expect(
+        resolveInteractiveContext(
+          { env: undefined, db: undefined } as any,
+          contextDef,
+          new Map(),
+          prompter,
+          false
+        )
+      ).rejects.toThrow('Unknown dependsOn "missing" for context field "db"');
+    });
+
+    it('rejects circular dependsOn relationships', async () => {
+      const contextDef = {
+        env: {
+          from: 'flag' as const,
+          schema: z.string(),
+          dependsOn: ['db'],
+          resolve: async () => ['dev'],
+        },
+        db: {
+          from: 'flag' as const,
+          schema: z.string(),
+          dependsOn: ['env'],
+          resolve: async () => ['db1'],
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ select: ['dev', 'db1'] });
+      await expect(
+        resolveInteractiveContext(
+          { env: undefined, db: undefined } as any,
+          contextDef,
+          new Map(),
+          prompter,
+          false
+        )
+      ).rejects.toThrow('Circular dependsOn in context: env -> db -> env');
     });
   });
 });

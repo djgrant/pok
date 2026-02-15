@@ -52,4 +52,22 @@ describe('Commands', () => {
       expect(error).toBeUndefined();
     });
   });
+
+  describe('command with dynamic resolve options', () => {
+    it('supports async paginated option loading and selection', async () => {
+      const { error } = await captureEvents(['with-dynamic-resolve-options'], {
+        selectResponses: ['TASK-002'],
+      });
+      expect(error).toBeUndefined();
+    });
+
+    it('still accepts explicit CLI flag values', async () => {
+      const { error } = await captureEvents([
+        'with-dynamic-resolve-options',
+        '--id',
+        'TASK-001',
+      ]);
+      expect(error).toBeUndefined();
+    });
+  });
 });

@@ -14,6 +14,15 @@ import type { CheckConfig } from './check';
 import type { Runner } from './runner';
 import type { Reporter } from '../events';
 import type { Prompter } from '../prompter';
+import type { OptionsRequest } from '../prompter';
+
+type ResolvePrimitive = string | number | boolean;
+export type ResolveOptionsPage = {
+  options: ResolvePrimitive[];
+  nextCursor?: string | null;
+  totalCount?: number;
+};
+export type ResolveOptionsResult = ResolvePrimitive[] | ResolveOptionsPage;
 
 // =============================================================================
 // Plugin / Mount Types
@@ -85,26 +94,37 @@ export type ContextSource = 'flag';
 
  */
 
-export type ContextFieldDef<TSchema extends z.ZodType = z.ZodType> = {
+export type ContextFieldDef = {
   /** Where the value comes from */
 
   from: 'flag';
 
   /** Zod schema for validation and type inference */
 
-  schema: TSchema;
+  schema: z.ZodType;
 
   /**
-   * Optional dynamic resolver for the flag value.
+   * Optional dynamic resolver for interactive option loading.
    *
-   * Called when the flag was not explicitly provided on the CLI.
-   * The returned value is validated through `schema`.
+   * Supports either:
+   * - direct options/page result
+   * - paginated loading via request cursor/filter
+   * - async iterator yielding option pages
    */
-  resolve?: (ctx: {
-    args: string[];
-    context: Record<string, unknown>;
-    flag: string;
-  }) => z.input<TSchema> | undefined | Promise<z.input<TSchema> | undefined>;
+  resolve?: (
+    request: OptionsRequest,
+    context: Record<string, unknown>
+  ) =>
+    | ResolveOptionsResult
+    | Promise<ResolveOptionsResult>
+    | AsyncIterable<ResolveOptionsResult>;
+
+  /**
+   * Context fields that must be resolved before this field.
+   *
+   * Useful for cascading selects, e.g. `db` depending on selected `env`.
+   */
+  dependsOn?: string[];
 
   /** Human-readable description for help text */
 
