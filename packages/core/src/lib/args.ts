@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import type { ContextDef, InferContext } from './command';
+import type { ContextDef, ContextFieldDef, InferContext, ResolveOptionsPage } from './command';
 import { isContextFieldDef } from './command';
-import type { Prompter } from '../prompter';
+import type { OptionsRequest, Prompter, SelectOption } from '../prompter';
 import { findClosestMatch } from './string-distance';
 import { CLIError, type ErrorContext } from './cli-error';
+
+type ResolvePrimitive = string | number | boolean;
 
 /**
  * Options for parsing context with error context
@@ -34,8 +36,6 @@ export type ParsedArgs<C extends ContextDef> = {
   context: InferContext<C>;
   /** Remaining positional arguments */
   rest: string[];
-  /** Flags that were explicitly provided on the CLI */
-  providedFlags: Set<string>;
 };
 
 /**
@@ -303,7 +303,6 @@ export function parseContext<C extends ContextDef>(
 ): ParsedArgs<C> {
   const context: Record<string, unknown> = {};
   const rest: string[] = [];
-  const providedFlags = new Set<string>();
   const errorContext = options?.errorContext;
 
   // Build schema info cache and known flag names for typo detection
@@ -401,7 +400,6 @@ export function parseContext<C extends ContextDef>(
           );
         }
         context[flagName] = !isNegated;
-        providedFlags.add(flagName);
         i++;
       } else {
         // String/enum flag - use inline value (--flag=value) or next arg (--flag value)
@@ -432,7 +430,6 @@ export function parseContext<C extends ContextDef>(
         }
 
         context[flagName] = result.data;
-        providedFlags.add(flagName);
         i += advance;
       }
     } else {
@@ -442,72 +439,146 @@ export function parseContext<C extends ContextDef>(
     }
   }
 
-  return { context: context as InferContext<C>, rest, providedFlags };
+  return { context: context as InferContext<C>, rest };
 }
 
-/**
- * Options for dynamic context resolution
- */
-export type ResolveDynamicContextOptions = {
-  /** Error context for rich error messages */
-  errorContext?: ErrorContext;
-  /** Original command arguments */
-  args?: string[];
-  /** Flags that were explicitly provided on the CLI */
-  providedFlags?: Set<string>;
-};
+function isOptionsPage(value: unknown): value is ResolveOptionsPage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'options' in value &&
+    Array.isArray((value as ResolveOptionsPage).options)
+  );
+}
 
-/**
- * Resolve context values from async/sync field resolvers.
- *
- * Dynamic resolvers run only for fields that were not explicitly provided
- * as CLI flags. Any resolved value is validated through the field schema.
- */
-export async function resolveDynamicContext<C extends ContextDef>(
-  context: InferContext<C>,
-  contextDef: C,
-  options?: ResolveDynamicContextOptions
-): Promise<InferContext<C>> {
-  const errorContext = options?.errorContext;
-  const args = options?.args ?? [];
-  const providedFlags = options?.providedFlags ?? new Set<string>();
-  const resolved = { ...context } as Record<string, unknown>;
+function isResolvePrimitive(value: unknown): value is ResolvePrimitive {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+}
 
-  for (const [name, fieldDef] of Object.entries(contextDef)) {
-    if (!isContextFieldDef(fieldDef) || !fieldDef.resolve) {
-      continue;
-    }
+function normalizeOptionValue(value: unknown): SelectOption<ResolvePrimitive> {
+  if (isResolvePrimitive(value)) {
+    return { value, label: String(value) };
+  }
+  throw new Error('Context resolve() must return primitive option values');
+}
 
-    // Explicit CLI values always win.
-    if (providedFlags.has(name)) {
-      continue;
-    }
-
-    const nextValue = await fieldDef.resolve({
-      args,
-      context: resolved,
-      flag: name,
-    });
-
-    if (nextValue === undefined) {
-      continue;
-    }
-
-    const parseResult = fieldDef.schema.safeParse(nextValue);
-    if (!parseResult.success) {
-      const info = getSchemaInfo(fieldDef.schema);
-      const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
-      throw createError(
-        `Invalid dynamic value for --${name}: ${String(nextValue)}.${choicesMsg}`,
-        contextDef,
-        errorContext
-      );
-    }
-
-    resolved[name] = parseResult.data;
+function normalizeOptionsResult(
+  value: ResolvePrimitive[] | ResolveOptionsPage
+): {
+  options: SelectOption<ResolvePrimitive>[];
+  nextCursor?: string | null;
+  totalCount?: number;
+} {
+  if (Array.isArray(value)) {
+    return {
+      options: value.map((option) => normalizeOptionValue(option)),
+    };
   }
 
-  return resolved as InferContext<C>;
+  return {
+    ...value,
+    options: value.options.map((option) => normalizeOptionValue(option)),
+  };
+}
+
+function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Symbol.asyncIterator in (value as Record<PropertyKey, unknown>)
+  );
+}
+
+function isArraySchema(schema: z.ZodType): boolean {
+  const unwrapped = unwrapSchema(schema);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const def = (unwrapped as any)._def;
+  const typeName = def?.typeName || def?.type;
+  return typeName === 'ZodArray' || typeName === 'array';
+}
+
+async function loadAllResolvedOptions(
+  resolve: NonNullable<ContextFieldDef['resolve']>,
+  context: Record<string, unknown>
+): Promise<SelectOption<ResolvePrimitive>[]> {
+  const controller = new AbortController();
+  const request: OptionsRequest = { signal: controller.signal };
+  const result = await resolve(request, context);
+
+  if (
+    isAsyncIterable<
+      | ResolvePrimitive[]
+      | ResolveOptionsPage
+    >(result)
+  ) {
+    const options: SelectOption<ResolvePrimitive>[] = [];
+    for await (const pageResult of result) {
+      const page = normalizeOptionsResult(pageResult);
+      options.push(...page.options);
+    }
+    return options;
+  }
+
+  if (Array.isArray(result) || isOptionsPage(result)) {
+    const firstPage = normalizeOptionsResult(result);
+    const options = [...firstPage.options];
+    let nextCursor = firstPage.nextCursor ?? null;
+    const seenCursors = new Set<string>();
+
+    while (nextCursor) {
+      if (seenCursors.has(nextCursor)) {
+        throw new Error(`Context resolve() returned repeated cursor "${nextCursor}"`);
+      }
+      seenCursors.add(nextCursor);
+      const next = await resolve({ signal: controller.signal, cursor: nextCursor }, context);
+      if (!(Array.isArray(next) || isOptionsPage(next))) {
+        throw new Error('Context resolve() returned invalid paginated result');
+      }
+      const nextPage = normalizeOptionsResult(next);
+      options.push(...nextPage.options);
+      nextCursor = nextPage.nextCursor ?? null;
+    }
+
+    return options;
+  }
+
+  throw new Error(
+    'Context resolve() must return primitive options, a primitive options page, or an async iterator'
+  );
+}
+
+function getResolutionOrder(contextDef: ContextDef): string[] {
+  const allKeys = new Set(Object.keys(contextDef));
+  const state = new Map<string, 'visiting' | 'visited'>();
+  const ordered: string[] = [];
+
+  const visit = (key: string, stack: string[]): void => {
+    const current = state.get(key);
+    if (current === 'visited') return;
+    if (current === 'visiting') {
+      const cycle = [...stack, key].join(' -> ');
+      throw new Error(`Circular dependsOn in context: ${cycle}`);
+    }
+
+    state.set(key, 'visiting');
+    const fieldDef = contextDef[key];
+    if (isContextFieldDef(fieldDef) && fieldDef.dependsOn) {
+      for (const dep of fieldDef.dependsOn) {
+        if (!allKeys.has(dep)) {
+          throw new Error(`Unknown dependsOn "${dep}" for context field "${key}"`);
+        }
+        visit(dep, [...stack, key]);
+      }
+    }
+    state.set(key, 'visited');
+    ordered.push(key);
+  };
+
+  for (const key of allKeys) {
+    visit(key, []);
+  }
+
+  return ordered;
 }
 
 /**
@@ -539,7 +610,9 @@ export async function resolveInteractiveContext<C extends ContextDef>(
     return resolved;
   }
 
-  for (const [name, fieldDef] of Object.entries(contextDef)) {
+  const orderedKeys = getResolutionOrder(contextDef);
+  for (const name of orderedKeys) {
+    const fieldDef = contextDef[name];
     // Skip static values
     if (!isContextFieldDef(fieldDef)) {
       continue;
@@ -562,7 +635,48 @@ export async function resolveInteractiveContext<C extends ContextDef>(
     }
 
     if (shouldPrompt) {
-      if (fieldChoices && fieldChoices.length > 0) {
+      if (fieldDef.resolve) {
+        const dynamicOptions = await loadAllResolvedOptions(
+          fieldDef.resolve,
+          resolved as Record<string, unknown>
+        );
+        if (dynamicOptions.length === 0) {
+          throw new Error(`No options available for --${name}`);
+        }
+
+        if (isArraySchema(fieldDef.schema)) {
+          const selected = await prompter.multiselect({
+            message: fieldDef.description || `Select ${name}:`,
+            options: dynamicOptions,
+            initialValues:
+              Array.isArray(currentValue) && currentValue.every((v) => isResolvePrimitive(v))
+                ? currentValue
+                : undefined,
+            required: !info.isOptional,
+          });
+          const parsed = fieldDef.schema.safeParse(selected);
+          if (!parsed.success) {
+            throw new Error(`Invalid selected value for --${name}`);
+          }
+          (resolved as Record<string, unknown>)[name] = parsed.data;
+        } else {
+          const selected = await prompter.select({
+            message: fieldDef.description || `Select ${name}:`,
+            options: dynamicOptions,
+            initialValue:
+              isResolvePrimitive(currentValue)
+                ? currentValue
+                : isResolvePrimitive(info.default)
+                  ? info.default
+                  : undefined,
+          });
+          const parsed = fieldDef.schema.safeParse(selected);
+          if (!parsed.success) {
+            throw new Error(`Invalid selected value for --${name}`);
+          }
+          (resolved as Record<string, unknown>)[name] = parsed.data;
+        }
+      } else if (fieldChoices && fieldChoices.length > 0) {
         // Select from choices, pre-select current/default value
         const initialValue =
           currentValue !== undefined

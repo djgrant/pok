@@ -37,48 +37,76 @@ type ContextFieldDef = {
   from: 'flag'; // Currently only 'flag' is supported
   schema: z.ZodType; // Zod schema for validation
   description?: string; // Help text
-  resolve?: (ctx: {
-    args: string[];
-    context: Record<string, unknown>;
-    flag: string;
-  }) => unknown | undefined | Promise<unknown | undefined>;
+  resolve?: (
+    request: OptionsRequest,
+    context: Record<string, unknown>
+  ) =>
+    | Array<string | number | boolean>
+    | { options: Array<string | number | boolean>; nextCursor?: string | null; totalCount?: number }
+    | Promise<
+        | Array<string | number | boolean>
+        | {
+            options: Array<string | number | boolean>;
+            nextCursor?: string | null;
+            totalCount?: number;
+          }
+      >
+    | AsyncIterable<
+        | Array<string | number | boolean>
+        | {
+            options: Array<string | number | boolean>;
+            nextCursor?: string | null;
+            totalCount?: number;
+          }
+      >;
+  dependsOn?: string[]; // Resolve after these fields
 };
 ```
 
 ### Dynamic Flag Resolution
 
-Use `resolve` when a flag value should be computed at runtime (for example from env, config files, or external state).
+Use `resolve` when a missing flag should be selected from dynamic options.
 
-`resolve` runs only when that flag was not explicitly provided on the CLI.
+`resolve` can return:
 
-Priority order for a flag value:
-
-1. Explicit CLI flag value
-2. `resolve` return value
-3. Zod default (`.default(...)`) / regular missing-value behavior
+1. A static value array (for example `string[]`, `number[]`, or `boolean[]`)
+2. A single page of values (`{ options, nextCursor }`)
+3. An async iterator yielding pages (pagination)
 
 ```typescript
 import { z } from 'zod';
 import { defineCommand } from '@pokit/core';
 
 export const command = defineCommand({
-  label: 'Deploy',
+  label: 'Move task',
   context: {
     env: {
       from: 'flag',
-      schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
-      resolve: async () => {
-        // Optional dynamic source
-        return process.env.DEFAULT_ENV ?? undefined;
+      schema: z.enum(['dev', 'prod']),
+      resolve: async () => ['dev', 'prod'],
+    },
+    id: {
+      from: 'flag',
+      schema: z.string(),
+      description: 'Task id',
+      dependsOn: ['env'],
+      resolve: async ({ cursor }, ctx) => {
+        return listTaskOptionPage({
+          env: String(ctx.env),
+          cursor,
+        });
       },
-      description: 'Target environment',
     },
   },
   run: async (r, ctx) => {
-    await r.exec(`deploy --env ${ctx.context.env}`);
+    await r.exec(`echo ${ctx.context.id}`);
   },
 });
 ```
+
+If the schema is an array (for example `z.array(z.string())`), pok prompts with multi-select.
+Otherwise, pok prompts with single-select.
+Resolver output only provides values; prompt mode is determined by the schema.
 
 ### Static Context Values
 
@@ -285,7 +313,7 @@ When a required context field is missing, pok prompts for it:
 - **Strings/Numbers** → Text input
 
 Fields with `.default()` or `.optional()` don't prompt.
-Fields resolved via `resolve` also won't prompt if the resolver returns a valid value.
+Fields with `resolve` prompt from resolver-provided options when a value is needed.
 
 ## Related
 

@@ -151,8 +151,7 @@ export const command = defineCommand({
 });
 ```
 
-Flags can also define a `resolve` function for runtime values when the flag is not explicitly passed.
-Explicit CLI flags always take precedence over `resolve`.
+Flags can also define a `resolve` function to load interactive options (including pagination).
 
 See [defineCommand](./api/define-command.md) for full details on defining command flags.
 
