@@ -281,6 +281,14 @@ function camelToKebab(str: string): string {
 }
 
 /**
+ * Normalize a user-provided flag name/alias.
+ */
+function normalizeFlagName(raw: string): string {
+  const stripped = raw.replace(/^--/, '');
+  return kebabToCamel(stripped);
+}
+
+/**
  * Create an error - CLIError if errorContext is provided, otherwise regular Error
  */
 function createError(message: string, contextDef: ContextDef, errorContext?: ErrorContext): Error {
@@ -316,6 +324,57 @@ export function parseContext<C extends ContextDef>(
   // Build schema info cache and known flag names for typo detection
   const schemaInfoCache = new Map<string, SchemaInfo>();
   const knownFlags: string[] = [];
+  const flagToField = new Map<string, string>();
+  const explicitlySetValues = new Map<string, { value: unknown; sourceFlag: string }>();
+
+  const registerFlagName = (ownerField: string, candidate: string): void => {
+    const normalized = normalizeFlagName(candidate);
+    if (!normalized) {
+      throw createError(
+        `Invalid empty flag alias on context field "${ownerField}"`,
+        contextDef,
+        errorContext
+      );
+    }
+
+    const existingOwner = flagToField.get(normalized);
+    if (existingOwner && existingOwner !== ownerField) {
+      const display = camelToKebab(normalized);
+      throw createError(
+        `Flag alias --${display} conflicts between context fields "${existingOwner}" and "${ownerField}"`,
+        contextDef,
+        errorContext
+      );
+    }
+    flagToField.set(normalized, ownerField);
+
+    // Track both canonical forms for typo suggestions
+    knownFlags.push(normalized);
+    const kebabName = camelToKebab(normalized);
+    if (kebabName !== normalized) {
+      knownFlags.push(kebabName);
+    }
+  };
+
+  const setExplicitValue = (fieldName: string, value: unknown, rawFlagName: string): void => {
+    const existing = explicitlySetValues.get(fieldName);
+    if (!existing) {
+      explicitlySetValues.set(fieldName, { value, sourceFlag: rawFlagName });
+      context[fieldName] = value;
+      return;
+    }
+
+    if (Object.is(existing.value, value)) {
+      return;
+    }
+
+    throw createError(
+      `Conflicting values for --${camelToKebab(fieldName)} provided by --${existing.sourceFlag} and --${rawFlagName}`,
+      contextDef,
+      errorContext
+    );
+  };
+
   for (const [name, fieldDef] of Object.entries(contextDef)) {
     // Skip static values
     if (!isContextFieldDef(fieldDef)) {
@@ -325,11 +384,10 @@ export function parseContext<C extends ContextDef>(
 
     const info = getSchemaInfo(fieldDef.schema);
     schemaInfoCache.set(name, info);
-    knownFlags.push(name);
-    // Also add kebab-case version for matching
-    const kebabName = camelToKebab(name);
-    if (kebabName !== name) {
-      knownFlags.push(kebabName);
+    registerFlagName(name, name);
+    registerFlagName(name, camelToKebab(name));
+    for (const alias of fieldDef.aliases ?? []) {
+      registerFlagName(name, alias);
     }
 
     // Initialize with defaults
@@ -367,9 +425,12 @@ export function parseContext<C extends ContextDef>(
         rawFlagName = flagPart;
       }
 
-      // Support both kebab-case (--dry-run) and camelCase (--dryRun)
-      const flagName = kebabToCamel(rawFlagName);
-      const fieldDef = contextDef[flagName];
+      // Support both kebab-case and camelCase names + aliases
+      const normalizedFlagName = normalizeFlagName(rawFlagName);
+      const fieldName = flagToField.get(normalizedFlagName);
+      const fieldDef = fieldName
+        ? contextDef[fieldName]
+        : (contextDef[normalizedFlagName] as C[keyof C] | undefined);
 
       if (!fieldDef || !isContextFieldDef(fieldDef)) {
         if (options?.ignoreUnknownFlags) {
@@ -396,18 +457,20 @@ export function parseContext<C extends ContextDef>(
         throw createError(errorMessage, contextDef, errorContext);
       }
 
-      const info = schemaInfoCache.get(flagName)!;
+      const resolvedFieldName = fieldName ?? normalizedFlagName;
+      const info = schemaInfoCache.get(resolvedFieldName)!;
 
       if (info.type === 'boolean') {
         // Boolean flags don't accept inline values
         if (inlineValue !== undefined) {
+          const displayName = camelToKebab(resolvedFieldName);
           throw createError(
-            `Boolean flag --${flagName} does not accept a value. Use --${flagName} or --no-${flagName}`,
+            `Boolean flag --${displayName} does not accept a value. Use --${displayName} or --no-${displayName}`,
             contextDef,
             errorContext
           );
         }
-        context[flagName] = !isNegated;
+        setExplicitValue(resolvedFieldName, !isNegated, rawFlagName);
         i++;
       } else {
         // String/enum flag - use inline value (--flag=value) or next arg (--flag value)
@@ -423,7 +486,11 @@ export function parseContext<C extends ContextDef>(
         }
 
         if (value === undefined || (inlineValue === undefined && value.startsWith('--'))) {
-          throw createError(`Flag --${flagName} requires a value`, contextDef, errorContext);
+          throw createError(
+            `Flag --${camelToKebab(resolvedFieldName)} requires a value`,
+            contextDef,
+            errorContext
+          );
         }
 
         // Validate the value against the schema
@@ -431,13 +498,13 @@ export function parseContext<C extends ContextDef>(
         if (!result.success) {
           const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
           throw createError(
-            `Invalid value for --${flagName}: ${value}.${choicesMsg}`,
+            `Invalid value for --${camelToKebab(resolvedFieldName)}: ${value}.${choicesMsg}`,
             contextDef,
             errorContext
           );
         }
 
-        context[flagName] = result.data;
+        setExplicitValue(resolvedFieldName, result.data, rawFlagName);
         i += advance;
       }
     } else {

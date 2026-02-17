@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'bun:test';
+import { z } from 'zod';
 import {
   buildCommandTree,
   run,
@@ -249,6 +250,76 @@ describe('run() - command execution', () => {
     const { error } = await runCli(['parent', 'child-a']);
 
     expect(error).toBeUndefined();
+  });
+});
+
+describe('run() - global context flags', () => {
+  it('accepts global flags before command path', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+    let resolvedDir: string | undefined;
+
+    let error: Error | undefined;
+    await captureConsoleOutput(async () => {
+      try {
+        await run(['--dir', '/tmp/board', 'with-context', '--env', 'dev'], {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'test-cli',
+          reporterAdapter,
+          prompter,
+          globalContext: {
+            dir: {
+              from: 'flag',
+              schema: z.string(),
+              description: 'Directory override',
+            },
+          },
+          onGlobalContext: (ctx) => {
+            resolvedDir = String(ctx.dir);
+          },
+        });
+      } catch (e) {
+        error = e instanceof Error ? e : new Error(String(e));
+      }
+    });
+
+    expect(error).toBeUndefined();
+    expect(resolvedDir).toBe('/tmp/board');
+  });
+
+  it('accepts global flags after command path', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+    let resolvedDir: string | undefined;
+
+    let error: Error | undefined;
+    await captureConsoleOutput(async () => {
+      try {
+        await run(['with-context', '--env', 'dev', '--dir', '/tmp/board'], {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'test-cli',
+          reporterAdapter,
+          prompter,
+          globalContext: {
+            dir: {
+              from: 'flag',
+              schema: z.string(),
+              description: 'Directory override',
+            },
+          },
+          onGlobalContext: (ctx) => {
+            resolvedDir = String(ctx.dir);
+          },
+        });
+      } catch (e) {
+        error = e instanceof Error ? e : new Error(String(e));
+      }
+    });
+
+    expect(error).toBeUndefined();
+    expect(resolvedDir).toBe('/tmp/board');
   });
 });
 

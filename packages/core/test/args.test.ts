@@ -207,6 +207,36 @@ describe('parseContext', () => {
     });
   });
 
+  describe('flag aliases', () => {
+    const aliasContextDef = {
+      epicRef: {
+        from: 'flag' as const,
+        schema: z.string(),
+        aliases: ['id', 'slug'],
+        description: 'Epic reference',
+      },
+    } satisfies ContextDef;
+
+    it('parses aliases into the same context field', () => {
+      const fromId = parseContext(['--id', 'EPIC-001'], aliasContextDef);
+      const fromSlug = parseContext(['--slug', 'agent-ergonomics'], aliasContextDef);
+
+      expect(fromId.context.epicRef).toBe('EPIC-001');
+      expect(fromSlug.context.epicRef).toBe('agent-ergonomics');
+    });
+
+    it('accepts duplicated aliases when values are identical', () => {
+      const parsed = parseContext(['--id', 'EPIC-001', '--slug', 'EPIC-001'], aliasContextDef);
+      expect(parsed.context.epicRef).toBe('EPIC-001');
+    });
+
+    it('rejects duplicated aliases when values conflict', () => {
+      expect(() =>
+        parseContext(['--id', 'EPIC-001', '--slug', 'agent-ergonomics'], aliasContextDef)
+      ).toThrow(/Conflicting values for --epic-ref/);
+    });
+  });
+
   describe('positional arguments', () => {
     it('collects positional arguments in rest', () => {
       const { context, rest } = parseContext(
