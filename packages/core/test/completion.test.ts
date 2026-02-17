@@ -43,6 +43,7 @@ const deployCommand: CommandConfig = {
     env: {
       from: 'flag' as const,
       schema: z.enum(['dev', 'staging', 'prod']),
+      aliases: ['target'],
       description: 'Target environment',
     },
     dryRun: {
@@ -215,6 +216,7 @@ describe('generateCompletions', () => {
       const completions = generateCompletions(['deploy', '--'], tree);
 
       expect(completions).toContain('--env');
+      expect(completions).toContain('--target');
       expect(completions).toContain('--dry-run');
       expect(completions).toContain('--help');
     });
@@ -236,6 +238,12 @@ describe('generateCompletions', () => {
   describe('flag value completion', () => {
     it('completes enum values', () => {
       const completions = generateCompletions(['deploy', '--env', ''], tree);
+
+      expect(completions).toEqual(['dev', 'staging', 'prod']);
+    });
+
+    it('completes enum values via alias flag', () => {
+      const completions = generateCompletions(['deploy', '--target', ''], tree);
 
       expect(completions).toEqual(['dev', 'staging', 'prod']);
     });

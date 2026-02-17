@@ -40,6 +40,8 @@ export type RootHelpOptions = {
   commands: CommandNode[];
   /** Optional application description */
   description?: string;
+  /** Optional app-level global flags */
+  globalContext?: ContextDef;
 };
 
 // =============================================================================
@@ -63,6 +65,25 @@ function camelToKebab(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
+function normalizeAlias(alias: string): string {
+  return alias.replace(/^--/, '').trim();
+}
+
+function getFlagNames(name: string, fieldDef: ContextFieldDef): string[] {
+  const primary = camelToKebab(name);
+  const seen = new Set([primary]);
+  const names = [primary];
+
+  for (const alias of fieldDef.aliases ?? []) {
+    const normalized = camelToKebab(normalizeAlias(alias));
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    names.push(normalized);
+  }
+
+  return names;
+}
+
 /**
  * Format a flag line for help output
  *
@@ -76,8 +97,8 @@ export function formatFlagLine(
   info: SchemaInfo,
   maxFlagWidth: number
 ): string {
-  const kebabName = camelToKebab(name);
-  let flagPart = `--${kebabName}`;
+  const flagNames = getFlagNames(name, fieldDef);
+  let flagPart = flagNames.map((flag) => `--${flag}`).join(', ');
 
   // Add value placeholder based on type
   if (info.type === 'enum' && info.choices) {
@@ -128,8 +149,8 @@ function getMaxFlagWidth(contextDef: ContextDef): number {
     }
 
     const info = getSchemaInfo(fieldDef.schema);
-    const kebabName = camelToKebab(name);
-    let width = `--${kebabName}`.length;
+    const flagNames = getFlagNames(name, fieldDef);
+    let width = flagNames.map((flag) => `--${flag}`).join(', ').length;
 
     if (info.type === 'enum' && info.choices) {
       width += ` <${info.choices.join('|')}>`.length;
@@ -290,7 +311,7 @@ export function generateHelp(options: HelpOptions): string {
  * Generate root-level help text showing all top-level commands
  */
 export function generateRootHelp(options: RootHelpOptions): string {
-  const { appName, commands, description } = options;
+  const { appName, commands, description, globalContext } = options;
   const lines: string[] = [];
 
   // Title
@@ -322,6 +343,24 @@ export function generateRootHelp(options: RootHelpOptions): string {
   lines.push('Flags:');
   lines.push(`${INDENT}-h, --help     Show this help message`);
   lines.push(`${INDENT}--version      Show version information`);
+  if (globalContext && Object.keys(globalContext).length > 0) {
+    const maxWidth = Math.max(
+      '--version'.length,
+      getMaxFlagWidth(globalContext)
+    );
+    const basePadding = Math.max(MIN_PADDING, maxWidth - '-h, --help'.length + MIN_PADDING);
+    const versionPadding = Math.max(MIN_PADDING, maxWidth - '--version'.length + MIN_PADDING);
+    lines[lines.length - 2] = `${INDENT}-h, --help${' '.repeat(basePadding)}Show this help message`;
+    lines[lines.length - 1] = `${INDENT}--version${' '.repeat(versionPadding)}Show version information`;
+
+    const sortedFlags = Object.entries(globalContext).sort(([a], [b]) => a.localeCompare(b));
+    for (const [name, fieldDef] of sortedFlags) {
+      if (!isContextFieldDef(fieldDef)) {
+        continue;
+      }
+      lines.push(formatFlagLine(name, fieldDef, getSchemaInfo(fieldDef.schema), maxWidth));
+    }
+  }
 
   // Footer
   lines.push('');

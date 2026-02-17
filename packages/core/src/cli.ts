@@ -20,6 +20,7 @@ import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
 import type { Prompter } from './prompter';
 import type { TabsAdapter } from './tabs';
+import type { ContextDef } from './lib/command';
 
 /**
  * Configuration for runCli
@@ -68,6 +69,16 @@ export type RunCliConfig = {
    * Allows injecting dynamic command sources.
    */
   plugins?: import('./lib/command').MountableLike[];
+  /**
+   * App-level global flags accepted regardless of position.
+   * These flags are stripped before command matching.
+   */
+  globalContext?: ContextDef;
+  /**
+   * Optional hook called once global flags are parsed/validated.
+   * Useful for wiring parsed values into app-specific runtime state.
+   */
+  onGlobalContext?: (context: Record<string, unknown>) => void | Promise<void>;
 };
 
 /**
@@ -137,6 +148,8 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       pmCommands: config.pmCommands,
       extraCommands: config.extraCommands,
       plugins: config.plugins,
+      globalContext: config.globalContext,
+      onGlobalContext: config.onGlobalContext,
     });
   } catch (error) {
     if (error instanceof RouterError) {

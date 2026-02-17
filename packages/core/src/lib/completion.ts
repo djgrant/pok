@@ -259,24 +259,51 @@ function getFlagsForNode(node: CommandNode | null): string[] {
   const contextDef = node.config.context;
   if (!contextDef) return ['help'];
 
-  const flags = Object.entries(contextDef)
-    .filter(([_, def]) => isContextFieldDef(def))
-    .map(([name]) => camelToKebab(name));
+  const flags = new Set<string>();
+  for (const [name, def] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(def)) continue;
+    flags.add(camelToKebab(name));
+    for (const alias of def.aliases ?? []) {
+      const normalized = normalizeFlagName(alias);
+      if (normalized) {
+        flags.add(camelToKebab(normalized));
+      }
+    }
+  }
+
   const completions = [...flags, 'help'];
 
   return completions;
+}
+
+function getFieldDefForFlag(flagName: string, node: CommandNode | null) {
+  if (!node) return null;
+  const contextDef = node.config.context;
+  if (!contextDef) return null;
+
+  const normalized = normalizeFlagName(flagName);
+  for (const [name, def] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(def)) continue;
+
+    if (normalizeFlagName(name) === normalized || camelToKebab(name) === camelToKebab(normalized)) {
+      return def;
+    }
+
+    for (const alias of def.aliases ?? []) {
+      if (normalizeFlagName(alias) === normalized) {
+        return def;
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
  * Get choices for a specific flag
  */
 function getChoicesForFlag(flagName: string, node: CommandNode | null): string[] | undefined {
-  if (!node) return undefined;
-
-  const contextDef = node.config.context;
-  if (!contextDef) return undefined;
-
-  const fieldDef = contextDef[flagName];
+  const fieldDef = getFieldDefForFlag(flagName, node);
   if (!fieldDef || !isContextFieldDef(fieldDef)) return undefined;
 
   // Check for explicit choices first
@@ -304,6 +331,10 @@ function getChoicesForFlag(flagName: string, node: CommandNode | null): string[]
  */
 function camelToKebab(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+function normalizeFlagName(str: string): string {
+  return kebabToCamel(str.replace(/^--/, ''));
 }
 
 /**

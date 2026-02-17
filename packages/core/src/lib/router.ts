@@ -15,6 +15,7 @@ import picomatch from 'picomatch';
 import { getRuntime, getPackageManager } from '../runtime';
 import type {
   CommandConfig,
+  ContextDef,
   CommandNode,
   CommandTree,
   HookContext,
@@ -118,6 +119,14 @@ export type RouterConfig = {
    * Allows injecting dynamic command sources (e.g. from other packages).
    */
   plugins?: MountableLike[];
+  /**
+   * App-level/global flags accepted regardless of command position.
+   */
+  globalContext?: ContextDef;
+  /**
+   * Callback invoked after global context is parsed and validated.
+   */
+  onGlobalContext?: (context: Record<string, unknown>) => void | Promise<void>;
 };
 
 /**
@@ -143,6 +152,8 @@ export type RouterContext = {
   prompter: Prompter;
   /** Optional tabs adapter */
   tabs?: TabsAdapter;
+  /** Resolved app-level/global context values */
+  globalContext: Record<string, unknown>;
 };
 
 /**
@@ -741,6 +752,7 @@ async function executeLeaf(
   // Build run context
   const runCtx = {
     context: resolvedContext,
+    globalContext: ctx.globalContext,
     extraArgs,
     cwd: projectRoot,
   };
@@ -1002,6 +1014,7 @@ async function executeLeafWithContext(
   // Build run context
   const runCtx = {
     context: resolvedContext,
+    globalContext: ctx.globalContext,
     extraArgs: finalArgs,
     cwd: projectRoot,
   };
@@ -1402,13 +1415,57 @@ function maybeHandleCompletionCommand(
   return false;
 }
 
-function renderRootHelp(tree: CommandTree, appName: string): void {
+function renderRootHelp(
+  tree: CommandTree,
+  appName: string,
+  globalContext?: ContextDef
+): void {
   const topLevelCommands = Array.from(tree.values());
   const helpText = generateRootHelp({
     appName,
     commands: topLevelCommands,
+    globalContext,
   });
   console.log(helpText);
+}
+
+async function resolveGlobalContextArgs(
+  args: string[],
+  config: RouterConfig,
+  resolvedAppName: string
+): Promise<{ args: string[]; context: Record<string, unknown> }> {
+  const globalContextDef = config.globalContext;
+  if (!globalContextDef || Object.keys(globalContextDef).length === 0) {
+    return { args, context: {} };
+  }
+
+  const errorContext: ErrorContext = {
+    appName: resolvedAppName,
+    commandPath: [],
+  };
+  const parsed = parseContext(args, globalContextDef, {
+    errorContext,
+    ignoreUnknownFlags: true,
+  });
+  const choices = extractChoices(globalContextDef);
+  const allowPrompt = !config.noTty;
+  const resolvedContext = await resolveInteractiveContext(
+    parsed.context,
+    globalContextDef,
+    choices,
+    config.prompter,
+    false,
+    allowPrompt
+  );
+  validateRequiredContext(resolvedContext, globalContextDef, { errorContext });
+  if (config.onGlobalContext) {
+    await config.onGlobalContext(resolvedContext as Record<string, unknown>);
+  }
+
+  return {
+    args: parsed.rest,
+    context: resolvedContext as Record<string, unknown>,
+  };
 }
 
 /**
@@ -1441,25 +1498,38 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     projectRoot,
     prompter: config.prompter,
     tabs: config.tabs,
+    globalContext: {},
   };
 
   try {
+    const { args: argsWithoutGlobalContext, context: globalContext } = await resolveGlobalContextArgs(
+      args,
+      config,
+      resolvedAppName
+    );
+    ctx.globalContext = globalContext;
+
     // Build command tree
     const tree = await buildCommandTree(commandsDir, ctx);
 
-    if (maybeHandleCompletionCommand(args, tree, resolvedAppName)) {
+    if (maybeHandleCompletionCommand(argsWithoutGlobalContext, tree, resolvedAppName)) {
       return;
     }
 
     // Check for --help or -h flag at root level (before any command)
-    if (args.length === 0 || (args.length > 0 && hasHelpFlag(args) && !findNode(tree, args))) {
+    if (
+      argsWithoutGlobalContext.length === 0 ||
+      (argsWithoutGlobalContext.length > 0 &&
+        hasHelpFlag(argsWithoutGlobalContext) &&
+        !findNode(tree, argsWithoutGlobalContext))
+    ) {
       // No command specified, just --help - show root help
-      if (hasHelpFlag(args)) {
-        renderRootHelp(tree, resolvedAppName);
+      if (hasHelpFlag(argsWithoutGlobalContext)) {
+        renderRootHelp(tree, resolvedAppName, config.globalContext);
         return;
       }
-      if (args.length === 0 && config.noTty) {
-        renderRootHelp(tree, resolvedAppName);
+      if (argsWithoutGlobalContext.length === 0 && config.noTty) {
+        renderRootHelp(tree, resolvedAppName, config.globalContext);
         return;
       }
       // No arguments - show interactive menu
@@ -1468,14 +1538,14 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     }
 
     // Find command by path (filtering out help flags for matching)
-    const argsWithoutHelp = args.filter((a) => a !== '--help' && a !== '-h');
+    const argsWithoutHelp = argsWithoutGlobalContext.filter((a) => a !== '--help' && a !== '-h');
     const match = findNode(tree, argsWithoutHelp);
 
     // Check for help flag - intercept before normal execution
-    if (hasHelpFlag(args)) {
+    if (hasHelpFlag(argsWithoutGlobalContext)) {
       if (!match) {
         // Unknown command with --help - show root help
-        renderRootHelp(tree, resolvedAppName);
+        renderRootHelp(tree, resolvedAppName, config.globalContext);
         return;
       }
 
@@ -1493,7 +1563,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     }
 
     if (!match) {
-      const unknownCommand = args[0];
+      const unknownCommand = argsWithoutGlobalContext[0];
       const availableCommands = Array.from(tree.keys());
       const suggestion = findClosestMatch(unknownCommand ?? '', availableCommands);
 

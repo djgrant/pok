@@ -132,6 +132,20 @@ export type ContextFieldDef = {
   description?: string;
 
   /**
+   * Alternative flag names for this context field.
+   *
+   * @example
+   * ```ts
+   * epicRef: {
+   *   from: 'flag',
+   *   schema: z.string(),
+   *   aliases: ['id', 'slug'],
+   * }
+   * ```
+   */
+  aliases?: string[];
+
+  /**
 
    * Explicit choices for select prompts (escape hatch)
 
@@ -217,6 +231,8 @@ export type HookFn<C extends ContextDef = any> = (
 export type RunContext<C extends ContextDef = any> = {
   /** Resolved context values from command flags */
   context: InferContext<C>;
+  /** Resolved app-level/global context values */
+  globalContext?: Record<string, unknown>;
   /** Extra positional arguments not consumed by command path or flags */
   extraArgs: string[];
   /** Project root directory */

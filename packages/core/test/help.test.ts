@@ -127,6 +127,19 @@ describe('formatFlagLine', () => {
     expect(line).toContain('--dry-run');
     expect(line).not.toContain('--dryRun');
   });
+
+  it('includes aliases in the same flag line', () => {
+    const fieldDef = {
+      from: 'flag' as const,
+      schema: z.string(),
+      aliases: ['id', 'slug'],
+      description: 'Epic reference',
+    };
+    const info = getSchemaInfo(fieldDef.schema);
+    const line = formatFlagLine('epicRef', fieldDef, info, 40);
+
+    expect(line).toContain('--epic-ref, --id, --slug');
+  });
 });
 
 // =============================================================================
@@ -316,6 +329,23 @@ describe('generateRootHelp', () => {
 
     expect(alphaPos).toBeLessThan(betaPos);
     expect(betaPos).toBeLessThan(zebraPos);
+  });
+
+  it('includes global context flags when provided', () => {
+    const help = generateRootHelp({
+      appName: 'mycli',
+      commands: [],
+      globalContext: {
+        dir: {
+          from: 'flag',
+          schema: z.string(),
+          description: 'Board directory override',
+        },
+      },
+    });
+
+    expect(help).toContain('--dir <string>');
+    expect(help).toContain('Board directory override');
   });
 });
 
