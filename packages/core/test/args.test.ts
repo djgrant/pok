@@ -876,7 +876,81 @@ describe('resolveInteractiveContext', () => {
       ).rejects.toThrow('Context resolve() returned repeated cursor "loop"');
     });
 
-    it('rejects non-primitive option values from resolve()', async () => {
+    it('accepts object options from resolve() for single select', async () => {
+      const contextDef = {
+        id: {
+          from: 'flag' as const,
+          schema: z.string(),
+          description: 'Task id',
+          resolve: async () => [
+            { value: 'TASK-001', label: 'Task 001 - Login bug' },
+            { value: 'TASK-002', label: 'Task 002 - Search' },
+          ],
+        },
+      } satisfies ContextDef;
+
+      let optionLabels: string[] = [];
+      const prompter: Prompter = {
+        async select<T>(options): Promise<T> {
+          if ('provider' in options) {
+            const page = await options.provider({ signal: new AbortController().signal });
+            optionLabels = page.options.map((option) => option.label);
+          } else {
+            optionLabels = options.options.map((option) => option.label);
+          }
+          return 'TASK-002' as T;
+        },
+        async multiselect<T>(): Promise<T[]> {
+          return [] as T[];
+        },
+        async confirm(): Promise<boolean> {
+          return false;
+        },
+        async text(): Promise<string> {
+          return '';
+        },
+      };
+
+      const result = await resolveInteractiveContext(
+        { id: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.id).toBe('TASK-002');
+      expect(optionLabels).toEqual(['Task 001 - Login bug', 'Task 002 - Search']);
+    });
+
+    it('accepts object options pages from resolve() for multi select', async () => {
+      const contextDef = {
+        ids: {
+          from: 'flag' as const,
+          schema: z.array(z.string()),
+          description: 'Task ids',
+          resolve: async () => ({
+            options: [
+              { value: 'TASK-001', label: 'Task 001 - Login bug' },
+              { value: 'TASK-002', label: 'Task 002 - Search' },
+            ],
+          }),
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({ multiselect: [['TASK-001', 'TASK-002']] });
+      const result = await resolveInteractiveContext(
+        { ids: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        false
+      );
+
+      expect(result.ids).toEqual(['TASK-001', 'TASK-002']);
+    });
+
+    it('rejects malformed option objects from resolve()', async () => {
       const contextDef = {
         id: {
           from: 'flag' as const,
@@ -889,7 +963,9 @@ describe('resolveInteractiveContext', () => {
       const prompter = createMockPrompter({ select: ['TASK-001'] });
       await expect(
         resolveInteractiveContext({ id: undefined } as any, contextDef, new Map(), prompter, false)
-      ).rejects.toThrow('Context resolve() must return primitive option values');
+      ).rejects.toThrow(
+        'Context resolve() must return primitive options or { value, label } option objects'
+      );
     });
 
     it('supports cascading resolve() via dependsOn', async () => {

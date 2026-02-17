@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import type { ContextDef, ContextFieldDef, InferContext, ResolveOptionsPage } from './command';
+import type {
+  ContextDef,
+  ContextFieldDef,
+  InferContext,
+  ResolveOption,
+  ResolveOptionsPage,
+  ResolveOptionsResult,
+} from './command';
 import { isContextFieldDef } from './command';
 import { withCapabilities } from '../prompter';
 import type { OptionsRequest, Prompter, SelectOption } from '../prompter';
@@ -456,15 +463,32 @@ function isResolvePrimitive(value: unknown): value is ResolvePrimitive {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
+function isResolveOptionObject(value: unknown): value is Exclude<ResolveOption, ResolvePrimitive> {
+  if (typeof value !== 'object' || value === null || !('value' in value)) {
+    return false;
+  }
+
+  const option = value as { value: unknown; label?: unknown };
+  return (
+    isResolvePrimitive(option.value) &&
+    (option.label === undefined || typeof option.label === 'string')
+  );
+}
+
 function normalizeOptionValue(value: unknown): SelectOption<ResolvePrimitive> {
   if (isResolvePrimitive(value)) {
     return { value, label: String(value) };
   }
-  throw new Error('Context resolve() must return primitive option values');
+  if (isResolveOptionObject(value)) {
+    return { value: value.value, label: value.label ?? String(value.value) };
+  }
+  throw new Error(
+    'Context resolve() must return primitive options or { value, label } option objects'
+  );
 }
 
 function normalizeOptionsResult(
-  value: ResolvePrimitive[] | ResolveOptionsPage
+  value: ResolveOptionsResult
 ): {
   options: SelectOption<ResolvePrimitive>[];
   nextCursor?: string | null;
@@ -499,7 +523,7 @@ function isArraySchema(schema: z.ZodType): boolean {
 }
 
 async function loadOptionsFromAsyncIterable(
-  iterator: AsyncIterable<ResolvePrimitive[] | ResolveOptionsPage>
+  iterator: AsyncIterable<ResolveOptionsResult>
 ): Promise<SelectOption<ResolvePrimitive>[]> {
   const options: SelectOption<ResolvePrimitive>[] = [];
   for await (const pageResult of iterator) {
@@ -519,8 +543,7 @@ async function loadAllResolvedOptions(
 
   if (
     isAsyncIterable<
-      | ResolvePrimitive[]
-      | ResolveOptionsPage
+      | ResolveOptionsResult
     >(result)
   ) {
     return loadOptionsFromAsyncIterable(result);
@@ -550,7 +573,7 @@ async function loadAllResolvedOptions(
   }
 
   throw new Error(
-    'Context resolve() must return primitive options, a primitive options page, or an async iterator'
+    'Context resolve() must return options, an options page, or an async iterator'
   );
 }
 
@@ -570,13 +593,11 @@ async function createDynamicResolveProvider(
   const controller = new AbortController();
   const firstRequest: OptionsRequest = { signal: controller.signal };
   const firstResult = await resolve(firstRequest, context);
-  if (isAsyncIterable<ResolvePrimitive[] | ResolveOptionsPage>(firstResult)) {
+  if (isAsyncIterable<ResolveOptionsResult>(firstResult)) {
     throw new Error('ASYNC_ITERABLE_RESOLVE_NOT_SUPPORTED_FOR_DYNAMIC_PROVIDER');
   }
   if (!(Array.isArray(firstResult) || isOptionsPage(firstResult))) {
-    throw new Error(
-      'Context resolve() must return primitive options, a primitive options page, or an async iterator'
-    );
+    throw new Error('Context resolve() must return options, an options page, or an async iterator');
   }
 
   const initialPage = normalizeOptionsResult(firstResult);
@@ -587,7 +608,7 @@ async function createDynamicResolveProvider(
         return initialPage;
       }
       const result = await resolve(request, context);
-      if (isAsyncIterable<ResolvePrimitive[] | ResolveOptionsPage>(result)) {
+      if (isAsyncIterable<ResolveOptionsResult>(result)) {
         throw new Error(
           'Async iterator resolve() is not supported for filtered/paginated provider requests'
         );

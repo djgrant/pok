@@ -17,12 +17,13 @@ import type { Prompter } from '../prompter';
 import type { OptionsRequest } from '../prompter';
 
 type ResolvePrimitive = string | number | boolean;
+export type ResolveOption = ResolvePrimitive | { value: ResolvePrimitive; label?: string };
 export type ResolveOptionsPage = {
-  options: ResolvePrimitive[];
+  options: ResolveOption[];
   nextCursor?: string | null;
   totalCount?: number;
 };
-export type ResolveOptionsResult = ResolvePrimitive[] | ResolveOptionsPage;
+export type ResolveOptionsResult = ResolveOption[] | ResolveOptionsPage;
 
 // =============================================================================
 // Plugin / Mount Types
