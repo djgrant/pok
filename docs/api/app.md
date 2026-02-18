@@ -15,19 +15,19 @@ The app adapter enables `r.app()` to render custom interactive applications full
 
 ```typescript
 interface AppAdapter {
-  run<TProps extends { onExit: (code?: number) => void }>(
+  run<TProps>(
     component: AnyComponent<TProps>,
     props: TProps
   ): Promise<void>;
 }
 ```
 
-The `onExit` callback is required in props — the component calls it to signal that the app should close and return control to the command.
+The app can receive an optional `onExit` callback from the adapter for graceful exit.
 
-## Using @pokit/tabs-opentui
+## Using @pokit/opentui
 
 ```typescript
-import { createAppAdapter } from '@pokit/tabs-opentui';
+import { createAppAdapter } from '@pokit/opentui';
 
 const appAdapter = createAppAdapter();
 
@@ -55,7 +55,6 @@ export const command = defineCommand({
         await saveToFile(r.cwd, id, fields);
         return loadData(r.cwd);
       },
-      onExit: () => {},
     });
   },
 });
@@ -72,7 +71,7 @@ import { useKeyboard } from '@opentui/react';
 type MyAppProps = {
   data: Item[];
   onSave: (id: string, fields: Partial<Item>) => Promise<Item[]>;
-  onExit: (code?: number) => void;
+  onExit?: (code?: number) => void;
 };
 
 function MyApp({ data: initial, onSave, onExit }: MyAppProps) {
@@ -80,7 +79,7 @@ function MyApp({ data: initial, onSave, onExit }: MyAppProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useKeyboard((event) => {
-    if (event.name === 'q') onExit();
+    if (event.name === 'q') onExit?.();
     if (event.name === 'j') setSelectedIndex(i => Math.min(i + 1, items.length - 1));
     if (event.name === 'k') setSelectedIndex(i => Math.max(i - 1, 0));
   });
@@ -106,7 +105,7 @@ When `r.app()` is called:
 2. **Full-screen mode** — Alternate buffer activated
 3. **Component renders** — Your React component is mounted
 4. **User interacts** — Keyboard/mouse handled by your component
-5. **App exits** — Component calls `onExit()`
+5. **App exits** — Component can call `onExit?.()`
 6. **Reporter resumes** — Returns to normal output
 
 ## Data Flow
@@ -128,7 +127,6 @@ await r.app(BoardApp, {
     await writeFile(path, updated);     // command owns I/O
     return loadProject(r.cwd);          // return fresh data
   },
-  onExit: () => {},
 });
 ```
 
@@ -152,7 +150,7 @@ run: async (r) => {
     console.log(JSON.stringify(data));
     return;
   }
-  await r.app(MyApp, { data, onExit: () => {} });
+  await r.app(MyApp, { data });
 },
 ```
 
@@ -167,7 +165,7 @@ const myAdapter: AppAdapter = {
   async run(component, props) {
     // Set up terminal
     // Render component
-    // Wait for onExit to be called
+    // Wait for the app to exit
     // Restore terminal
   },
 };

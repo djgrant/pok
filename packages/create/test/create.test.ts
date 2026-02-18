@@ -205,7 +205,7 @@ describe('create-pokit template presets', () => {
       expect(full!.plugins).toEqual([
         '@pokit/prompter-clack',
         '@pokit/reporter-clack',
-        '@pokit/tabs-ink',
+        '@pokit/opentui',
       ]);
     });
 
@@ -243,10 +243,10 @@ describe('create-pokit template presets', () => {
       expect(reporter!.label).toBe('Reporter (clack)');
     });
 
-    it('has tabs-ink plugin', () => {
-      const tabs = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/tabs-ink');
+    it('has opentui plugin', () => {
+      const tabs = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/opentui');
       expect(tabs).toBeDefined();
-      expect(tabs!.label).toBe('Tabs (ink)');
+      expect(tabs!.label).toBe('OpenTUI (tabs + app)');
     });
 
     it('all plugins have required properties', () => {
@@ -269,7 +269,7 @@ describe('create-pokit template presets', () => {
 
       expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
       expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/tabs-ink']).toBeUndefined();
+      expect(result.dependencies['@pokit/opentui']).toBeUndefined();
     });
   });
 
@@ -285,12 +285,12 @@ describe('create-pokit template presets', () => {
       expect(result.dependencies['@pokit/core']).toBe('latest');
       expect(result.dependencies['@pokit/prompter-clack']).toBeUndefined();
       expect(result.dependencies['@pokit/reporter-clack']).toBeUndefined();
-      expect(result.dependencies['@pokit/tabs-ink']).toBeUndefined();
+      expect(result.dependencies['@pokit/opentui']).toBeUndefined();
     });
   });
 
   describe('full template', () => {
-    it('includes all plugins including tabs-ink', () => {
+    it('includes all plugins including opentui', () => {
       const full = TEMPLATES.find((t) => t.name === 'full')!;
       const config = {
         name: 'full-project',
@@ -300,7 +300,7 @@ describe('create-pokit template presets', () => {
 
       expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
       expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/tabs-ink']).toBe('latest');
+      expect(result.dependencies['@pokit/opentui']).toBe('latest');
     });
   });
 

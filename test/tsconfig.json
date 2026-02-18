@@ -13,8 +13,7 @@
       "@pokit/reporter-clack": ["../packages/reporter-clack/src/index.ts"],
       "@pokit/reporter-web": ["../packages/reporter-web/src/index.ts"],
       "@pokit/tabs-core": ["../packages/tabs-core/src/index.ts"],
-      "@pokit/tabs-ink": ["../packages/tabs-ink/src/index.ts"],
-      "@pokit/tabs-opentui": ["../packages/tabs-opentui/src/index.ts"],
+      "@pokit/opentui": ["../packages/opentui/src/index.ts"],
       "@pokit/test-utils": ["./utils/src/index.ts"]
     }
   },
@@ -24,8 +23,7 @@
     "prompter-clack/**/*",
     "op/**/*",
     "tabs-core/**/*",
-    "tabs-ink/**/*",
-    "tabs-opentui/**/*",
+    "opentui/**/*",
     "cases/**/*",
     "commands/**/*",
     "shared/**/*"
@@ -37,8 +35,7 @@
     { "path": "../packages/prompter-clack" },
     { "path": "../packages/op" },
     { "path": "../packages/tabs-core" },
-    { "path": "../packages/tabs-ink" },
-    { "path": "../packages/tabs-opentui" },
+    { "path": "../packages/opentui" },
     { "path": "./utils" }
   ]
 }

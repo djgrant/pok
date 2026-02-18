@@ -9,8 +9,7 @@ const SCOPED_PACKAGES = [
   '@pokit/reporter-clack',
   '@pokit/reporter-web',
   '@pokit/tabs-core',
-  '@pokit/tabs-ink',
-  '@pokit/tabs-opentui',
+  '@pokit/opentui',
 ] as const;
 
 const CLI_PACKAGES = ['pokit', 'create-pokit'] as const;

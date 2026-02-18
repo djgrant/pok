@@ -2,7 +2,7 @@
  * State Reducer for Event-Driven CLI
  *
  * Builds a state tree from CLI events using a reducer pattern.
- * Framework-agnostic - used by both Ink and OpenTUI adapters.
+ * Framework-agnostic reducer used by tabs adapters.
  */
 
 import type { CLIEvent, ActivityId, GroupId } from '@pokit/core';

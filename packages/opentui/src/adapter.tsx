@@ -263,7 +263,7 @@ export function createEventAdapter(
  */
 export function createAppAdapter(): AppAdapter {
   return {
-    async run<TProps extends { onExit: (code?: number) => void }>(
+    async run<TProps>(
       component: AnyComponent<TProps>,
       props: TProps
     ): Promise<void> {
@@ -342,22 +342,28 @@ export function createAppAdapter(): AppAdapter {
           cleanup();
         };
 
-        // Wrap the user's onExit to handle cleanup
+        const userOnExit =
+          typeof props === 'object' && props !== null && 'onExit' in props
+            ? (props as { onExit?: (code?: number) => void }).onExit
+            : undefined;
+
+        // Inject onExit for app-controlled shutdown. It remains optional for callers.
         const wrappedProps = {
           ...props,
           onExit: (code?: number) => {
+            userOnExit?.(code);
             cleanup();
             if (code === 130) {
               process.exit(130);
             }
           },
-        } as TProps;
+        };
 
         root.render(
           React.createElement(
             TabsErrorBoundary,
             { onFatalError: handleFatalError },
-            React.createElement(component as any, wrappedProps)
+            React.createElement(component as any, wrappedProps as any)
           ) as any
         );
       });

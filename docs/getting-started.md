@@ -32,7 +32,7 @@ bun add @pokit/core zod
 # TTY adapters (choose what you need)
 bun add @pokit/prompter-clack   # Interactive prompts
 bun add @pokit/reporter-clack   # Terminal output rendering
-bun add @pokit/tabs-ink         # Tabbed terminal UI (optional)
+bun add @pokit/opentui         # Tabbed terminal UI (optional)
 ```
 
 ## Project Structure
@@ -57,7 +57,7 @@ Create a `pok` file (or any name) as your CLI entry point:
 import { run } from '@pokit/core';
 import { createPrompter } from '@pokit/prompter-clack';
 import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createTabsAdapter } from '@pokit/tabs-ink';
+import { createTabsAdapter } from '@pokit/opentui';
 import * as path from 'path';
 
 await run(process.argv.slice(2), {

@@ -9,7 +9,7 @@ This guide walks through building a fullscreen interactive TUI application using
 Your app needs `@pokit/core` and an OpenTUI-based adapter:
 
 ```bash
-bun add @pokit/core @pokit/tabs-opentui @opentui/core @opentui/react react
+bun add @pokit/core @pokit/opentui @opentui/core @opentui/react react
 ```
 
 ### 2. Configure the adapter
@@ -18,7 +18,7 @@ In your `pok.config.ts`:
 
 ```typescript
 import { defineConfig } from '@pokit/core';
-import { createTabsAdapter, createAppAdapter } from '@pokit/tabs-opentui';
+import { createTabsAdapter, createAppAdapter } from '@pokit/opentui';
 
 export default defineConfig({
   tabs: createTabsAdapter(),
@@ -39,7 +39,7 @@ The core pattern: **commands own data, components own UI**.
 │  │ Load data   │───▶│ r.app(Component, {     │  │
 │  │ from disk   │    │   data,                │  │
 │  └─────────────┘    │   onUpdate: write,     │  │
-│                     │   onExit: () => {},     │  │
+│                     │   (optional) onExit     │  │
 │  ┌─────────────┐    │ })                     │  │
 │  │ Write data  │◀───│                        │  │
 │  │ to disk     │    └────────────────────────┘  │
@@ -127,7 +127,6 @@ export const command = defineCommand({
     await r.app(BoardApp, {
       project,
       onUpdateTask: (id, fields) => updateTask(r.cwd, id, fields),
-      onExit: () => {},
     });
   },
 });
@@ -146,7 +145,7 @@ import type { Project, Task } from '../lib/types';
 type BoardAppProps = {
   project: Project;
   onUpdateTask: (id: string, fields: Partial<Task>) => Promise<Project>;
-  onExit: (code?: number) => void;
+  onExit?: (code?: number) => void;
 };
 
 type View = 'board' | 'detail';
@@ -177,7 +176,7 @@ export function BoardApp({ project: initial, onUpdateTask, onExit }: BoardAppPro
     const { name } = event;
 
     if (view === 'board') {
-      if (name === 'q') return onExit();
+      if (name === 'q') return onExit?.();
       if (name === 'j') setCursor(c => ({ ...c, row: Math.min(c.row + 1, (columns[c.col]?.tasks.length ?? 1) - 1) }));
       if (name === 'k') setCursor(c => ({ ...c, row: Math.max(c.row - 1, 0) }));
       if (name === 'h') setCursor(c => ({ ...c, col: Math.max(c.col - 1, 0), row: 0 }));
@@ -258,7 +257,6 @@ export const command = defineCommand({
     await r.app(BoardApp, {
       project,
       onUpdateTask: (id, fields) => updateTask(r.cwd, id, fields),
-      onExit: () => {},
     });
   },
 });
@@ -350,7 +348,7 @@ Use `useKeyboard` from `@opentui/react`. Scope shortcuts to the active view:
 ```typescript
 useKeyboard((event) => {
   // Global shortcuts
-  if (event.name === 'q' && event.ctrl) return props.onExit();
+  if (event.name === 'q' && event.ctrl) return props.onExit?.();
 
   // View-specific shortcuts
   switch (view.screen) {
@@ -389,7 +387,6 @@ it('renders task list', () => {
     <BoardApp
       project={project}
       onUpdateTask={async () => project}
-      onExit={() => {}}
     />
   );
 

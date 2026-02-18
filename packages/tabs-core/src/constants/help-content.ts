@@ -16,7 +16,7 @@ export type ShortcutGroup = {
 
 /**
  * Standard keyboard shortcut help content.
- * Used by both Ink and OpenTUI help overlays.
+ * Used by tabs adapter help overlays.
  */
 export const HELP_CONTENT: ShortcutGroup[] = [
   {

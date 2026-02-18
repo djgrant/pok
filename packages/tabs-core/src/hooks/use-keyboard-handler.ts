@@ -77,7 +77,7 @@ export type KeyboardAction =
  * Process a normalized key event and return the appropriate action.
  *
  * This is the core keyboard handling logic, extracted to be framework-agnostic.
- * Each adapter (Ink, OpenTUI) normalizes their keyboard events and calls this function.
+ * Each adapter normalizes keyboard events and calls this function.
  */
 export function processKeyEvent(
   event: NormalizedKeyEvent,

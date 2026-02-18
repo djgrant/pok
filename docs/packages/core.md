@@ -149,7 +149,7 @@ The core package requires adapters for terminal features:
 import { run } from '@pokit/core';
 import { createPrompter } from '@pokit/prompter-clack';
 import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createTabsAdapter } from '@pokit/tabs-ink';
+import { createTabsAdapter } from '@pokit/opentui';
 
 await run(process.argv.slice(2), {
   commandsDir: './commands',
@@ -166,7 +166,7 @@ await run(process.argv.slice(2), {
 | ----------------------- | ------------------- |
 | `@pokit/prompter-clack` | Interactive prompts |
 | `@pokit/reporter-clack` | Terminal output     |
-| `@pokit/tabs-ink`       | Tabbed terminal UI  |
+| `@pokit/opentui`       | Tabbed terminal UI  |
 | `@pokit/tabs-core`      | Shared tabs logic   |
 | `create-pokit`          | Project scaffolding |
 

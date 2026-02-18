@@ -104,8 +104,7 @@ bun add @pokit/core zod
 | `@pokit/prompter-clack` | Interactive prompts adapter (Clack)                          |
 | `@pokit/reporter-clack` | Terminal output adapter (Clack)                              |
 | `@pokit/tabs-core`      | Shared tabs state management                                 |
-| `@pokit/tabs-ink`       | Tabbed terminal UI (Ink/React)                               |
-| `@pokit/tabs-opentui`   | Tabbed terminal UI (OpenTUI/React)                           |
+| `@pokit/opentui`        | Tabbed + app terminal UI (OpenTUI/React)                     |
 
 ## Documentation
 
