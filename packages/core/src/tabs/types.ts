@@ -62,10 +62,10 @@ export interface AppAdapter {
    * Run a fullscreen app component.
    *
    * @param component - React component to render
-   * @param props - Props to pass to the component. Must include an `onExit` callback.
+   * @param props - Props to pass to the component.
    * @returns Promise that resolves when the app exits
    */
-  run<TProps extends { onExit: (code?: number) => void }>(
+  run<TProps>(
     component: AnyComponent<TProps>,
     props: TProps
   ): Promise<void>;

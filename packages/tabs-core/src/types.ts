@@ -1,7 +1,7 @@
 /**
  * Shared Types for CLI Tabs
  *
- * Framework-agnostic types used by both Ink and OpenTUI adapters.
+ * Framework-agnostic types used by tabs adapters.
  */
 
 import type { ActivityId, GroupId, GroupLayout } from '@pokit/core';

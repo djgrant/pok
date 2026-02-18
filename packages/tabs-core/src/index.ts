@@ -1,7 +1,7 @@
 /**
  * @pokit/tabs-core
  *
- * Shared logic for CLI tabs adapters (Ink, OpenTUI).
+ * Shared logic for CLI tabs adapters.
  * Framework-agnostic types, state management, and process handling.
  */
 

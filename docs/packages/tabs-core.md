@@ -8,7 +8,7 @@ Shared logic for tabbed terminal UI adapters. Framework-agnostic types, state ma
 bun add @pokit/tabs-core
 ```
 
-This package is typically a dependency of tabs adapter implementations (like `@pokit/tabs-ink`), not installed directly.
+This package is typically a dependency of tabs adapter implementations (like `@pokit/opentui`), not installed directly.
 
 ## What It Provides
 
@@ -158,5 +158,5 @@ function createTabsAdapter(): TabsAdapter {
 
 ## Related
 
-- [@pokit/tabs-ink](./tabs-ink.md) - Ink implementation
+- [@pokit/opentui](./opentui.md) - OpenTUI implementation
 - [API Reference: Tabs](../api/tabs.md)

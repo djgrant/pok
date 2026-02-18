@@ -270,16 +270,15 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
    * The component receives props and owns its own state via React hooks.
    * The adapter handles terminal lifecycle (alternate screen, raw mode, cleanup).
    *
-   * Requires an AppAdapter to be configured (e.g., from @pokit/tabs-opentui).
+   * Requires an AppAdapter to be configured (e.g., from @pokit/opentui).
    *
    * @example
-   * await r.app(MyBoardApp, {
-   *   tasks,
-   *   onSave: async (id, data) => { ... },
-   *   onExit: (code) => { ... },
-   * });
-   */
-  app<TProps extends { onExit: (code?: number) => void }>(
+  * await r.app(MyBoardApp, {
+  *   tasks,
+  *   onSave: async (id, data) => { ... },
+  * });
+  */
+  app<TProps>(
     component: AnyComponent<TProps>,
     props: TProps
   ): Promise<void>;
@@ -1260,8 +1259,8 @@ export function createRunner<TContext extends Record<string, unknown>>(
     if (!tabsAdapter) {
       throw new Error(
         'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
-          'Install @pokit/tabs-ink and pass the adapter:\n' +
-          '  import { createTabsAdapter } from "@pokit/tabs-ink";\n' +
+          'Install @pokit/opentui and pass the adapter:\n' +
+          '  import { createTabsAdapter } from "@pokit/opentui";\n' +
           '  // In your router config:\n' +
           '  tabs: createTabsAdapter()'
       );
@@ -1433,15 +1432,15 @@ export function createRunner<TContext extends Record<string, unknown>>(
     }
   };
 
-  const app = async <TProps extends { onExit: (code?: number) => void }>(
+  const app = async <TProps>(
     component: AnyComponent<TProps>,
     props: TProps
   ): Promise<void> => {
     if (!appAdapter) {
       throw new Error(
         'App adapter not available. Please provide an AppAdapter in your config to use r.app().\n' +
-          'Install @pokit/tabs-opentui and pass the adapter:\n' +
-          '  import { createAppAdapter } from "@pokit/tabs-opentui";\n' +
+          'Install @pokit/opentui and pass the adapter:\n' +
+          '  import { createAppAdapter } from "@pokit/opentui";\n' +
           '  // In your pok.config.ts:\n' +
           '  app: createAppAdapter()'
       );

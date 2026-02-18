@@ -1,5 +1,5 @@
 /**
- * @pokit/tabs-opentui
+ * @pokit/opentui
  *
  * OpenTUI-based tabs adapter for CLI applications.
  * Implements the TabsAdapter interface using OpenTUI (React for CLI).

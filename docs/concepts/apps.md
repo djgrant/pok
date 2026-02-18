@@ -14,7 +14,6 @@ export const command = defineCommand({
     await r.app(DashboardApp, {
       stats,
       onRefresh: () => loadStats(r.cwd),
-      onExit: () => {},
     });
   },
 });
@@ -50,7 +49,6 @@ run: async (r) => {
       await deleteTaskFile(r.cwd, id);
       return loadTasks(r.cwd);
     },
-    onExit: () => {},
   });
 },
 ```
@@ -102,7 +100,7 @@ Add the app adapter to your `pok.config.ts`:
 
 ```typescript
 import { defineConfig } from '@pokit/core';
-import { createAppAdapter } from '@pokit/tabs-opentui';
+import { createAppAdapter } from '@pokit/opentui';
 
 export default defineConfig({
   app: createAppAdapter(),
@@ -123,7 +121,7 @@ run: async (r) => {
     return;
   }
 
-  await r.app(ExplorerApp, { data, onExit: () => {} });
+  await r.app(ExplorerApp, { data });
 },
 ```
 

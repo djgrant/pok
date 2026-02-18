@@ -26,7 +26,7 @@ interface Runner<TContext> {
   run<TReturn>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
   parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
   tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
-  app<TProps extends { onExit: (code?: number) => void }>(
+  app<TProps>(
     component: AnyComponent<TProps>,
     props: TProps
   ): Promise<void>;
@@ -202,7 +202,7 @@ type TabsRunnerOptions = {
 };
 ````
 
-Requires a tabs adapter (e.g., `@pokit/tabs-ink`):
+Requires a tabs adapter (e.g., `@pokit/opentui`):
 
 ```typescript
 run: async (r) => {
@@ -224,20 +224,19 @@ Features:
 Run a fullscreen interactive app component.
 
 ```typescript
-app<TProps extends { onExit: (code?: number) => void }>(
+app<TProps>(
   component: AnyComponent<TProps>,
   props: TProps
 ): Promise<void>
 ```
 
-Requires an app adapter (e.g., `@pokit/tabs-opentui`):
+Requires an app adapter (e.g., `@pokit/opentui`):
 
 ```typescript
 run: async (r) => {
   await r.app(MyExplorer, {
     data: await loadData(r.cwd),
     onSave: async (id, fields) => { /* persist */ },
-    onExit: () => {},
   });
 },
 ```
@@ -245,7 +244,7 @@ run: async (r) => {
 The component is a standard React function component that:
 - Owns its own state via hooks
 - Handles keyboard input via `useKeyboard`
-- Calls `onExit()` to close and return control
+- Can use optional `onExit()` to close and return control
 
 See [App Adapter](./app.md) for full details.
 

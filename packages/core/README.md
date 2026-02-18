@@ -12,8 +12,7 @@ packages/
 ├── prompter-clack/     # Clack-based prompts adapter
 ├── reporter-clack/     # Clack-based reporter adapter
 ├── tabs-core/          # Shared tabs state management
-├── tabs-ink/           # Ink-based tabbed console
-└── tabs-opentui/       # OpenTUI-based tabbed console
+└── opentui/            # OpenTUI-based tabs and app adapter
 ```
 
 This design:
@@ -31,7 +30,7 @@ pnpm add @pokit/core
 # TTY adapters (choose what you need)
 pnpm add @pokit/prompter-clack   # For prompts
 pnpm add @pokit/reporter-clack   # For output rendering
-pnpm add @pokit/tabs-ink         # For tabbed console
+pnpm add @pokit/opentui          # For tabs + app UI
 ```
 
 ## Quick Start
@@ -42,7 +41,7 @@ Create an entry point with TTY adapters:
 #!/usr/bin/env bun
 import { run } from '@pokit/core';
 import { createPrompter } from '@pokit/prompter-clack';
-import { createTabsAdapter } from '@pokit/tabs-ink';
+import { createTabsAdapter } from '@pokit/opentui';
 import * as path from 'path';
 
 async function main(): Promise<void> {

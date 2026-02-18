@@ -6,7 +6,7 @@
  *
  * Implementations:
  * - @pokit/reporter-clack (Clack-based, sequential output)
- * - @pokit/core-reporter-ink (Ink/React-based, for complex layouts like tabs)
+ * - Custom reporter adapters (for alternative rendering strategies)
  */
 
 import type { EventBus } from './bus';

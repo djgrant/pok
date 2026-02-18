@@ -83,8 +83,8 @@ pok is built on a modular, event-driven architecture that separates concerns int
 @pokit/reporter-clack       # Terminal output
 └── Clack-based Reporter adapter
 
-@pokit/tabs-ink             # Tabbed UI
-├── Ink (React) based tabs adapter
+@pokit/opentui             # Tabbed UI
+├── OpenTUI (React) based tabs adapter
 └── Full-screen alternate buffer
 
 @pokit/tabs-core            # Shared tabs logic

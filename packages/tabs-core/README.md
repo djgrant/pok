@@ -4,7 +4,7 @@ Shared logic for pok tabbed terminal UI adapters.
 
 ## Purpose
 
-This package provides framework-agnostic types, state management, and process handling used by tabs adapter implementations like `@pokit/tabs-ink`.
+This package provides framework-agnostic types, state management, and process handling used by tabs adapter implementations like `@pokit/opentui`.
 
 ## Installation
 

@@ -69,7 +69,7 @@ The create CLI prompts for:
 2. **Plugins** - Which adapters to include:
    - `@pokit/prompter-clack` (recommended)
    - `@pokit/reporter-clack` (recommended)
-   - `@pokit/tabs-ink` (optional)
+   - `@pokit/opentui` (optional)
 
 ## Post-Installation
 

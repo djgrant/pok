@@ -1,5 +1,5 @@
-import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from 'bun:test';
-import { createEventBus, type CLIEvent, type EventBus } from '@pokit/core';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { createEventBus, type CLIEvent } from '@pokit/core';
 
 // =============================================================================
 // Mock process TTY status for adapter TTY checks
@@ -29,28 +29,15 @@ function restoreTTY() {
 // Test Adapter Exports
 // =============================================================================
 
-describe('@pokit/tabs-ink - exports', () => {
+describe('@pokit/opentui - exports', () => {
   it('exports createTabsAdapter function', async () => {
-    const module = await import('@pokit/tabs-ink');
+    const module = await import('@pokit/opentui');
     expect(typeof module.createTabsAdapter).toBe('function');
   });
 
   it('exports createEventAdapter function', async () => {
-    const module = await import('@pokit/tabs-ink');
+    const module = await import('@pokit/opentui');
     expect(typeof module.createEventAdapter).toBe('function');
-  });
-
-  it('exports useEventBus hook', async () => {
-    const module = await import('@pokit/tabs-ink');
-    expect(typeof module.useEventBus).toBe('function');
-  });
-
-  it('re-exports state management from tabs-core', async () => {
-    const module = await import('@pokit/tabs-ink');
-    expect(typeof module.createInitialState).toBe('function');
-    expect(typeof module.reducer).toBe('function');
-    expect(typeof module.getTabsGroupActivities).toBe('function');
-    expect(typeof module.findTabsGroup).toBe('function');
   });
 });
 
@@ -59,10 +46,10 @@ describe('@pokit/tabs-ink - exports', () => {
 // =============================================================================
 
 describe('createTabsAdapter', () => {
-  let adapter: ReturnType<typeof import('@pokit/tabs-ink').createTabsAdapter>;
+  let adapter: ReturnType<typeof import('@pokit/opentui').createTabsAdapter>;
 
   beforeEach(async () => {
-    const { createTabsAdapter } = await import('@pokit/tabs-ink');
+    const { createTabsAdapter } = await import('@pokit/opentui');
     adapter = createTabsAdapter();
   });
 
@@ -110,7 +97,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdout is not TTY', async () => {
     mockTTY(false, true);
-    const { createEventAdapter } = await import('@pokit/tabs-ink');
+    const { createEventAdapter } = await import('@pokit/opentui');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdout to be a TTY');
@@ -118,7 +105,7 @@ describe('createEventAdapter', () => {
 
   it('throws error when stdin is not TTY', async () => {
     mockTTY(true, false);
-    const { createEventAdapter } = await import('@pokit/tabs-ink');
+    const { createEventAdapter } = await import('@pokit/opentui');
     const bus = createEventBus();
 
     expect(() => createEventAdapter(bus)).toThrow('stdin to be a TTY');
@@ -126,121 +113,48 @@ describe('createEventAdapter', () => {
 });
 
 // =============================================================================
-// State Management (re-exported from tabs-core)
+// Test App Adapter Exports
 // =============================================================================
 
-describe('State management re-exports', () => {
-  it('createInitialState creates empty state', async () => {
-    const { createInitialState } = await import('@pokit/tabs-ink');
-    const state = createInitialState();
-
-    expect(state.appName).toBeUndefined();
-    expect(state.version).toBeUndefined();
-    expect(state.exitCode).toBeUndefined();
-    expect(state.activities).toBeInstanceOf(Map);
-    expect(state.groups).toBeInstanceOf(Map);
-    expect(state.rootChildren).toEqual([]);
-  });
-
-  it('reducer handles root:start event', async () => {
-    const { createInitialState, reducer } = await import('@pokit/tabs-ink');
-    const state = createInitialState();
-
-    const event: CLIEvent = {
-      type: 'root:start',
-      appName: 'test-app',
-      version: '1.0.0',
-    };
-
-    const newState = reducer(state, event);
-
-    expect(newState.appName).toBe('test-app');
-    expect(newState.version).toBe('1.0.0');
-  });
-
-  it('reducer handles group:start event', async () => {
-    const { createInitialState, reducer } = await import('@pokit/tabs-ink');
-    const state = createInitialState();
-
-    const event: CLIEvent = {
-      type: 'group:start',
-      id: 'group-1' as any,
-      label: 'Test Group',
-      layout: 'tabs',
-    };
-
-    const newState = reducer(state, event);
-
-    expect(newState.groups.has('group-1')).toBe(true);
-    expect(newState.groups.get('group-1')?.label).toBe('Test Group');
-    expect(newState.groups.get('group-1')?.layout).toBe('tabs');
-  });
-
-  it('findTabsGroup finds tabs layout group', async () => {
-    const { createInitialState, reducer, findTabsGroup } = await import('@pokit/tabs-ink');
-
-    let state = createInitialState();
-    state = reducer(state, {
-      type: 'group:start',
-      id: 'seq-group' as any,
-      label: 'Sequential',
-      layout: 'sequence',
-    });
-    state = reducer(state, {
-      type: 'group:start',
-      id: 'tabs-group' as any,
-      label: 'Tabbed',
-      layout: 'tabs',
-    });
-
-    const tabsGroup = findTabsGroup(state);
-
-    expect(tabsGroup).toBeDefined();
-    expect(tabsGroup?.layout).toBe('tabs');
-    expect(tabsGroup?.label).toBe('Tabbed');
-  });
-
-  it('getTabsGroupActivities returns activities in tabs group', async () => {
-    const { createInitialState, reducer, getTabsGroupActivities } = await import('@pokit/tabs-ink');
-
-    let state = createInitialState();
-    const groupId = 'tabs-group' as any;
-
-    state = reducer(state, {
-      type: 'group:start',
-      id: groupId,
-      label: 'Tabbed',
-      layout: 'tabs',
-    });
-    state = reducer(state, {
-      type: 'activity:start',
-      id: 'activity-1' as any,
-      parentId: groupId,
-      label: 'Activity 1',
-    });
-    state = reducer(state, {
-      type: 'activity:start',
-      id: 'activity-2' as any,
-      parentId: groupId,
-      label: 'Activity 2',
-    });
-
-    const activities = getTabsGroupActivities(state, groupId);
-
-    expect(activities).toHaveLength(2);
-    expect(activities[0].label).toBe('Activity 1');
-    expect(activities[1].label).toBe('Activity 2');
+describe('@pokit/opentui - app adapter exports', () => {
+  it('exports createAppAdapter function', async () => {
+    const module = await import('@pokit/opentui');
+    expect(typeof module.createAppAdapter).toBe('function');
   });
 });
 
 // =============================================================================
-// useEventBus Hook Tests (Unit tests without React rendering)
+// createAppAdapter Tests
 // =============================================================================
 
-describe('useEventBus hook', () => {
-  it('is exported as a function', async () => {
-    const { useEventBus } = await import('@pokit/tabs-ink');
-    expect(typeof useEventBus).toBe('function');
+describe('createAppAdapter', () => {
+  let adapter: ReturnType<typeof import('@pokit/opentui').createAppAdapter>;
+
+  beforeEach(async () => {
+    const { createAppAdapter } = await import('@pokit/opentui');
+    adapter = createAppAdapter();
+  });
+
+  afterEach(() => {
+    restoreTTY();
+  });
+
+  it('returns adapter with run method', () => {
+    expect(typeof adapter.run).toBe('function');
+  });
+
+  it('throws error when stdout is not TTY', async () => {
+    mockTTY(false, true);
+
+    const DummyApp = () => null;
+    await expect(adapter.run(DummyApp, {})).rejects.toThrow('stdout to be a TTY');
+  });
+
+  it('throws error when stdin is not TTY', async () => {
+    mockTTY(true, false);
+
+    const DummyApp = () => null;
+    await expect(adapter.run(DummyApp, {})).rejects.toThrow('stdin to be a TTY');
   });
 });
 

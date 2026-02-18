@@ -30,12 +30,12 @@ type TabsOptions = {
 };
 ```
 
-## Using @pokit/tabs-ink
+## Using @pokit/opentui
 
-The recommended implementation uses [Ink](https://github.com/vadimdemedes/ink) (React for CLI):
+The recommended implementation uses OpenTUI (React for CLI):
 
 ```typescript
-import { createTabsAdapter } from '@pokit/tabs-ink';
+import { createTabsAdapter } from '@pokit/opentui';
 
 const tabsAdapter = createTabsAdapter();
 
@@ -112,7 +112,7 @@ await r.tabs([r.exec('npm run dev')]);
 
 ## Keyboard Controls
 
-The Ink adapter provides:
+The OpenTUI adapter provides:
 
 | Key              | Action        |
 | ---------------- | ------------- |
@@ -190,5 +190,5 @@ const myAdapter: TabsAdapter = {
 
 - [Runner](./runner.md) - Using `r.tabs()`
 - [defineTask](./define-task.md) - Tasks with shortLabel
-- [@pokit/tabs-ink](../packages/tabs-ink.md) - Ink implementation
+- [@pokit/opentui](../packages/opentui.md) - OpenTUI implementation
 - [@pokit/tabs-core](../packages/tabs-core.md) - Shared logic

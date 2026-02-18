@@ -1,7 +1,7 @@
 {
-  "name": "@pokit/tabs-ink",
+  "name": "@pokit/opentui",
   "version": "0.0.46",
-  "description": "Ink-based tab renderer for pok CLI applications",
+  "description": "OpenTUI adapters for tabs and fullscreen apps in pok CLI applications",
   "keywords": [
     "cli",
     "command-line",
@@ -11,7 +11,7 @@
     "pok",
     "pokjs",
     "tabs",
-    "ink",
+    "opentui",
     "react",
     "tui"
   ],
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/notation-dev/openpok.git",
-    "directory": "packages/tabs-ink"
+    "directory": "packages/opentui"
   },
   "homepage": "https://github.com/notation-dev/openpok#readme",
   "bugs": {
@@ -45,8 +45,10 @@
     "access": "public"
   },
   "dependencies": {
-    "ink": "^6.6.0",
-    "react": "^19.2.0"
+    "@opentui/core": "^0.1.63",
+    "@opentui/react": "^0.1.63",
+    "react": "^19.2.0",
+    "strip-ansi": "^7.1.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
