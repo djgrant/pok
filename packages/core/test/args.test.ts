@@ -168,6 +168,35 @@ describe('parseContext', () => {
       const { context } = parseContext(['--env', 'dev'], simpleContextDef);
       expect(context.verbose).toBe(false);
     });
+
+    it('keeps optional booleans undefined when not provided', () => {
+      const optionalBooleanContextDef = {
+        ready: {
+          from: 'flag' as const,
+          schema: z.boolean().optional(),
+          description: 'Optional ready filter',
+        },
+      } satisfies ContextDef;
+
+      const { context } = parseContext([], optionalBooleanContextDef);
+      expect(context.ready).toBeUndefined();
+    });
+
+    it('parses optional booleans with --flag and --no-flag', () => {
+      const optionalBooleanContextDef = {
+        ready: {
+          from: 'flag' as const,
+          schema: z.boolean().optional(),
+          description: 'Optional ready filter',
+        },
+      } satisfies ContextDef;
+
+      const enabled = parseContext(['--ready'], optionalBooleanContextDef);
+      const disabled = parseContext(['--no-ready'], optionalBooleanContextDef);
+
+      expect(enabled.context.ready).toBe(true);
+      expect(disabled.context.ready).toBe(false);
+    });
   });
 
   describe('kebab-case conversion', () => {
