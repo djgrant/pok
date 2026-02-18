@@ -45,9 +45,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.63",
-    "@opentui/react": "^0.1.63",
-    "react": "^19.2.0",
     "strip-ansi": "^7.1.2"
   },
   "devDependencies": {
@@ -57,6 +54,9 @@
     "@pokit/tabs-core": "workspace:*"
   },
   "peerDependencies": {
+    "@opentui/core": "^0.1.63",
+    "@opentui/react": "^0.1.63",
+    "react": "^19.2.0",
     "@pokit/core": "workspace:*",
     "@pokit/tabs-core": "workspace:*"
   },

@@ -258,10 +258,28 @@ export function createEventAdapter(
 }
 
 /**
+ * Options for creating an app adapter.
+ *
+ * When the consuming application provides its own React and OpenTUI instances
+ * (e.g. because the component uses hooks from those packages), pass them here
+ * to avoid duplicate-module issues in cross-repo linked setups.
+ */
+export type AppAdapterOptions = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  react?: { createElement: (...args: any[]) => any };
+  createCliRenderer?: typeof createCliRenderer;
+  createRoot?: typeof createRoot;
+};
+
+/**
  * Create an app adapter for rendering custom fullscreen TUI applications.
  * Handles terminal lifecycle (alternate screen, raw mode, signals, cleanup).
  */
-export function createAppAdapter(): AppAdapter {
+export function createAppAdapter(options?: AppAdapterOptions): AppAdapter {
+  const _React = options?.react ?? React;
+  const _createCliRenderer = options?.createCliRenderer ?? createCliRenderer;
+  const _createRoot = options?.createRoot ?? createRoot;
+
   return {
     async run<TProps>(
       component: AnyComponent<TProps>,
@@ -286,7 +304,7 @@ export function createAppAdapter(): AppAdapter {
       // Enable raw mode before OpenTUI starts
       process.stdin.setRawMode(true);
 
-      const renderer = await createCliRenderer({
+      const renderer = await _createCliRenderer({
         exitOnCtrlC: false,
         useAlternateScreen: true,
         useMouse: true,
@@ -295,7 +313,7 @@ export function createAppAdapter(): AppAdapter {
 
       renderer.disableStdoutInterception();
 
-      const root = createRoot(renderer);
+      const root = _createRoot(renderer);
       renderer.start();
 
       return new Promise<void>((resolve) => {
@@ -360,10 +378,10 @@ export function createAppAdapter(): AppAdapter {
         };
 
         root.render(
-          React.createElement(
+          _React.createElement(
             TabsErrorBoundary,
             { onFatalError: handleFatalError },
-            React.createElement(component as any, wrappedProps as any)
+            _React.createElement(component as any, wrappedProps as any)
           ) as any
         );
       });
