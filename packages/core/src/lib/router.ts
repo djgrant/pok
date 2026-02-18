@@ -55,7 +55,7 @@ import {
   type Shell,
 } from './completion';
 import type { Prompter } from '../prompter';
-import type { TabsAdapter } from '../tabs';
+import type { TabsAdapter, AppAdapter } from '../tabs';
 import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
 import { createEventBus, ScopedReporter } from '../events';
 
@@ -89,6 +89,8 @@ export type RouterConfig = {
   prompter: Prompter;
   /** Optional tabs adapter for tabbed console */
   tabs?: TabsAdapter;
+  /** Optional app adapter for fullscreen TUI applications */
+  app?: AppAdapter;
   /** Optional version string (auto-discovered from package.json if not provided) */
   version?: string;
   /** Disable interactive prompts and menus */
@@ -152,6 +154,8 @@ export type RouterContext = {
   prompter: Prompter;
   /** Optional tabs adapter */
   tabs?: TabsAdapter;
+  /** Optional app adapter */
+  app?: AppAdapter;
   /** Resolved app-level/global context values */
   globalContext: Record<string, unknown>;
 };
@@ -693,7 +697,7 @@ async function executeLeaf(
   const { fromMenu, menuOpen = false, quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
   const contextDef = config.context || {};
-  const { reporter, prompter, eventBus, tabs, appName } = ctx;
+  const { reporter, prompter, eventBus, tabs, app, appName } = ctx;
   const projectRoot = getNodeProjectRoot(node, ctx);
 
   // Check if already aborted before starting
@@ -770,6 +774,7 @@ async function executeLeaf(
       signal,
       eventBus,
       tabs,
+      app,
       prompter,
     });
     await config.run(runner, runCtx);
@@ -987,7 +992,7 @@ async function executeLeafWithContext(
 ): Promise<void> {
   const { quiet = false, signal, skipPreChecks = false } = options;
   const { config } = node;
-  const { reporter, prompter, eventBus, tabs } = ctx;
+  const { reporter, prompter, eventBus, tabs, app } = ctx;
   const projectRoot = getNodeProjectRoot(node, ctx);
 
   // Check if already aborted before starting
@@ -1032,6 +1037,7 @@ async function executeLeafWithContext(
       signal,
       eventBus,
       tabs,
+      app,
       prompter,
     });
     await config.run(runner, runCtx);
@@ -1498,6 +1504,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     projectRoot,
     prompter: config.prompter,
     tabs: config.tabs,
+    app: config.app,
     globalContext: {},
   };
 

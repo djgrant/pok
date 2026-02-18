@@ -19,7 +19,7 @@ import { run, RouterError } from './lib/router';
 import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
 import type { Prompter } from './prompter';
-import type { TabsAdapter } from './tabs';
+import type { TabsAdapter, AppAdapter } from './tabs';
 import type { ContextDef } from './lib/command';
 
 /**
@@ -41,6 +41,8 @@ export type RunCliConfig = {
   prompter: Prompter;
   /** Optional tabs adapter (instantiated) */
   tabs?: TabsAdapter;
+  /** Optional app adapter for fullscreen TUI applications (instantiated) */
+  app?: AppAdapter;
   /** Optional version string for --version flag */
   version?: string;
   /**
@@ -124,7 +126,7 @@ function getErrorDetails(error: unknown): string {
  * @param config - Resolved configuration with all paths and adapters
  */
 export async function runCli(args: string[], config: RunCliConfig): Promise<void> {
-  const { commandsDir, projectRoot, reporterAdapter, prompter, tabs, version } = config;
+  const { commandsDir, projectRoot, reporterAdapter, prompter, tabs, app, version } = config;
 
   // Detect output configuration from args
   const { outputArgs, remainingArgs } = extractOutputFlags(args);
@@ -143,6 +145,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       reporterAdapter,
       prompter,
       tabs,
+      app,
       noTty,
       pmScripts: config.pmScripts,
       pmCommands: config.pmCommands,

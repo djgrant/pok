@@ -8,6 +8,6 @@
   "dependencies": {
     "@pokit/core": "workspace:*",
     "@pokit/test-utils": "workspace:*",
-    "zod": "^4.0.0"
+    "zod": "^4.3.6"
   }
 }

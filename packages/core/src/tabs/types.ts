@@ -43,3 +43,30 @@ export interface TabsAdapter {
    */
   run(items: TabSpec[], options: TabsOptions): Promise<void>;
 }
+
+/**
+ * A function component type that doesn't require a React dependency in core.
+ * Adapters will cast this to their framework's component type.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyComponent<P = any> = (props: P) => any;
+
+/**
+ * App Adapter for rendering custom fullscreen TUI applications.
+ *
+ * The component receives props and owns its own state via React hooks.
+ * The adapter handles terminal lifecycle (alternate screen, raw mode, cleanup).
+ */
+export interface AppAdapter {
+  /**
+   * Run a fullscreen app component.
+   *
+   * @param component - React component to render
+   * @param props - Props to pass to the component. Must include an `onExit` callback.
+   * @returns Promise that resolves when the app exits
+   */
+  run<TProps extends { onExit: (code?: number) => void }>(
+    component: AnyComponent<TProps>,
+    props: TProps
+  ): Promise<void>;
+}

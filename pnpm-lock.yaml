@@ -31,24 +31,8 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
-
-  .test-projects/workspace-test:
-    dependencies:
-      '@pokit/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@pokit/prompter-clack':
-        specifier: workspace:*
-        version: link:../../packages/prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../../packages/reporter-clack
-    devDependencies:
-      '@types/bun':
-        specifier: latest
-        version: 1.3.9
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/cmd:
     devDependencies:
@@ -77,8 +61,8 @@ importers:
         specifier: ^4.0.2
         version: 4.0.3
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@pokit/prompter-clack':
         specifier: workspace:*
@@ -114,8 +98,8 @@ importers:
         specifier: workspace:*
         version: link:../reporter-clack
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -127,8 +111,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -299,8 +283,8 @@ importers:
         specifier: workspace:*
         version: link:utils
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -315,8 +299,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       zod:
-        specifier: ^4.0.0
-        version: 4.2.1
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -1166,9 +1150,6 @@ packages:
   '@types/bun@1.3.5':
     resolution: {integrity: sha512-RnygCqNrd3srIPEWBd5LFeUYG7plCoH2Yw9WaZGyNmdTEei+gWaHqydbaIRkIkcbXwhBT94q78QljxN0Sk838w==}
 
-  '@types/bun@1.3.9':
-    resolution: {integrity: sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw==}
-
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -1427,9 +1408,6 @@ packages:
 
   bun-types@1.3.5:
     resolution: {integrity: sha512-inmAYe2PFLs0SUbFOWSVD24sg1jFlMPxOjOSSCYqUgn4Hsc3rDc7dFvfVYjFPNHtov6kgUeulV4SxbuIV/stPw==}
-
-  bun-types@1.3.9:
-    resolution: {integrity: sha512-+UBWWOakIP4Tswh0Bt0QD0alpTY8cb5hvgiYeWCMet9YukHbzuruIEeXC2D7nMJPB12kbh8C7XJykSexEqGKJg==}
 
   bun-webgpu-darwin-arm64@0.1.4:
     resolution: {integrity: sha512-eDgLN9teKTfmvrCqgwwmWNsNszxYs7IZdCqk0S1DCarvMhr4wcajoSBlA/nQA0/owwLduPTS8xxCnQp4/N/gDg==}
@@ -2395,8 +2373,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.2.1:
-    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -3237,10 +3215,6 @@ snapshots:
     dependencies:
       bun-types: 1.3.5
 
-  '@types/bun@1.3.9':
-    dependencies:
-      bun-types: 1.3.9
-
   '@types/estree@1.0.8': {}
 
   '@types/hast@3.0.4':
@@ -3515,10 +3489,6 @@ snapshots:
       typescript: 5.9.3
 
   bun-types@1.3.5:
-    dependencies:
-      '@types/node': 25.0.3
-
-  bun-types@1.3.9:
     dependencies:
       '@types/node': 25.0.3
 
@@ -4496,6 +4466,6 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zod@4.2.1: {}
+  zod@4.3.6: {}
 
   zwitch@2.0.4: {}

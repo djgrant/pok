@@ -249,7 +249,7 @@ export { createRawPrompter, isDynamicOptions, withCapabilities } from './prompte
 // Tabs (Tabbed terminal UI interface)
 // =============================================================================
 
-export type { TabsAdapter, TabSpec, TabsOptions } from './tabs';
+export type { TabsAdapter, TabSpec, TabsOptions, AppAdapter, AnyComponent } from './tabs';
 
 // =============================================================================
 // Output Configuration
