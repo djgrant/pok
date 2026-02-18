@@ -6,5 +6,5 @@
  */
 
 export { createTabsAdapter, createEventAdapter, createAppAdapter } from './adapter.js';
-export type { EventAdapterOptions } from './adapter.js';
+export type { EventAdapterOptions, AppAdapterOptions } from './adapter.js';
 export type { ScrollBoxRenderable } from '@opentui/core';
