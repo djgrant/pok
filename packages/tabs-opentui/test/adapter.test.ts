@@ -113,6 +113,56 @@ describe('createEventAdapter', () => {
 });
 
 // =============================================================================
+// Test App Adapter Exports
+// =============================================================================
+
+describe('@pokit/tabs-opentui - app adapter exports', () => {
+  it('exports createAppAdapter function', async () => {
+    const module = await import('@pokit/tabs-opentui');
+    expect(typeof module.createAppAdapter).toBe('function');
+  });
+});
+
+// =============================================================================
+// createAppAdapter Tests
+// =============================================================================
+
+describe('createAppAdapter', () => {
+  let adapter: ReturnType<typeof import('@pokit/tabs-opentui').createAppAdapter>;
+
+  beforeEach(async () => {
+    const { createAppAdapter } = await import('@pokit/tabs-opentui');
+    adapter = createAppAdapter();
+  });
+
+  afterEach(() => {
+    restoreTTY();
+  });
+
+  it('returns adapter with run method', () => {
+    expect(typeof adapter.run).toBe('function');
+  });
+
+  it('throws error when stdout is not TTY', async () => {
+    mockTTY(false, true);
+
+    const DummyApp = ({ onExit }: { onExit: (code?: number) => void }) => null;
+    await expect(
+      adapter.run(DummyApp, { onExit: () => {} })
+    ).rejects.toThrow('stdout to be a TTY');
+  });
+
+  it('throws error when stdin is not TTY', async () => {
+    mockTTY(true, false);
+
+    const DummyApp = ({ onExit }: { onExit: (code?: number) => void }) => null;
+    await expect(
+      adapter.run(DummyApp, { onExit: () => {} })
+    ).rejects.toThrow('stdin to be a TTY');
+  });
+});
+
+// =============================================================================
 // EventBus Integration Tests
 // =============================================================================
 

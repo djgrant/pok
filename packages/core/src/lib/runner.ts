@@ -10,7 +10,7 @@ import {
 } from './task';
 import { type Env, getEnvKeys } from './env';
 import { getRuntime, type SpawnResult } from '../runtime';
-import type { TabsAdapter, TabSpec } from '../tabs';
+import type { TabsAdapter, TabSpec, AppAdapter, AnyComponent } from '../tabs';
 import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
 import type { Prompter } from '../prompter';
@@ -266,6 +266,25 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
   tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
 
   /**
+   * Run a fullscreen interactive app.
+   * The component receives props and owns its own state via React hooks.
+   * The adapter handles terminal lifecycle (alternate screen, raw mode, cleanup).
+   *
+   * Requires an AppAdapter to be configured (e.g., from @pokit/tabs-opentui).
+   *
+   * @example
+   * await r.app(MyBoardApp, {
+   *   tasks,
+   *   onSave: async (id, data) => { ... },
+   *   onExit: (code) => { ... },
+   * });
+   */
+  app<TProps extends { onExit: (code?: number) => void }>(
+    component: AnyComponent<TProps>,
+    props: TProps
+  ): Promise<void>;
+
+  /**
    * Run a task. Returns a deferred task that can be awaited directly
    * or passed to r.tabs() for tabbed execution.
    *
@@ -488,6 +507,8 @@ export type RunnerOptions<TContext extends Record<string, unknown>> = {
   eventBus: EventBus;
   /** Optional tabs adapter for tabbed terminal UI */
   tabs?: TabsAdapter;
+  /** Optional app adapter for fullscreen TUI applications */
+  app?: AppAdapter;
   /** Prompter for interactive input */
   prompter: Prompter;
 };
@@ -516,6 +537,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     quiet = false,
     signal,
     tabs: tabsAdapter,
+    app: appAdapter,
     eventBus,
     prompter,
   } = options;
@@ -1411,6 +1433,29 @@ export function createRunner<TContext extends Record<string, unknown>>(
     }
   };
 
+  const app = async <TProps extends { onExit: (code?: number) => void }>(
+    component: AnyComponent<TProps>,
+    props: TProps
+  ): Promise<void> => {
+    if (!appAdapter) {
+      throw new Error(
+        'App adapter not available. Please provide an AppAdapter in your config to use r.app().\n' +
+          'Install @pokit/tabs-opentui and pass the adapter:\n' +
+          '  import { createAppAdapter } from "@pokit/tabs-opentui";\n' +
+          '  // In your pok.config.ts:\n' +
+          '  app: createAppAdapter()'
+      );
+    }
+
+    // Suspend reporter before app takes over the terminal
+    reporter.suspend();
+    try {
+      await appAdapter.run(component, props);
+    } finally {
+      reporter.resume();
+    }
+  };
+
   const group = <T>(
     label: string,
     options: GroupOptions,
@@ -1426,6 +1471,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     exec,
     parallel,
     tabs,
+    app,
     run,
     group,
   };

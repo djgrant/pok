@@ -26,6 +26,10 @@ interface Runner<TContext> {
   run<TReturn>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
   parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
   tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
+  app<TProps extends { onExit: (code?: number) => void }>(
+    component: AnyComponent<TProps>,
+    props: TProps
+  ): Promise<void>;
   group<T>(
     label: string,
     options: GroupOptions,
@@ -215,6 +219,36 @@ Features:
 - Scrollable output history
 - Process lifecycle management
 
+### app
+
+Run a fullscreen interactive app component.
+
+```typescript
+app<TProps extends { onExit: (code?: number) => void }>(
+  component: AnyComponent<TProps>,
+  props: TProps
+): Promise<void>
+```
+
+Requires an app adapter (e.g., `@pokit/tabs-opentui`):
+
+```typescript
+run: async (r) => {
+  await r.app(MyExplorer, {
+    data: await loadData(r.cwd),
+    onSave: async (id, fields) => { /* persist */ },
+    onExit: () => {},
+  });
+},
+```
+
+The component is a standard React function component that:
+- Owns its own state via hooks
+- Handles keyboard input via `useKeyboard`
+- Calls `onExit()` to close and return control
+
+See [App Adapter](./app.md) for full details.
+
 ### group
 
 Create a visual group for organizing activities.
@@ -370,4 +404,6 @@ export const command = defineCommand({
 
 - [defineCommand](./define-command.md) - Command definitions
 - [defineTask](./define-task.md) - Task definitions
+- [App Adapter](./app.md) - Fullscreen TUI apps
+- [Tabs Adapter](./tabs.md) - Tabbed terminal UI
 - [Events](./events.md) - Reporter event system

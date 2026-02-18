@@ -30,7 +30,7 @@
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "typescript": "^5.8.3",
-    "zod": "^4.0.0"
+    "zod": "^4.3.6"
   },
   "dependencies": {
     "cli-highlight": "^2.1.11"

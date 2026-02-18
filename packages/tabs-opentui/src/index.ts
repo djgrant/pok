@@ -5,6 +5,6 @@
  * Implements the TabsAdapter interface using OpenTUI (React for CLI).
  */
 
-export { createTabsAdapter, createEventAdapter } from './adapter.js';
+export { createTabsAdapter, createEventAdapter, createAppAdapter } from './adapter.js';
 export type { EventAdapterOptions } from './adapter.js';
 export type { ScrollBoxRenderable } from '@opentui/core';

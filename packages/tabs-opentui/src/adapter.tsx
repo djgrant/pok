@@ -8,7 +8,7 @@
 import * as React from 'react';
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
-import type { TabsAdapter, TabSpec, TabsOptions, EventBus } from '@pokit/core';
+import type { TabsAdapter, TabSpec, TabsOptions, EventBus, AppAdapter, AnyComponent } from '@pokit/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';
@@ -254,5 +254,113 @@ export function createEventAdapter(
 
   return {
     unmount: cleanup,
+  };
+}
+
+/**
+ * Create an app adapter for rendering custom fullscreen TUI applications.
+ * Handles terminal lifecycle (alternate screen, raw mode, signals, cleanup).
+ */
+export function createAppAdapter(): AppAdapter {
+  return {
+    async run<TProps extends { onExit: (code?: number) => void }>(
+      component: AnyComponent<TProps>,
+      props: TProps
+    ): Promise<void> {
+      if (!process.stdout.isTTY) {
+        throw new Error('App view requires stdout to be a TTY');
+      }
+
+      if (!process.stdin.isTTY) {
+        throw new Error('App view requires stdin to be a TTY for keyboard input');
+      }
+
+      // Clear the main screen before switching to alternate screen buffer
+      process.stdout.write('\x1b[2J\x1b[H');
+
+      // Ensure stdin is not paused
+      if (process.stdin.isPaused()) {
+        process.stdin.resume();
+      }
+
+      // Enable raw mode before OpenTUI starts
+      process.stdin.setRawMode(true);
+
+      const renderer = await createCliRenderer({
+        exitOnCtrlC: false,
+        useAlternateScreen: true,
+        useMouse: true,
+        useKittyKeyboard: {},
+      });
+
+      renderer.disableStdoutInterception();
+
+      const root = createRoot(renderer);
+      renderer.start();
+
+      return new Promise<void>((resolve) => {
+        let resolved = false;
+
+        const cleanup = () => {
+          if (resolved) return;
+          resolved = true;
+
+          process.removeListener('SIGINT', handleSignal);
+          process.removeListener('SIGTERM', handleSignal);
+          process.removeListener('SIGQUIT', handleSignal);
+          process.removeListener('uncaughtException', handleUncaughtException);
+
+          try {
+            root.unmount();
+            renderer.destroy();
+          } catch {
+            // Ignore errors during cleanup
+          }
+
+          restoreTerminal();
+          resolve();
+        };
+
+        const handleSignal = () => {
+          cleanup();
+          process.exit(0);
+        };
+
+        const handleUncaughtException = (error: Error) => {
+          restoreTerminal();
+          console.error('\n[AppUI] Uncaught exception:', error);
+          cleanup();
+          process.exit(1);
+        };
+
+        process.on('SIGINT', handleSignal);
+        process.on('SIGTERM', handleSignal);
+        process.on('SIGQUIT', handleSignal);
+        process.on('uncaughtException', handleUncaughtException);
+
+        const handleFatalError = () => {
+          cleanup();
+        };
+
+        // Wrap the user's onExit to handle cleanup
+        const wrappedProps = {
+          ...props,
+          onExit: (code?: number) => {
+            cleanup();
+            if (code === 130) {
+              process.exit(130);
+            }
+          },
+        } as TProps;
+
+        root.render(
+          React.createElement(
+            TabsErrorBoundary,
+            { onFatalError: handleFatalError },
+            React.createElement(component as any, wrappedProps)
+          ) as any
+        );
+      });
+    },
   };
 }
