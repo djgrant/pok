@@ -393,7 +393,7 @@ export function parseContext<C extends ContextDef>(
     // Initialize with defaults
     if (info.default !== undefined) {
       context[name] = info.default;
-    } else if (info.type === 'boolean') {
+    } else if (info.type === 'boolean' && !info.isOptional) {
       context[name] = false;
     }
   }
