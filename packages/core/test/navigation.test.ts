@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents, normalizeEvents } from './utils';
+import { captureEvents, normalizeEvents, stripRootLifecycleEvents } from './utils';
 import * as fixtures from './fixtures';
 
 describe('Navigation', () => {
@@ -9,7 +9,7 @@ describe('Navigation', () => {
         selectResponses: ['parent', 'child-a'],
       });
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.menuNavigation.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.menuNavigation.events);
     });
 
     it('navigates through multiple menu levels', async () => {
@@ -67,7 +67,7 @@ describe('Navigation', () => {
     it('runs child directly via args (no menu events)', async () => {
       const { events, error } = await captureEvents(['parent', 'child-a']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual([]);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual([]);
     });
 
     it('runs nested command directly', async () => {
@@ -82,7 +82,7 @@ describe('Navigation', () => {
         selectResponses: ['run-all', '__all__'],
       });
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.runAllChildren.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.runAllChildren.events);
     });
 
     it('can select individual child instead of all', async () => {

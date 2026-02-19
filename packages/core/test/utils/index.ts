@@ -23,4 +23,4 @@ export {
 export { COMMANDS_DIR, CASES_DIR, PROJECT_ROOT } from './paths';
 
 // Re-export from test-utils package
-export { normalizeEvents, filterEvents, eventTypes } from '@pokit/test-utils';
+export { normalizeEvents, stripRootLifecycleEvents, filterEvents, eventTypes } from '@pokit/test-utils';

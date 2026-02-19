@@ -115,11 +115,14 @@ context: {
 
 ## Cancellation
 
-Pressing `Ctrl+C` exits gracefully:
+Pressing `Ctrl+C` throws a `CancelError` (exit code `130`) so callers can decide
+whether to terminate the process:
 
 ```typescript
+import { CancelError } from '@pokit/core';
+
 if (p.isCancel(result)) {
-  process.exit(0);
+  throw new CancelError();
 }
 ```
 

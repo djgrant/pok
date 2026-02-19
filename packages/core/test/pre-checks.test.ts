@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents, normalizeEvents, eventTypes } from './utils';
+import { captureEvents, normalizeEvents, eventTypes, stripRootLifecycleEvents } from './utils';
 import * as fixtures from './fixtures';
 
 describe('Pre-flight Checks', () => {
   describe('static checks', () => {
     it('emits group with activity events for each check', async () => {
       const { events } = await captureEvents(['with-pre']);
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithPre.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithPre.events);
     });
 
     it('runs checks in order', async () => {
       const { events } = await captureEvents(['with-pre']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
       expect(types).toEqual([
         'group:start',
         'activity:start',
@@ -35,12 +35,12 @@ describe('Pre-flight Checks', () => {
   describe('dynamic checks', () => {
     it('runs fewer checks in dev environment', async () => {
       const { events } = await captureEvents(['with-dynamic-pre', '--env', 'dev']);
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithDynamicPreDev.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithDynamicPreDev.events);
     });
 
     it('runs more checks in staging environment', async () => {
       const { events } = await captureEvents(['with-dynamic-pre', '--env', 'staging']);
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithDynamicPreStaging.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithDynamicPreStaging.events);
     });
 
     it('selects checks based on context', async () => {
@@ -122,7 +122,9 @@ describe('Pre-flight Checks', () => {
 
     it('matches expected events for check with remediation', async () => {
       const { events } = await captureEvents(['with-failing-pre-remediation']);
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithFailingPreRemediation.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(
+        fixtures.commandWithFailingPreRemediation.events
+      );
     });
   });
 });

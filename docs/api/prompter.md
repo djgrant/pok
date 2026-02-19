@@ -187,12 +187,15 @@ const prompter = createRawPrompter({
 
 ## Cancellation
 
-When the user cancels (Ctrl+C), implementations should exit gracefully:
+When the user cancels (Ctrl+C / Esc), implementations should throw a cancellation
+error that can be handled by the caller:
 
 ```typescript
-// @pokit/prompter-clack handles this:
+import { CancelError } from '@pokit/core';
+
+// @pokit/prompter-clack does this internally:
 if (p.isCancel(result)) {
-  process.exit(0);
+  throw new CancelError(); // exitCode: 130
 }
 ```
 

@@ -163,7 +163,7 @@ import type { ReporterAdapter, EventBus, CLIEvent } from '@pokit/core';
 
 const myAdapter: ReporterAdapter = {
   start(eventBus: EventBus) {
-    const unsubscribe = eventBus.subscribe((event: CLIEvent) => {
+    const unsubscribe = eventBus.on((event: CLIEvent) => {
       renderEvent(event);
     });
 
@@ -214,7 +214,7 @@ const spinnerAdapter: ReporterAdapter = {
   start(eventBus) {
     const spinners = new Map<string, Spinner>();
 
-    const unsubscribe = eventBus.subscribe((event) => {
+    const unsubscribe = eventBus.on((event) => {
       switch (event.type) {
         case 'activity:start':
           const spinner = createSpinner(event.label);
@@ -319,7 +319,7 @@ run: async (r) => {
 The adapter handles these events:
 
 ```typescript
-eventBus.subscribe((event) => {
+ eventBus.on((event) => {
   if (event.type === 'reporter:suspend') {
     // Stop rendering, clear screen
   }

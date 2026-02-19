@@ -4,6 +4,8 @@ import {
   buildCommandTree,
   run,
   RouterError,
+  CancelError,
+  CANCEL_EXIT_CODE,
   createEventBus,
   createRawReporterAdapter,
   createRawPrompter,
@@ -144,8 +146,13 @@ async function captureConsoleOutput(fn: () => Promise<void>): Promise<string> {
 /**
  * Run CLI and capture output
  */
-async function runCli(args: string[]): Promise<{ output: string; error?: Error }> {
-  const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+async function runCli(
+  args: string[]
+): Promise<{ output: string; events: any[]; error?: Error }> {
+  const events: any[] = [];
+  const reporterAdapter = createRawReporterAdapter({
+    onEvent: (event) => events.push(event),
+  });
   const prompter = createRawPrompter({});
 
   let error: Error | undefined;
@@ -163,8 +170,56 @@ async function runCli(args: string[]): Promise<{ output: string; error?: Error }
     }
   });
 
-  return { output, error };
+  return { output, events, error };
 }
+
+describe('run() - root lifecycle events', () => {
+  it('emits root:start first and root:end last on success', async () => {
+    const { events, error } = await runCli(['simple']);
+    expect(error).toBeUndefined();
+
+    expect(events[0]?.type).toBe('root:start');
+    expect(events[events.length - 1]?.type).toBe('root:end');
+    if (events[events.length - 1]?.type === 'root:end') {
+      expect(events[events.length - 1].exitCode).toBe(0);
+    }
+  });
+
+  it('emits root:end with RouterError exitCode', async () => {
+    const { events, error } = await runCli(['nonexistent-command']);
+    expect(error).toBeDefined();
+
+    expect(events[0]?.type).toBe('root:start');
+    expect(events[events.length - 1]?.type).toBe('root:end');
+    if (events[events.length - 1]?.type === 'root:end') {
+      expect(events[events.length - 1].exitCode).toBe(1);
+    }
+  });
+
+  it('emits root:end with exitCode 1 for unknown errors', async () => {
+    const { events, error } = await runCli(['with-failing-pre']);
+    expect(error).toBeDefined();
+
+    expect(events[0]?.type).toBe('root:start');
+    expect(events[events.length - 1]?.type).toBe('root:end');
+    if (events[events.length - 1]?.type === 'root:end') {
+      expect(events[events.length - 1].exitCode).toBe(1);
+    }
+  });
+
+  it('emits root:end with exitCode 130 on cancellation', async () => {
+    const { events, error } = await runCli(['with-cancel']);
+    expect(error).toBeDefined();
+    expect(error).toBeInstanceOf(CancelError);
+    expect((error as CancelError).exitCode).toBe(CANCEL_EXIT_CODE);
+
+    expect(events[0]?.type).toBe('root:start');
+    expect(events[events.length - 1]?.type).toBe('root:end');
+    if (events[events.length - 1]?.type === 'root:end') {
+      expect(events[events.length - 1].exitCode).toBe(CANCEL_EXIT_CODE);
+    }
+  });
+});
 
 describe('run() - help and version', () => {
   it('shows help with --help flag', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents, eventTypes } from './utils';
+import { captureEvents, eventTypes, stripRootLifecycleEvents } from './utils';
 
 describe('Error Handling', () => {
   describe('pre-flight check errors', () => {
@@ -15,19 +15,19 @@ describe('Error Handling', () => {
 
     it('emits activity:failure event', async () => {
       const { events } = await captureEvents(['with-failing-pre']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
       expect(types).toContain('activity:failure');
     });
 
     it('still emits group:end after error', async () => {
       const { events } = await captureEvents(['with-failing-pre']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
       expect(types).toContain('group:end');
     });
 
     it('successful checks run before failing check', async () => {
       const { events } = await captureEvents(['with-failing-pre']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
 
       const successIndex = types.indexOf('activity:success');
       const failureIndex = types.indexOf('activity:failure');
@@ -50,13 +50,13 @@ describe('Error Handling', () => {
 
     it('emits activity:failure for failing activity', async () => {
       const { events } = await captureEvents(['with-activity-failure']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
       expect(types).toContain('activity:failure');
     });
 
     it('completes successful activities before failure', async () => {
       const { events } = await captureEvents(['with-activity-failure']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
 
       const successCount = types.filter((t) => t === 'activity:success').length;
       expect(successCount).toBeGreaterThan(0);

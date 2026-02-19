@@ -44,6 +44,7 @@ import {
 import { CLIError, type ErrorContext } from './cli-error';
 import { findClosestMatch } from './string-distance';
 import { createRunner, AbortError } from './runner';
+import { CancelError, CANCEL_EXIT_CODE } from './cancel';
 import { appendHistory } from './history';
 import { generateHelp, generateRootHelp, hasHelpFlag, hasVersionFlag } from './help';
 import {
@@ -57,7 +58,7 @@ import {
 import type { Prompter } from '../prompter';
 import type { TabsAdapter, AppAdapter } from '../tabs';
 import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
-import { createEventBus, ScopedReporter } from '../events';
+import { createEventBus, createRootReporter, emitRootEnd } from '../events';
 
 /**
  * Error class for router-level failures.
@@ -541,14 +542,15 @@ async function executeNode(
   args: string[],
   ctx: RouterContext,
   fromMenu: boolean = false,
-  menuOpen: boolean = false
+  menuOpen: boolean = false,
+  signal?: AbortSignal
 ): Promise<void> {
   const { config } = node;
   const { reporter } = ctx;
 
   // If node has a run function, execute it
   if (config.run) {
-    await executeLeaf(node, args, ctx, { fromMenu, menuOpen });
+    await executeLeaf(node, args, ctx, { fromMenu, menuOpen, signal });
     return;
   }
 
@@ -573,13 +575,13 @@ async function executeNode(
   // If not already in a menu group, wrap in one
   if (!menuOpen) {
     await reporter.group(config.label, { layout: 'sequence' }, async () => {
-      await showParentSubmenu(node, tree, args, ctx, true);
+      await showParentSubmenu(node, tree, args, ctx, true, signal);
     });
     return;
   }
 
   // Already in a group - show submenu directly
-  await showParentSubmenu(node, tree, args, ctx, menuOpen);
+  await showParentSubmenu(node, tree, args, ctx, menuOpen, signal);
 }
 
 /**
@@ -590,7 +592,8 @@ async function showParentSubmenu(
   tree: CommandTree,
   args: string[],
   ctx: RouterContext,
-  menuOpen: boolean
+  menuOpen: boolean,
+  signal?: AbortSignal
 ): Promise<void> {
   const { config } = node;
   const { reporter, prompter } = ctx;
@@ -628,7 +631,7 @@ async function showParentSubmenu(
   if (selected === '__all__') {
     // Close menu group before running all children
     reporter.success('Selected');
-    await executeAllChildren(node, args, ctx, true, false);
+    await executeAllChildren(node, args, ctx, true, false, signal);
     return;
   }
 
@@ -638,7 +641,7 @@ async function showParentSubmenu(
   }
 
   // Recurse into selected child (menu stays open through navigation)
-  await executeNode(selectedChild, tree, args, ctx, true, menuOpen);
+  await executeNode(selectedChild, tree, args, ctx, true, menuOpen, signal);
 }
 
 /**
@@ -876,7 +879,8 @@ async function executeChildrenGroup(
   node: CommandNode,
   leavesWithContext: LeafWithContext[],
   ctx: RouterContext,
-  quiet: boolean
+  quiet: boolean,
+  signal?: AbortSignal
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
   const groupLabel = node.config.label;
@@ -889,6 +893,7 @@ async function executeChildrenGroup(
           await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
             quiet,
             skipPreChecks: true,
+            signal,
           });
         });
       }
@@ -898,6 +903,9 @@ async function executeChildrenGroup(
   if (mode === 'parallel') {
     await reporter.group(groupLabel, { layout: 'parallel' }, async (grp) => {
       const controller = new AbortController();
+      const groupSignal = signal
+        ? AbortSignal.any([signal, controller.signal])
+        : controller.signal;
       let firstError: unknown = null;
 
       await Promise.allSettled(
@@ -909,7 +917,7 @@ async function executeChildrenGroup(
               await executeLeafWithContext(leaf, resolvedContext, extraArgs, ctx, {
                 quiet,
                 skipPreChecks: true,
-                signal: controller.signal,
+                signal: groupSignal,
               });
             });
           } catch (error) {
@@ -940,7 +948,8 @@ async function executeAllChildren(
   args: string[],
   ctx: RouterContext,
   fromMenu: boolean,
-  menuOpen: boolean = false
+  menuOpen: boolean = false,
+  signal?: AbortSignal
 ): Promise<void> {
   const mode = node.config.enableRunAllChildren;
   const { reporter } = ctx;
@@ -972,7 +981,7 @@ async function executeAllChildren(
   await runChecksGroup(allChecks, reporter);
 
   // Phase 4: Run all leaves as activities within a single group
-  await executeChildrenGroup(node, leavesWithContext, ctx, quiet);
+  await executeChildrenGroup(node, leavesWithContext, ctx, quiet, signal);
 }
 
 /**
@@ -1338,7 +1347,7 @@ async function selectFromMenu(
 /**
  * Show interactive menu and run selected command
  */
-async function runMenu(tree: CommandTree, ctx: RouterContext): Promise<void> {
+async function runMenu(tree: CommandTree, ctx: RouterContext, signal?: AbortSignal): Promise<void> {
   // Phase 1: Selection (wrapped in group, closes after selection)
   const selection = await selectFromMenu(tree, ctx);
 
@@ -1352,13 +1361,13 @@ async function runMenu(tree: CommandTree, ctx: RouterContext): Promise<void> {
   // Check if this is a "run all children" scenario
   if (runAll) {
     if (!node.config.run && node.config.enableRunAllChildren) {
-      await executeAllChildren(node, extraArgs, ctx, true);
+      await executeAllChildren(node, extraArgs, ctx, true, false, signal);
     }
     return;
   }
 
   // Execute the leaf command with pre-resolved context
-  await executeLeafWithContext(node, selection.context, extraArgs, ctx);
+  await executeLeafWithContext(node, selection.context, extraArgs, ctx, { signal });
 }
 
 /**
@@ -1492,7 +1501,21 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
   // Create event bus and start reporter adapter
   const eventBus = createEventBus();
   const adapterController = reporterAdapter.start(eventBus);
-  const reporter = new ScopedReporter(eventBus, 'root', 'root');
+  const reporter = createRootReporter(eventBus, resolvedAppName, config.version);
+
+  let exitCode = 0;
+
+  // Root-level cancellation signal (SIGINT/SIGTERM)
+  // This allows cancellation to propagate through the normal router flow so
+  // root:end still emits and callers can catch a CancelError.
+  const rootController = new AbortController();
+  let cancelledBySignal = false;
+  const handleSignal = () => {
+    cancelledBySignal = true;
+    rootController.abort();
+  };
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
 
   // Build the router context with all runtime state
   const ctx: RouterContext = {
@@ -1540,7 +1563,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
         return;
       }
       // No arguments - show interactive menu
-      await runMenu(tree, ctx);
+      await runMenu(tree, ctx, rootController.signal);
       return;
     }
 
@@ -1598,21 +1621,39 @@ Run '${resolvedAppName} --help' for usage.`;
       remainingArgs[0] === 'all' &&
       match.node.config.enableRunAllChildren
     ) {
-      await executeAllChildren(match.node, remainingArgs.slice(1), ctx, false);
+      await executeAllChildren(match.node, remainingArgs.slice(1), ctx, false, false, rootController.signal);
       return;
     }
 
     // Execute the command with remaining args
-    await executeNode(match.node, tree, match.remainingArgs, ctx);
+    await executeNode(match.node, tree, match.remainingArgs, ctx, false, false, rootController.signal);
   } catch (error) {
     // Format CLIError with usage hints
     if (error instanceof CLIError) {
       console.error(error.format());
-      throw new RouterError(error.message);
+      const routerError = new RouterError(error.message);
+      exitCode = routerError.exitCode;
+      throw routerError;
     }
+
+    if (error instanceof CancelError) {
+      exitCode = error.exitCode;
+      throw error;
+    }
+
+    if (cancelledBySignal && error instanceof AbortError) {
+      const cancel = new CancelError('Cancelled', CANCEL_EXIT_CODE);
+      exitCode = cancel.exitCode;
+      throw cancel;
+    }
+
+    exitCode = error instanceof RouterError ? error.exitCode : 1;
     throw error;
   } finally {
-    // Stop the reporter adapter when done
+    process.removeListener('SIGINT', handleSignal);
+    process.removeListener('SIGTERM', handleSignal);
+    emitRootEnd(eventBus, exitCode);
+    // Stop the reporter adapter after emitting root:end
     adapterController.stop();
   }
 }

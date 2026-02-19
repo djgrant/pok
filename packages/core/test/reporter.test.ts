@@ -1,17 +1,23 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents, normalizeEvents, eventTypes, filterEvents } from './utils';
+import {
+  captureEvents,
+  normalizeEvents,
+  eventTypes,
+  filterEvents,
+  stripRootLifecycleEvents,
+} from './utils';
 import * as fixtures from './fixtures';
 
 describe('Reporter', () => {
   describe('groups and activities', () => {
     it('emits group and activity events', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      expect(normalizeEvents(events)).toEqual(fixtures.taskWithReporter.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.taskWithReporter.events);
     });
 
     it('wraps activities in group', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
 
       expect(types[0]).toBe('group:start');
       expect(types.includes('activity:start')).toBe(true);
@@ -20,7 +26,7 @@ describe('Reporter', () => {
 
     it('links activities to parent group', async () => {
       const { events } = await captureEvents(['with-reporter']);
-      const normalized = normalizeEvents(events);
+      const normalized = normalizeEvents(stripRootLifecycleEvents(events));
 
       const groupStart = normalized.find((e) => e.type === 'group:start');
       const activities = normalized.filter((e) => e.type === 'activity:start');
@@ -73,7 +79,7 @@ describe('Reporter', () => {
 
     it('maintains correct group hierarchy', async () => {
       const { events } = await captureEvents(['with-nested-groups']);
-      const normalized = normalizeEvents(events);
+      const normalized = normalizeEvents(stripRootLifecycleEvents(events));
       const types = eventTypes(normalized);
 
       const firstGroupStart = types.indexOf('group:start');
@@ -84,7 +90,7 @@ describe('Reporter', () => {
 
     it('closes groups in correct order', async () => {
       const { events } = await captureEvents(['with-nested-groups']);
-      const types = eventTypes(events);
+      const types = eventTypes(stripRootLifecycleEvents(events));
 
       const groupEnds: number[] = [];
       types.forEach((t, i) => {

@@ -394,7 +394,6 @@ class ProcessRegistry {
 
     const cleanup = () => {
       this.killAll();
-      process.exit(0);
     };
 
     process.on('SIGINT', cleanup);

@@ -131,6 +131,12 @@ export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
 
 // =============================================================================
+// Cancellation
+// =============================================================================
+
+export { CancelError, CANCEL_EXIT_CODE } from './lib/cancel';
+
+// =============================================================================
 // CLI Error (with usage hints)
 // =============================================================================
 
