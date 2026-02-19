@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineCommand, defineCheck } from '@pokit/core';
+import { defineCommand } from '@pokit/core';
 import { $ } from 'bun';
 
 const SCOPED_PACKAGES = [
@@ -31,20 +31,8 @@ const PACKAGE_GROUPS = {
 
 type PackageGroup = keyof typeof PACKAGE_GROUPS;
 
-const npmLoggedIn = defineCheck({
-  label: 'npm login',
-  check: async () => {
-    const result = await $`npm whoami`.quiet().nothrow();
-    if (result.exitCode !== 0) {
-      throw new Error('Not logged in to npm');
-    }
-  },
-  remediation: ['Run: npm login'],
-});
-
 export const command = defineCommand({
-  label: 'Publish packages to npm',
-  pre: [npmLoggedIn],
+  label: 'Publish packages',
   context: {
     packages: {
       from: 'flag',
@@ -56,13 +44,24 @@ export const command = defineCommand({
       schema: z.boolean().default(false),
       description: 'Perform a dry run without actually publishing',
     },
+    verdaccio: {
+      from: 'flag',
+      schema: z.boolean().default(false),
+      description: 'Publish to local Verdaccio (http://127.0.0.1:4873/) instead of npmjs',
+    },
   },
   run: async (r, ctx) => {
     const group = PACKAGE_GROUPS[ctx.context.packages as PackageGroup];
     const filterArgs = group.packages.map((pkg) => `--filter "${pkg}"`).join(' ');
     const dryRunFlag = ctx.context.dryRun ? ' --dry-run' : '';
+    const registry = ctx.context.verdaccio ? 'http://127.0.0.1:4873/' : 'https://registry.npmjs.org/';
 
-    await r.group('Publish to npm', { layout: 'sequence' }, async (g) => {
+    const whoamiResult = await $`npm whoami --registry ${registry}`.quiet().nothrow();
+    if (whoamiResult.exitCode !== 0) {
+      throw new Error(`Not logged in for registry ${registry}. Run: npm login --registry ${registry}`);
+    }
+
+    await r.group(`Publish to ${registry}`, { layout: 'sequence' }, async (g) => {
       await g.activity('Install workspace dependencies', async () => {
         await r.exec('pnpm install --frozen-lockfile');
       });
@@ -74,7 +73,7 @@ export const command = defineCommand({
       await g.activity(`Publish ${group.packages.length} packages`, async () => {
         const gitCheckFlag = ctx.context.dryRun ? ' --no-git-checks' : '';
         // Use interactive mode to allow browser auth / OTP prompts
-        await r.exec(`pnpm ${filterArgs} publish --access public${dryRunFlag}${gitCheckFlag}`, {
+        await r.exec(`pnpm ${filterArgs} publish --access public --registry ${registry}${dryRunFlag}${gitCheckFlag}`, {
           interactive: !ctx.context.dryRun,
         });
       });
@@ -83,7 +82,7 @@ export const command = defineCommand({
     if (ctx.context.dryRun) {
       r.reporter.info('Dry run complete. No packages were published.');
     } else {
-      r.reporter.success(`Published ${group.packages.length} packages to npm`);
+      r.reporter.success(`Published ${group.packages.length} packages to ${registry}`);
     }
   },
 });
