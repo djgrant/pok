@@ -9,6 +9,7 @@ import * as React from 'react';
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
 import type { TabsAdapter, TabSpec, TabsOptions, EventBus, AppAdapter, AnyComponent } from '@pokit/core';
+import { CancelError } from '@pokit/core';
 import { TabsApp } from './tabs-app.js';
 import { EventDrivenApp } from './event-driven-app.js';
 import { TabsErrorBoundary, restoreTerminal } from './error-boundary.js';
@@ -61,76 +62,83 @@ export function createTabsAdapter(): TabsAdapter {
       // Start the render loop explicitly
       renderer.start();
 
-      return new Promise<void>((resolve) => {
-        let resolved = false;
+       return new Promise<void>((resolve, reject) => {
+         let settled = false;
 
-        // Cleanup function to restore terminal and resolve
-        const cleanup = () => {
-          if (resolved) return;
-          resolved = true;
+         const cleanup = () => {
+           // Remove signal handlers
+           process.removeListener('SIGINT', handleSignal);
+           process.removeListener('SIGTERM', handleSignal);
+           process.removeListener('SIGQUIT', handleSignal);
+           process.removeListener('uncaughtException', handleUncaughtException);
 
-          // Remove signal handlers
-          process.removeListener('SIGINT', handleSignal);
-          process.removeListener('SIGTERM', handleSignal);
-          process.removeListener('SIGQUIT', handleSignal);
-          process.removeListener('uncaughtException', handleUncaughtException);
+           try {
+             root.unmount();
+             renderer.destroy();
+           } catch {
+             // Ignore errors during cleanup
+           }
 
-          try {
-            root.unmount();
-            renderer.destroy();
-          } catch {
-            // Ignore errors during cleanup
-          }
+           restoreTerminal();
+         };
 
-          restoreTerminal();
-          resolve();
-        };
+         const resolveOnce = () => {
+           if (settled) return;
+           settled = true;
+           cleanup();
+           resolve();
+         };
 
-        // Signal handler for graceful shutdown
-        const handleSignal = () => {
-          cleanup();
-          process.exit(0);
-        };
+         const rejectOnce = (error: unknown) => {
+           if (settled) return;
+           settled = true;
+           cleanup();
+           reject(error);
+         };
 
-        // Handle uncaught exceptions
-        const handleUncaughtException = (error: Error) => {
-          restoreTerminal();
-          console.error('\n[TabsUI] Uncaught exception:', error);
-          cleanup();
-          process.exit(1);
-        };
+         // Signal handler for graceful shutdown
+         const handleSignal = () => {
+           rejectOnce(new CancelError());
+         };
 
-        // Register signal handlers
-        process.on('SIGINT', handleSignal);
-        process.on('SIGTERM', handleSignal);
-        process.on('SIGQUIT', handleSignal);
-        process.on('uncaughtException', handleUncaughtException);
+         // Handle uncaught exceptions
+         const handleUncaughtException = (error: Error) => {
+           console.error('\n[TabsUI] Uncaught exception:', error);
+           rejectOnce(error);
+         };
 
-        // Handle fatal errors from error boundary
-        const handleFatalError = () => {
-          cleanup();
-        };
+         // Register signal handlers
+         process.on('SIGINT', handleSignal);
+         process.on('SIGTERM', handleSignal);
+         process.on('SIGQUIT', handleSignal);
+         process.on('uncaughtException', handleUncaughtException);
 
-        const handleExit = (code: number) => {
-          cleanup();
-          if (code === 130) {
-            process.exit(130);
-          }
-        };
+         // Handle fatal errors from error boundary
+         const handleFatalError = () => {
+           rejectOnce(new Error('[TabsUI] Fatal error'));
+         };
+
+         const handleExit = (code: number) => {
+           if (code === 130) {
+             rejectOnce(new CancelError());
+             return;
+           }
+           resolveOnce();
+         };
 
         // Use React.createElement to bypass OpenTUI's JSX type constraints for class components
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        root.render(
-          React.createElement(
-            TabsErrorBoundary,
-            { onFatalError: handleFatalError },
-            React.createElement(TabsApp, { items, options, onExit: handleExit })
-          ) as any
-        );
-      });
-    },
-  };
-}
+         root.render(
+           React.createElement(
+             TabsErrorBoundary,
+             { onFatalError: handleFatalError },
+             React.createElement(TabsApp, { items, options, onExit: handleExit })
+           ) as any
+         );
+       });
+     },
+   };
+ }
 
 export type EventAdapterOptions = {
   onExit?: (code: number) => void;
@@ -184,7 +192,7 @@ export function createEventAdapter(
   // Signal handler for graceful shutdown
   const handleSignal = () => {
     cleanup();
-    process.exit(0);
+    options.onExit?.(130);
   };
 
   // Handle uncaught exceptions
@@ -192,7 +200,7 @@ export function createEventAdapter(
     restoreTerminal();
     console.error('\n[TabsUI] Uncaught exception:', error);
     cleanup();
-    process.exit(1);
+    options.onExit?.(1);
   };
 
   // Register signal handlers
@@ -226,9 +234,6 @@ export function createEventAdapter(
     const handleExit = (code: number) => {
       cleanup();
       options.onExit?.(code);
-      if (code === 130) {
-        process.exit(130);
-      }
     };
 
     // Handle fatal errors from error boundary
@@ -298,13 +303,10 @@ export function createAppAdapter(): AppAdapter {
       const root = createRoot(renderer);
       renderer.start();
 
-      return new Promise<void>((resolve) => {
-        let resolved = false;
+      return new Promise<void>((resolve, reject) => {
+        let settled = false;
 
         const cleanup = () => {
-          if (resolved) return;
-          resolved = true;
-
           process.removeListener('SIGINT', handleSignal);
           process.removeListener('SIGTERM', handleSignal);
           process.removeListener('SIGQUIT', handleSignal);
@@ -318,19 +320,29 @@ export function createAppAdapter(): AppAdapter {
           }
 
           restoreTerminal();
+        };
+
+        const resolveOnce = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
           resolve();
         };
 
-        const handleSignal = () => {
+        const rejectOnce = (error: unknown) => {
+          if (settled) return;
+          settled = true;
           cleanup();
-          process.exit(0);
+          reject(error);
+        };
+
+        const handleSignal = () => {
+          rejectOnce(new CancelError());
         };
 
         const handleUncaughtException = (error: Error) => {
-          restoreTerminal();
           console.error('\n[AppUI] Uncaught exception:', error);
-          cleanup();
-          process.exit(1);
+          rejectOnce(error);
         };
 
         process.on('SIGINT', handleSignal);
@@ -339,7 +351,7 @@ export function createAppAdapter(): AppAdapter {
         process.on('uncaughtException', handleUncaughtException);
 
         const handleFatalError = () => {
-          cleanup();
+          rejectOnce(new Error('[AppUI] Fatal error'));
         };
 
         const userOnExit =
@@ -352,10 +364,11 @@ export function createAppAdapter(): AppAdapter {
           ...props,
           onExit: (code?: number) => {
             userOnExit?.(code);
-            cleanup();
             if (code === 130) {
-              process.exit(130);
+              rejectOnce(new CancelError());
+              return;
             }
+            resolveOnce();
           },
         };
 

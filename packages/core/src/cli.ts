@@ -16,6 +16,7 @@
 
 import * as path from 'path';
 import { run, RouterError } from './lib/router';
+import { CancelError } from './lib/cancel';
 import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
 import type { Prompter } from './prompter';
@@ -155,8 +156,8 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       onGlobalContext: config.onGlobalContext,
     });
   } catch (error) {
-    if (error instanceof RouterError) {
-      process.exit(error.exitCode);
+    if (error instanceof RouterError || error instanceof CancelError) {
+      throw error;
     }
 
     // Handle unexpected errors with clean messages
@@ -177,6 +178,6 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       console.error('\nSet DEBUG=1 for full stack trace.');
     }
 
-    process.exit(1);
+    throw error;
   }
 }

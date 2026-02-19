@@ -4,7 +4,7 @@
  * Test utilities for pokjs packages.
  */
 
-export { normalizeEvents, filterEvents, eventTypes } from './normalize';
+export { normalizeEvents, stripRootLifecycleEvents, filterEvents, eventTypes } from './normalize';
 
 export { createVirtualTerminal, type VirtualTerminal } from './virtual-terminal';
 

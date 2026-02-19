@@ -116,6 +116,13 @@ export interface EventBus {
    * @returns Unsubscribe function
    */
   on(listener: EventListener): Unsubscribe;
+
+  /**
+   * Subscribe to events
+   *
+   * @deprecated Use `on(listener)`.
+   */
+  subscribe(listener: EventListener): Unsubscribe;
 }
 
 /**

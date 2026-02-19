@@ -72,10 +72,12 @@ type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'step';
 
 The event bus is a pub/sub system for CLI events.
 
+Note: `subscribe(listener)` is supported as a deprecated alias of `on(listener)` for compatibility.
+
 ```typescript
 interface EventBus {
   emit(event: CLIEvent): void;
-  subscribe(listener: EventListener): Unsubscribe;
+  on(listener: EventListener): Unsubscribe;
 }
 
 type EventListener = (event: CLIEvent) => void;
@@ -88,7 +90,7 @@ type Unsubscribe = () => void;
 const eventBus = createEventBus();
 
 // Subscribe to events
-const unsubscribe = eventBus.subscribe((event) => {
+const unsubscribe = eventBus.on((event) => {
   console.log('Event:', event);
 });
 
@@ -211,7 +213,7 @@ run: async (r, ctx) => {
 ```typescript
 import { isRootEvent, isGroupEvent, isActivityEvent, isLogEvent } from '@pokit/core';
 
-eventBus.subscribe((event) => {
+eventBus.on((event) => {
   if (isLogEvent(event)) {
     console.log(`[${event.level}] ${event.message}`);
   }

@@ -16,7 +16,7 @@ import type {
   AutocompleteOptions,
   OptionsPage,
 } from '@pokit/core';
-import { isDynamicOptions } from '@pokit/core';
+import { isDynamicOptions, CancelError } from '@pokit/core';
 import { patchedAutocomplete } from './autocomplete-prompt.js';
 
 // =============================================================================
@@ -174,7 +174,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
     const action = await showErrorRecovery(errorMessage);
     if (action === 'cancel') {
       p.cancel('Cancelled');
-      process.exit(0);
+      throw new CancelError('Cancelled');
     }
 
     // Retry - recursive call
@@ -184,7 +184,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
   // Check for empty results
   if (state.options.length === 0) {
     p.cancel('No options available');
-    process.exit(0);
+    throw new CancelError('No options available');
   }
 
   // Main selection loop - handles "Load more" and re-selection
@@ -223,7 +223,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
     // Handle case where filtering removed all visible options
     if (displayOptions.length === 0) {
       p.cancel('No matching options');
-      process.exit(0);
+      throw new CancelError('No matching options');
     }
 
     // Show the select prompt
@@ -235,7 +235,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
 
     if (p.isCancel(result)) {
       controller.abort();
-      process.exit(0);
+      throw new CancelError('Cancelled');
     }
 
     // Check if "Load more" was selected
@@ -269,7 +269,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
         const action = await showErrorRecovery(errorMessage);
         if (action === 'cancel') {
           p.cancel('Cancelled');
-          process.exit(0);
+          throw new CancelError('Cancelled');
         }
 
         // Retry loading more - continue the loop
@@ -330,14 +330,14 @@ async function handleDynamicSelectWithTypeahead<T>(
     const action = await showErrorRecovery(errorMessage);
     if (action === 'cancel') {
       p.cancel('Cancelled');
-      process.exit(0);
+      throw new CancelError('Cancelled');
     }
     return handleDynamicSelectWithTypeahead(dynamicOptions);
   }
 
   if (allOptions.length === 0) {
     p.cancel('No options available');
-    process.exit(0);
+    throw new CancelError('No options available');
   }
 
   // For server-side filtering, we need to refetch when filter changes
@@ -374,7 +374,7 @@ async function handleDynamicSelectWithTypeahead<T>(
 
     if (selectOptions.length === 0) {
       p.cancel('No matching options');
-      process.exit(0);
+      throw new CancelError('No matching options');
     }
 
     const result = await p.select({
@@ -385,7 +385,7 @@ async function handleDynamicSelectWithTypeahead<T>(
 
     if (p.isCancel(result)) {
       controller.abort();
-      process.exit(0);
+      throw new CancelError('Cancelled');
     }
 
     if (result === LOAD_MORE_SYMBOL) {
@@ -407,7 +407,7 @@ async function handleDynamicSelectWithTypeahead<T>(
         const action = await showErrorRecovery(errorMessage);
         if (action === 'cancel') {
           p.cancel('Cancelled');
-          process.exit(0);
+          throw new CancelError('Cancelled');
         }
         continue;
       }
@@ -448,7 +448,7 @@ export function createPrompter(): Prompter {
       });
 
       if (p.isCancel(result)) {
-        process.exit(0);
+        throw new CancelError('Cancelled');
       }
 
       return result as T;
@@ -463,7 +463,7 @@ export function createPrompter(): Prompter {
       });
 
       if (p.isCancel(result)) {
-        process.exit(0);
+        throw new CancelError('Cancelled');
       }
 
       return result as T[];
@@ -476,7 +476,7 @@ export function createPrompter(): Prompter {
       });
 
       if (p.isCancel(result)) {
-        process.exit(0);
+        throw new CancelError('Cancelled');
       }
 
       return result;
@@ -493,7 +493,7 @@ export function createPrompter(): Prompter {
       });
 
       if (p.isCancel(result)) {
-        process.exit(0);
+        throw new CancelError('Cancelled');
       }
 
       return result;
@@ -512,7 +512,7 @@ export function createPrompter(): Prompter {
       });
 
       if (p.isCancel(result)) {
-        process.exit(0);
+        throw new CancelError('Cancelled');
       }
 
       return result as T;

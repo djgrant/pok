@@ -25,7 +25,11 @@ if (args[0] === 'init') {
   process.exit(0);
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
+  if (err && typeof err === 'object' && 'exitCode' in err) {
+    const code = Number((err as { exitCode?: unknown }).exitCode);
+    process.exit(Number.isFinite(code) ? code : 1);
+  }
   console.error(err);
   process.exit(1);
 });

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents, normalizeEvents } from './utils';
+import { captureEvents, normalizeEvents, stripRootLifecycleEvents } from './utils';
 import * as fixtures from './fixtures';
 
 describe('Commands', () => {
   describe('simple command', () => {
     it('emits no events for basic r.exec()', async () => {
       const { events } = await captureEvents(['simple']);
-      expect(normalizeEvents(events)).toEqual(fixtures.simpleCommand.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.simpleCommand.events);
     });
 
     it('executes without errors', async () => {
@@ -19,25 +19,25 @@ describe('Commands', () => {
     it('runs with default flag values', async () => {
       const { events, error } = await captureEvents(['with-context']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with explicit --env flag', async () => {
       const { events, error } = await captureEvents(['with-context', '--env', 'staging']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with --verbose flag', async () => {
       const { events, error } = await captureEvents(['with-context', '--verbose']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithContext.events);
     });
 
     it('runs with multiple flags', async () => {
       const { events, error } = await captureEvents(['with-context', '--env', 'prod', '--verbose']);
       expect(error).toBeUndefined();
-      expect(normalizeEvents(events)).toEqual(fixtures.commandWithContext.events);
+      expect(normalizeEvents(stripRootLifecycleEvents(events))).toEqual(fixtures.commandWithContext.events);
     });
   });
 

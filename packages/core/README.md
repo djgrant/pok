@@ -56,8 +56,14 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Error:', error.message);
-  process.exit(1);
+  const exitCode =
+    error && typeof error === 'object' && 'exitCode' in error
+      ? Number((error as { exitCode?: unknown }).exitCode)
+      : 1;
+  if (!(error && typeof error === 'object' && 'exitCode' in error)) {
+    console.error('Error:', error instanceof Error ? error.message : String(error));
+  }
+  process.exit(Number.isFinite(exitCode) ? exitCode : 1);
 });
 ```
 

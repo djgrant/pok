@@ -21,6 +21,13 @@ export interface EventBus {
    * @returns Unsubscribe function
    */
   on(listener: EventListener): Unsubscribe;
+
+  /**
+   * Subscribe to events
+   *
+   * @deprecated Use `on(listener)`.
+   */
+  subscribe(listener: EventListener): Unsubscribe;
 }
 
 /**
@@ -65,8 +72,7 @@ export function createEventBus(options?: EventBusOptions): EventBus {
     console.error('Error in event listener:', error);
   };
 
-  return {
-    emit(event: CLIEvent): void {
+  const emit = (event: CLIEvent): void => {
       for (const listener of listeners) {
         try {
           listener(event);
@@ -74,13 +80,18 @@ export function createEventBus(options?: EventBusOptions): EventBus {
           handleError(error, event);
         }
       }
-    },
+    };
 
-    on(listener: EventListener): Unsubscribe {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+  const on = (listener: EventListener): Unsubscribe => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+
+  return {
+    emit,
+    on,
+    subscribe: on,
   };
 }

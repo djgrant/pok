@@ -3,7 +3,11 @@ import { resolve } from 'bun';
 import * as fs from 'fs';
 import * as path from 'path';
 
-main().catch((err) => {
+main().catch((err: unknown) => {
+  if (err && typeof err === 'object' && 'exitCode' in err) {
+    const code = Number((err as { exitCode?: unknown }).exitCode);
+    process.exit(Number.isFinite(code) ? code : 1);
+  }
   console.error(err);
   process.exit(1);
 });

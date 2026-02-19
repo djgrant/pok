@@ -71,6 +71,16 @@ export function normalizeEvents(events: CLIEvent[]): CLIEvent[] {
 }
 
 /**
+ * Strip root lifecycle events (root:start/root:end).
+ *
+ * Useful for fixture-based comparisons where the test case focuses on
+ * command-level events rather than CLI process lifecycle.
+ */
+export function stripRootLifecycleEvents(events: CLIEvent[]): CLIEvent[] {
+  return events.filter((e) => e.type !== 'root:start' && e.type !== 'root:end');
+}
+
+/**
  * Filter events to only include specific types.
  *
  * @example
