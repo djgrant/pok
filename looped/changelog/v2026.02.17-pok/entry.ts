@@ -1,4 +1,4 @@
-import { defineChangelogEntry } from '@notation/smithers'
+import { defineChangelogEntry } from '@notation/looped'
 
 export default defineChangelogEntry({
   schema: 'changelog.entry.v1',
