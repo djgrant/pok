@@ -69,7 +69,7 @@ export const command = defineCommand({
       push: !ctx.context.skipPush,
       tag: group.tag,
       commit: group.commit,
-      preid: 'alpha',
+      preid: 'rc',
       confirm: !skipConfirm,
     });
   },
