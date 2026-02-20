@@ -1,0 +1,37 @@
+# v2026.02.17-pok
+
+## What Changed
+
+This release of `pok` introduces core architectural primitives for building flexible, agent-friendly CLIs.
+
+### Global App-level Flags
+
+We've added support for "global" context fields. These are flags that can be defined at the application level and are automatically available to all commands, regardless of where they appear in the command line string.
+
+<Sample name="global-context.ts" />
+
+### First-class Flag Aliases
+
+Flag aliases are now a first-class citizen in the command context. Instead of manual parsing logic within the `run` function, you can simply declare aliases like `id` or `slug` for a single context field. `pok` handles the resolution automatically.
+
+<Sample name="flag-aliases.ts" />
+
+## Why This Matters
+
+CLIs often need "sticky" state like a working directory or a configuration path. By providing a native way to handle these global flags and aliases, `pok` reduces the boilerplate needed to build sophisticated CLIs that feel consistent and predictable.
+
+## How To Use It
+
+1. Define `globalContext` in your `runCli` options.
+2. Use the `aliases` array when defining a context field in `defineCommand`.
+
+## Files Changed
+
+- `pok/packages/core/src/lib/app.ts`
+- `pok/packages/core/src/lib/parser.ts`
+- `pok/packages/core/src/lib/command.ts`
+
+## Validation
+
+- Comprehensive tests for global flag positioning.
+- Alias resolution tests covering multiple flags mapping to a single field.
