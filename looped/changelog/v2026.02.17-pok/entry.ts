@@ -1,7 +1,7 @@
 import { defineChangelogEntry } from '@notation/looped'
 
 export default defineChangelogEntry({
-  schema: 'changelog.entry.v1',
+  schema: 'changelog.entry',
   date: '2026-02-17',
   slug: 'pok',
   title: 'Global Flags and Aliases in Pok',
