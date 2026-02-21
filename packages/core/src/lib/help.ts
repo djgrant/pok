@@ -6,7 +6,7 @@
  * the command's context and pre configuration.
  */
 
-import type { CommandConfig, CommandNode, ContextDef, ContextFieldDef } from './command';
+import type { CommandConfig, CommandNode, CommandTree, ContextDef, ContextFieldDef } from './command';
 import { isContextFieldDef } from './command';
 import type { CheckConfig } from './check';
 import type { SchemaInfo } from './args';
@@ -366,6 +366,148 @@ export function generateRootHelp(options: RootHelpOptions): string {
   lines.push('');
   lines.push(`Use "${appName} <command> --help" for more information about a command.`);
   lines.push('');
+
+  return lines.join('\n');
+}
+
+// =============================================================================
+// Recursive Help (full CLI reference)
+// =============================================================================
+
+/**
+ * Options for generating recursive help text
+ */
+export type RecursiveHelpOptions = {
+  /** Application name */
+  appName: string;
+  /** Root command tree */
+  tree: CommandTree;
+  /** Optional subtree root node (for `help <command>`) */
+  subtree?: CommandNode;
+  /** Optional app-level global flags */
+  globalContext?: ContextDef;
+};
+
+/**
+ * Generate recursive help for a single node and all its descendants
+ */
+function generateNodeHelp(
+  node: CommandNode,
+  appName: string,
+  lines: string[]
+): void {
+  const fullPath = [appName, ...node.path].join(' ');
+  const children = Array.from(node.children.values());
+
+  // Command heading
+  lines.push(`## ${fullPath}`);
+  lines.push('');
+  lines.push(node.config.label);
+  lines.push('');
+
+  if (node.config.description) {
+    lines.push(node.config.description);
+    lines.push('');
+  }
+
+  // Aliases
+  if (node.config.aliases && node.config.aliases.length > 0) {
+    lines.push(`Aliases: ${node.config.aliases.join(', ')}`);
+    lines.push('');
+  }
+
+  // Usage
+  if (children.length > 0) {
+    lines.push(`Usage: ${fullPath} <command> [flags]`);
+  } else if (node.config.context && Object.keys(node.config.context).length > 0) {
+    lines.push(`Usage: ${fullPath} [flags]`);
+  } else {
+    lines.push(`Usage: ${fullPath}`);
+  }
+  lines.push('');
+
+  // Subcommands list
+  if (children.length > 0) {
+    lines.push('Subcommands:');
+    const sorted = [...children].sort((a, b) => a.segment.localeCompare(b.segment));
+    for (const child of sorted) {
+      lines.push(`${INDENT}${child.segment}  ${child.config.label}`);
+    }
+    lines.push('');
+  }
+
+  // Flags
+  const contextDef = node.config.context;
+  if (contextDef && Object.keys(contextDef).length > 0) {
+    lines.push('Flags:');
+    const maxWidth = getMaxFlagWidth(contextDef);
+    const sortedFlags = Object.entries(contextDef).sort(([a], [b]) => a.localeCompare(b));
+    for (const [name, fieldDef] of sortedFlags) {
+      if (!isContextFieldDef(fieldDef)) continue;
+      const info = getSchemaInfo(fieldDef.schema);
+      lines.push(formatFlagLine(name, fieldDef, info, maxWidth));
+    }
+    lines.push('');
+  }
+
+  // Examples
+  if (node.config.examples && node.config.examples.length > 0) {
+    lines.push('Examples:');
+    for (const example of node.config.examples) {
+      lines.push(`${INDENT}${example}`);
+    }
+    lines.push('');
+  }
+
+  // Recurse into children
+  if (children.length > 0) {
+    const sorted = [...children].sort((a, b) => a.segment.localeCompare(b.segment));
+    for (const child of sorted) {
+      generateNodeHelp(child, appName, lines);
+    }
+  }
+}
+
+/**
+ * Generate comprehensive recursive help for the entire CLI or a subtree.
+ *
+ * Produces a full reference document showing every command, its flags,
+ * and subcommands. Designed to be consumed in a single read by agents
+ * or piped to a pager.
+ */
+export function generateRecursiveHelp(options: RecursiveHelpOptions): string {
+  const { appName, tree, subtree, globalContext } = options;
+  const lines: string[] = [];
+
+  if (subtree) {
+    // Show recursive help for a specific subtree
+    generateNodeHelp(subtree, appName, lines);
+    return lines.join('\n');
+  }
+
+  // Full CLI reference
+  lines.push(`# ${appName} — CLI Reference`);
+  lines.push('');
+
+  // Global flags
+  if (globalContext && Object.keys(globalContext).length > 0) {
+    lines.push('## Global Flags');
+    lines.push('');
+    const maxWidth = getMaxFlagWidth(globalContext);
+    const sortedFlags = Object.entries(globalContext).sort(([a], [b]) => a.localeCompare(b));
+    for (const [name, fieldDef] of sortedFlags) {
+      if (!isContextFieldDef(fieldDef)) continue;
+      const info = getSchemaInfo(fieldDef.schema);
+      lines.push(formatFlagLine(name, fieldDef, info, maxWidth));
+    }
+    lines.push('');
+  }
+
+  // All commands
+  const sorted = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
+  for (const node of sorted) {
+    generateNodeHelp(node, appName, lines);
+  }
 
   return lines.join('\n');
 }
