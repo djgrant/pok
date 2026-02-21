@@ -3,7 +3,7 @@ import { runCli, RouterError, CancelError, createRawReporterAdapter, createRawPr
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
 
 describe('runCli() - embeddability', () => {
-  it('does not call process.exit on RouterError', async () => {
+  it('returns RouterError exit code by default', async () => {
     const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
     const prompter = createRawPrompter({});
 
@@ -21,13 +21,13 @@ describe('runCli() - embeddability', () => {
           reporterAdapter,
           prompter,
         })
-      ).rejects.toBeInstanceOf(RouterError);
+      ).resolves.toBe(1);
     } finally {
       (process as any).exit = originalExit;
     }
   });
 
-  it('does not call process.exit on CancelError', async () => {
+  it('returns CancelError exit code by default', async () => {
     const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
     const prompter = createRawPrompter({});
 
@@ -45,7 +45,78 @@ describe('runCli() - embeddability', () => {
           reporterAdapter,
           prompter,
         })
-      ).rejects.toBeInstanceOf(CancelError);
+      ).resolves.toBe(130);
+    } finally {
+      (process as any).exit = originalExit;
+    }
+  });
+
+  it('can rethrow RouterError with throwOnError', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    await expect(
+      runCli(['nonexistent-command'], {
+        commandsDir: COMMANDS_DIR,
+        projectRoot: PROJECT_ROOT,
+        appName: 'test-cli',
+        reporterAdapter,
+        prompter,
+        throwOnError: true,
+      })
+    ).rejects.toBeInstanceOf(RouterError);
+  });
+
+  it('can rethrow CancelError with throwOnError', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    await expect(
+      runCli(['with-cancel'], {
+        commandsDir: COMMANDS_DIR,
+        projectRoot: PROJECT_ROOT,
+        appName: 'test-cli',
+        reporterAdapter,
+        prompter,
+        throwOnError: true,
+      })
+    ).rejects.toBeInstanceOf(CancelError);
+  });
+
+  it('returns success code on successful run', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    await expect(
+      runCli(['simple'], {
+        commandsDir: COMMANDS_DIR,
+        projectRoot: PROJECT_ROOT,
+        appName: 'test-cli',
+        reporterAdapter,
+        prompter,
+      })
+    ).resolves.toBe(0);
+  });
+
+  it('does not call process.exit on failures', async () => {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    const prompter = createRawPrompter({});
+
+    const originalExit = process.exit;
+    (process as any).exit = (code?: number) => {
+      throw new Error(`process.exit(${code}) called`);
+    };
+
+    try {
+      await expect(
+        runCli(['nonexistent-command'], {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'test-cli',
+          reporterAdapter,
+          prompter,
+        })
+      ).resolves.toBe(1);
     } finally {
       (process as any).exit = originalExit;
     }

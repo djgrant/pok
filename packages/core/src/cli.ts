@@ -3,15 +3,17 @@
  *
  * This module provides the runCli() function that handles the full CLI lifecycle:
  * - Running the router with pre-resolved configuration
+ * - Returning a process exit code (0 success, non-zero failure)
  *
  * Usage:
  *   import { runCli } from '@pokit/core';
- *   await runCli(process.argv.slice(2), {
+ *   const exitCode = await runCli(process.argv.slice(2), {
  *     commandsDir: '/path/to/commands',
  *     projectRoot: '/path/to/project',
  *     reporterAdapter: createReporterAdapter(),
  *     prompter: createPrompter(),
  *   });
+ *   process.exitCode = exitCode;
  */
 
 import * as path from 'path';
@@ -82,6 +84,14 @@ export type RunCliConfig = {
    * Useful for wiring parsed values into app-specific runtime state.
    */
   onGlobalContext?: (context: Record<string, unknown>) => void | Promise<void>;
+
+  /**
+   * Whether runCli should rethrow errors after handling/logging.
+   *
+   * Defaults to false for pit-of-success entrypoint behavior.
+   * Set to true for programmatic callers that want to catch failures.
+   */
+  throwOnError?: boolean;
 };
 
 /**
@@ -125,8 +135,9 @@ function getErrorDetails(error: unknown): string {
  *
  * @param args - Command line arguments (without 'node' and script name)
  * @param config - Resolved configuration with all paths and adapters
+ * @returns Process-style exit code
  */
-export async function runCli(args: string[], config: RunCliConfig): Promise<void> {
+export async function runCli(args: string[], config: RunCliConfig): Promise<number> {
   const { commandsDir, projectRoot, reporterAdapter, prompter, tabs, app, version } = config;
 
   // Detect output configuration from args
@@ -155,9 +166,16 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       globalContext: config.globalContext,
       onGlobalContext: config.onGlobalContext,
     });
+    return 0;
   } catch (error) {
     if (error instanceof RouterError || error instanceof CancelError) {
-      throw error;
+      if (config.throwOnError) {
+        throw error;
+      }
+
+      const exitCode = Number.isFinite(error.exitCode) ? error.exitCode : 1;
+      process.exitCode = exitCode;
+      return exitCode;
     }
 
     // Handle unexpected errors with clean messages
@@ -178,6 +196,11 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<void
       console.error('\nSet DEBUG=1 for full stack trace.');
     }
 
-    throw error;
+    if (config.throwOnError) {
+      throw error;
+    }
+
+    process.exitCode = 1;
+    return 1;
   }
 }
