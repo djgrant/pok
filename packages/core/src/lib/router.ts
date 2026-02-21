@@ -46,7 +46,7 @@ import { findClosestMatch } from './string-distance';
 import { createRunner, AbortError } from './runner';
 import { CancelError, CANCEL_EXIT_CODE } from './cancel';
 import { appendHistory } from './history';
-import { generateHelp, generateRootHelp, hasHelpFlag, hasVersionFlag } from './help';
+import { generateHelp, generateRootHelp, generateRecursiveHelp, hasHelpFlag, hasVersionFlag } from './help';
 import {
   generateCompletionScript,
   generateCompletions,
@@ -1402,6 +1402,41 @@ async function maybeHandleVersionFlag(
   return true;
 }
 
+function maybeHandleHelpCommand(
+  args: string[],
+  tree: CommandTree,
+  resolvedAppName: string,
+  globalContext?: ContextDef
+): boolean {
+  if (args[0] !== 'help') return false;
+
+  const subArgs = args.slice(1);
+
+  // `help <command>` — show recursive help for a specific subtree
+  if (subArgs.length > 0) {
+    const match = findNode(tree, subArgs);
+    if (match) {
+      const helpText = generateRecursiveHelp({
+        appName: resolvedAppName,
+        tree,
+        subtree: match.node,
+        globalContext,
+      });
+      console.log(helpText);
+      return true;
+    }
+  }
+
+  // `help` with no args — show full CLI reference
+  const helpText = generateRecursiveHelp({
+    appName: resolvedAppName,
+    tree,
+    globalContext,
+  });
+  console.log(helpText);
+  return true;
+}
+
 function maybeHandleCompletionCommand(
   args: string[],
   tree: CommandTree,
@@ -1543,6 +1578,10 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     const tree = await buildCommandTree(commandsDir, ctx);
 
     if (maybeHandleCompletionCommand(argsWithoutGlobalContext, tree, resolvedAppName)) {
+      return;
+    }
+
+    if (maybeHandleHelpCommand(argsWithoutGlobalContext, tree, resolvedAppName, config.globalContext)) {
       return;
     }
 

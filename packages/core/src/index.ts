@@ -147,8 +147,8 @@ export type { ErrorContext } from './lib/cli-error';
 // Help generation
 // =============================================================================
 
-export { generateHelp, generateRootHelp, hasHelpFlag } from './lib/help';
-export type { HelpOptions, RootHelpOptions } from './lib/help';
+export { generateHelp, generateRootHelp, generateRecursiveHelp, hasHelpFlag } from './lib/help';
+export type { HelpOptions, RootHelpOptions, RecursiveHelpOptions } from './lib/help';
 
 // =============================================================================
 // Utils - Shell
