@@ -221,7 +221,7 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
 
     if (fs.existsSync(dir)) {
       const files: string[] = [];
-      for await (const file of runtime.glob('*.{ts,tsx}', { cwd: dir })) {
+      for await (const file of runtime.glob('*.{ts,tsx,js,jsx}', { cwd: dir })) {
         if (file.startsWith('_')) continue;
         files.push(file);
       }
@@ -235,7 +235,7 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
           const module = await import(filePath);
           if (!module.command) continue;
 
-          const commandPath = file.replace(/\.tsx?$/, '');
+          const commandPath = file.replace(/\.[jt]sx?$/, '');
           const segments = commandPath.split('.');
           const config = module.command as CommandConfig;
 
