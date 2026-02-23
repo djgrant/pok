@@ -1,6 +1,6 @@
 {
   "name": "@pokit/tabs-core",
-  "version": "0.0.52-rc.1",
+  "version": "0.0.53-rc.1",
   "description": "Core tab management utilities for pok CLI applications",
   "keywords": [
     "cli",
