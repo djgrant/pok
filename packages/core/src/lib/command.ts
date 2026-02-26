@@ -176,6 +176,31 @@ export type ContextFieldDef = {
    */
 
   choices?: string[];
+
+  /**
+   * Group name for collapsing boolean flags into a single multiselect prompt.
+   *
+   * When multiple boolean fields share the same group name, they are presented
+   * as a single multiselect prompt (checked = true, unchecked = false) instead
+   * of individual confirm prompts. Only applies to boolean schema fields.
+   *
+   * @example
+   * ```ts
+   * verbose: {
+   *   from: 'flag',
+   *   schema: z.boolean().default(false),
+   *   description: 'Enable verbose output',
+   *   group: 'Options',
+   * },
+   * dryRun: {
+   *   from: 'flag',
+   *   schema: z.boolean().default(false),
+   *   description: 'Dry run mode',
+   *   group: 'Options',
+   * },
+   * ```
+   */
+  group?: string;
 };
 
 /**

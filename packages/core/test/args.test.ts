@@ -582,6 +582,119 @@ describe('resolveInteractiveContext', () => {
     });
   });
 
+  describe('grouped boolean fields', () => {
+    const groupedContextDef = {
+      env: {
+        from: 'flag' as const,
+        schema: z.enum(['dev', 'staging', 'prod']),
+        description: 'Environment',
+      },
+      verbose: {
+        from: 'flag' as const,
+        schema: z.boolean().default(false),
+        description: 'Enable verbose output',
+        group: 'Options',
+      },
+      dryRun: {
+        from: 'flag' as const,
+        schema: z.boolean().default(false),
+        description: 'Dry run mode',
+        group: 'Options',
+      },
+      force: {
+        from: 'flag' as const,
+        schema: z.boolean().default(true),
+        description: 'Force operation',
+        group: 'Options',
+      },
+    } satisfies ContextDef;
+
+    it('collapses grouped booleans into a single multiselect', async () => {
+      const prompter = createMockPrompter({
+        select: ['dev'],
+        multiselect: [['verbose', 'force']],
+      });
+      const context = {
+        env: undefined,
+        verbose: false,
+        dryRun: false,
+        force: true,
+      } as any;
+      const choices = new Map([['env', ['dev', 'staging', 'prod']]]);
+
+      const result = await resolveInteractiveContext(
+        context,
+        groupedContextDef,
+        choices,
+        prompter,
+        true
+      );
+
+      expect(result.verbose).toBe(true);
+      expect(result.dryRun).toBe(false);
+      expect(result.force).toBe(true);
+    });
+
+    it('sets all grouped fields to false when none selected', async () => {
+      const prompter = createMockPrompter({
+        select: ['dev'],
+        multiselect: [[]],
+      });
+      const context = {
+        env: undefined,
+        verbose: false,
+        dryRun: false,
+        force: true,
+      } as any;
+      const choices = new Map([['env', ['dev', 'staging', 'prod']]]);
+
+      const result = await resolveInteractiveContext(
+        context,
+        groupedContextDef,
+        choices,
+        prompter,
+        true
+      );
+
+      expect(result.verbose).toBe(false);
+      expect(result.dryRun).toBe(false);
+      expect(result.force).toBe(false);
+    });
+
+    it('ungrouped booleans still use confirm prompt', async () => {
+      const mixedContextDef = {
+        grouped: {
+          from: 'flag' as const,
+          schema: z.boolean().default(false),
+          description: 'Grouped bool',
+          group: 'Options',
+        },
+        ungrouped: {
+          from: 'flag' as const,
+          schema: z.boolean().default(false),
+          description: 'Ungrouped bool',
+        },
+      } satisfies ContextDef;
+
+      const prompter = createMockPrompter({
+        multiselect: [['grouped']],
+        confirm: [true],
+      });
+      const context = { grouped: false, ungrouped: false } as any;
+
+      const result = await resolveInteractiveContext(
+        context,
+        mixedContextDef,
+        new Map(),
+        prompter,
+        true
+      );
+
+      expect(result.grouped).toBe(true);
+      expect(result.ungrouped).toBe(true);
+    });
+  });
+
   describe('dynamic resolve options', () => {
     const tasks = [
       { id: 'TASK-001', title: 'First task' },

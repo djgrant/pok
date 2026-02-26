@@ -759,6 +759,10 @@ export async function resolveInteractiveContext<C extends ContextDef>(
   }
 
   const orderedKeys = getResolutionOrder(contextDef);
+
+  // Track which boolean groups have been presented as multiselects
+  const resolvedGroups = new Set<string>();
+
   for (const name of orderedKeys) {
     const fieldDef = contextDef[name];
     // Skip static values
@@ -780,6 +784,48 @@ export async function resolveInteractiveContext<C extends ContextDef>(
       // Direct invocation: only prompt for required fields that are missing
       const isMissing = currentValue === undefined || currentValue === '';
       shouldPrompt = isMissing;
+    }
+
+    // Handle grouped boolean fields: collapse into a single multiselect
+    if (shouldPrompt && fieldDef.group && info.type === 'boolean') {
+      if (resolvedGroups.has(fieldDef.group)) {
+        // Already resolved as part of the group multiselect
+        continue;
+      }
+      resolvedGroups.add(fieldDef.group);
+
+      // Collect all boolean fields in this group (in resolution order)
+      const groupFields = orderedKeys.filter((k) => {
+        const fd = contextDef[k];
+        return (
+          isContextFieldDef(fd) &&
+          fd.group === fieldDef.group &&
+          getSchemaInfo(fd.schema).type === 'boolean'
+        );
+      });
+
+      const options = groupFields.map((k) => ({
+        value: k,
+        label: (contextDef[k] as ContextFieldDef).description || k,
+      }));
+
+      // Pre-select fields whose current value or default is true
+      const initialValues = groupFields.filter((k) => {
+        const cv = resolved[k as keyof typeof resolved];
+        const si = getSchemaInfo((contextDef[k] as ContextFieldDef).schema);
+        return cv !== undefined ? Boolean(cv) : Boolean(si.default);
+      });
+
+      const selected = await prompter.multiselect({
+        message: fieldDef.group,
+        options,
+        initialValues,
+      });
+
+      for (const k of groupFields) {
+        (resolved as Record<string, unknown>)[k] = selected.includes(k);
+      }
+      continue;
     }
 
     if (shouldPrompt) {
