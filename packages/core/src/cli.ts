@@ -159,6 +159,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
       tabs,
       app,
       noTty,
+      outputFormat: outputConfig.format,
       pmScripts: config.pmScripts,
       pmCommands: config.pmCommands,
       extraCommands: config.extraCommands,

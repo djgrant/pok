@@ -17,6 +17,8 @@ export type CaptureResult = {
   events: CLIEvent[];
   /** Error thrown during execution, if any */
   error?: Error;
+  /** Captured stdout output (from structured output commands) */
+  stdout: string;
 };
 
 /**
@@ -29,6 +31,8 @@ export type CaptureOptions = {
   confirmResponses?: boolean[];
   /** Pre-configured responses for text prompts */
   textResponses?: string[];
+  /** Output format override (json, table, csv) */
+  outputFormat?: 'json' | 'table' | 'csv';
 };
 
 /**
@@ -71,6 +75,13 @@ export async function captureEvents(
   });
 
   let error: Error | undefined;
+  let stdout = '';
+
+  // Capture console.log output (structured output goes to stdout via console.log)
+  const originalLog = console.log;
+  console.log = (...args: unknown[]) => {
+    stdout += args.map(String).join(' ') + '\n';
+  };
 
   try {
     await run(args, {
@@ -79,12 +90,15 @@ export async function captureEvents(
       appName: 'cli-test',
       reporterAdapter,
       prompter,
+      outputFormat: options.outputFormat,
     });
   } catch (e) {
     error = e instanceof Error ? e : new Error(String(e));
+  } finally {
+    console.log = originalLog;
   }
 
-  return { events, error };
+  return { events, error, stdout };
 }
 
 /**

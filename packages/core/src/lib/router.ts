@@ -130,6 +130,12 @@ export type RouterConfig = {
    * Callback invoked after global context is parsed and validated.
    */
   onGlobalContext?: (context: Record<string, unknown>) => void | Promise<void>;
+  /**
+   * Output format override from --format flag.
+   * When set, commands with output schemas serialize their return value
+   * in the specified format to stdout.
+   */
+  outputFormat?: 'json' | 'table' | 'csv';
 };
 
 /**
@@ -780,7 +786,38 @@ async function executeLeaf(
       app,
       prompter,
     });
-    await config.run(runner, runCtx);
+    const result = await config.run(runner, runCtx);
+
+    // Handle structured output if command defines an output schema
+    if (config.output && result !== undefined) {
+      handleCommandOutput(result, config, ctx);
+    }
+  }
+}
+
+/**
+ * Handle structured output from a command with an output schema.
+ * Routes to the appropriate formatter based on --format flag.
+ */
+function handleCommandOutput(
+  data: unknown,
+  config: CommandConfig,
+  ctx: RouterContext
+): void {
+  const format = ctx.config.outputFormat;
+
+  if (format === 'json') {
+    console.log(JSON.stringify(data, null, 2));
+  } else if (format === 'table' || format === 'csv') {
+    // TODO: Auto-derive table/csv from schema
+    console.log(JSON.stringify(data, null, 2));
+  } else if (config.format) {
+    // Human-readable format via the command's format function
+    const reporter = ctx.reporter as import('../events').CommandReporter;
+    config.format(data, reporter);
+  } else {
+    // No format function, no --format flag: fall back to JSON
+    console.log(JSON.stringify(data, null, 2));
   }
 }
 
