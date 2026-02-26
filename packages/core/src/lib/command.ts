@@ -201,6 +201,28 @@ export type ContextFieldDef = {
    * ```
    */
   group?: string;
+
+  /**
+   * Group enum choices for visual grouping in select prompts.
+   *
+   * Maps group labels to arrays of choice values. Options are displayed
+   * under their group headers (like HTML `<optgroup>`).
+   *
+   * @example
+   * ```ts
+   * environment: {
+   *   from: 'flag',
+   *   schema: z.enum(['dev-local', 'dev-cloud', 'staging', 'prod-us', 'prod-eu']),
+   *   description: 'Target environment',
+   *   choiceGroups: {
+   *     'Development': ['dev-local', 'dev-cloud'],
+   *     'Staging': ['staging'],
+   *     'Production': ['prod-us', 'prod-eu'],
+   *   },
+   * }
+   * ```
+   */
+  choiceGroups?: Record<string, string[]>;
 };
 
 /**

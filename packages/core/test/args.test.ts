@@ -695,6 +695,71 @@ describe('resolveInteractiveContext', () => {
     });
   });
 
+  describe('choiceGroups', () => {
+    it('passes group to select options when choiceGroups is defined', async () => {
+      const contextDef = {
+        env: {
+          from: 'flag' as const,
+          schema: z.enum(['dev', 'staging', 'prod-us', 'prod-eu']),
+          description: 'Target environment',
+          choiceGroups: {
+            'Development': ['dev'],
+            'Staging': ['staging'],
+            'Production': ['prod-us', 'prod-eu'],
+          },
+        },
+      } satisfies ContextDef;
+
+      let capturedOptions: any[] = [];
+      const prompter: Prompter = {
+        async select(opts: any) {
+          capturedOptions = opts.options;
+          return 'prod-us';
+        },
+        async multiselect() { return []; },
+        async confirm() { return false; },
+        async text() { return ''; },
+      };
+
+      const context = { env: undefined } as any;
+      const choices = new Map([['env', ['dev', 'staging', 'prod-us', 'prod-eu']]]);
+
+      const result = await resolveInteractiveContext(context, contextDef, choices, prompter, true);
+
+      expect(result.env).toBe('prod-us');
+      expect(capturedOptions).toEqual([
+        { value: 'dev', label: 'dev', group: 'Development' },
+        { value: 'staging', label: 'staging', group: 'Staging' },
+        { value: 'prod-us', label: 'prod-us', group: 'Production' },
+        { value: 'prod-eu', label: 'prod-eu', group: 'Production' },
+      ]);
+    });
+
+    it('omits group when choiceGroups is not defined', async () => {
+      let capturedOptions: any[] = [];
+      const prompter: Prompter = {
+        async select(opts: any) {
+          capturedOptions = opts.options;
+          return 'dev';
+        },
+        async multiselect() { return []; },
+        async confirm() { return false; },
+        async text() { return ''; },
+      };
+
+      const context = { env: undefined, verbose: false, tag: undefined } as any;
+      const choices = new Map([['env', ['dev', 'staging', 'prod']]]);
+
+      await resolveInteractiveContext(context, simpleContextDef, choices, prompter, true);
+
+      expect(capturedOptions).toEqual([
+        { value: 'dev', label: 'dev', group: undefined },
+        { value: 'staging', label: 'staging', group: undefined },
+        { value: 'prod', label: 'prod', group: undefined },
+      ]);
+    });
+  });
+
   describe('dynamic resolve options', () => {
     const tasks = [
       { id: 'TASK-001', title: 'First task' },
