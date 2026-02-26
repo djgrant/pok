@@ -37,6 +37,8 @@ export type {
   HookContext,
   HookFn,
   RunFn,
+  OutputRunFn,
+  FormatFn,
   RunAllMode,
   LoadedCommand,
   CommandNode,

@@ -21,12 +21,14 @@ export type OutputConfig = {
   verbose: boolean;
   /** Whether interactive terminal UI is allowed */
   interactive: boolean;
+  /** Output format override (json, table, csv) - only applies to commands with output schemas */
+  format?: 'json' | 'table' | 'csv';
 };
 
 /**
  * Output-related CLI flags that should be extracted from args
  */
-export const OUTPUT_FLAGS = ['--no-color', '--no-unicode', '--no-tty', '--verbose'] as const;
+export const OUTPUT_FLAGS = ['--no-color', '--no-unicode', '--no-tty', '--verbose', '--format'] as const;
 
 /**
  * Detect output configuration from command-line args and environment
@@ -83,7 +85,14 @@ export function detectOutputConfig(args: string[]): OutputConfig {
   // Check for verbose flag
   const verbose = args.includes('--verbose');
 
-  return { color, unicode, verbose, interactive };
+  // Check for --format flag
+  const formatIndex = args.indexOf('--format');
+  const formatValue = formatIndex !== -1 ? args[formatIndex + 1] : undefined;
+  const format = formatValue && ['json', 'table', 'csv'].includes(formatValue)
+    ? formatValue as 'json' | 'table' | 'csv'
+    : undefined;
+
+  return { color, unicode, verbose, interactive, format };
 }
 
 /**
@@ -99,9 +108,15 @@ export function extractOutputFlags(args: string[]): {
   const outputArgs: string[] = [];
   const remainingArgs: string[] = [];
 
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
     if (OUTPUT_FLAGS.includes(arg as (typeof OUTPUT_FLAGS)[number])) {
       outputArgs.push(arg);
+      // --format takes a value argument
+      if (arg === '--format' && i + 1 < args.length) {
+        outputArgs.push(args[i + 1]!);
+        i++; // skip the value
+      }
     } else {
       remainingArgs.push(arg);
     }

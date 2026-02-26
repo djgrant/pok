@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import type { CheckConfig } from './check';
 import type { Runner } from './runner';
-import type { Reporter } from '../events';
+import type { Reporter, CommandReporter } from '../events';
 import type { Prompter } from '../prompter';
 import type { OptionsRequest } from '../prompter';
 
@@ -277,6 +277,24 @@ export type RunFn<C extends ContextDef = any> = (
 ) => Promise<void> | void;
 
 /**
+ * Run function type for commands with output schemas.
+ * Returns typed data matching the output schema.
+ */
+export type OutputRunFn<C extends ContextDef = any, O extends z.ZodType = z.ZodType> = (
+  runner: Runner<InferContext<C>>,
+  ctx: RunContext<C>
+) => Promise<z.infer<O>> | z.infer<O>;
+
+/**
+ * Format function type for human-readable output.
+ * Receives typed data and a reporter for rendering.
+ */
+export type FormatFn<O extends z.ZodType = z.ZodType> = (
+  data: z.infer<O>,
+  reporter: CommandReporter
+) => void;
+
+/**
  * Run-all-children execution mode
  *
  * When set on a parent command, an "all" option appears in the submenu
@@ -376,6 +394,41 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
   run?: RunFn<C>;
 
   /**
+   * Output schema for typed, structured command output.
+   * 
+   * When defined, the framework:
+   * - Infers the return type of `run` from this schema
+   * - Auto-injects a `--format` flag (json, table, csv)
+   * - Routes structured data to stdout (parsable) separate from reporter logs (stderr)
+   * 
+   * @example
+   * ```ts
+   * output: z.object({
+   *   tasks: z.array(z.object({ id: z.string(), title: z.string() })),
+   * }),
+   * ```
+   */
+  output?: z.ZodType;
+
+  /**
+   * Human-readable format function for structured output.
+   * 
+   * Called when no `--format` flag is specified (default human display).
+   * Receives the typed data returned by `run` and a reporter for rendering.
+   * If omitted, falls back to JSON output.
+   * 
+   * @example
+   * ```ts
+   * format(data, r) {
+   *   for (const t of data.tasks) {
+   *     r.info(`${t.id}  ${t.title}`);
+   *   }
+   * },
+   * ```
+   */
+  format?: (data: any, reporter: CommandReporter) => void;
+
+  /**
    * Enable "run all children" option in the submenu.
    *
    * When set to 'sequential', all leaf children run one after another.
@@ -420,35 +473,45 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
 };
 
 /**
+ * Define a command with output schema - run must return typed data
+ */
+export function defineCommand<C extends ContextDef, O extends z.ZodType>(
+  config: Omit<CommandConfig<C>, 'run' | 'format'> & {
+    output: O;
+    format?: FormatFn<O>;
+    run?: OutputRunFn<C, O>;
+  }
+): CommandConfig<C>;
+
+/**
+ * Define a command without output schema - run returns void
+ */
+export function defineCommand<C extends ContextDef>(
+  config: CommandConfig<C>
+): CommandConfig<C>;
+
+/**
  * Define a command with type inference
  *
  * @example
  * ```ts
- * // Command with context - runner is typed with that context
+ * // Command with output schema - typed return value
  * export const command = defineCommand({
- *   label: 'Run migrations',
- *   context: {
- *     env: {
- *       from: 'flag',
- *       schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
- *       description: 'Target environment',
- *     },
+ *   label: 'List tasks',
+ *   output: z.object({ tasks: z.array(taskSchema) }),
+ *   format(data, r) {
+ *     for (const t of data.tasks) r.info(`${t.id}  ${t.title}`);
  *   },
  *   run: async (r, ctx) => {
- *     // ctx.env is typed as 'dev' | 'staging' | 'prod'
- *     // ctx.args is string[]
- *     // Tasks requiring { env: string } context can be run
- *     await r.run(runMigration, { command: 'apply' });
+ *     return { tasks };  // Must match output schema
  *   },
  * });
  *
- * // Command without context - runner has empty context
+ * // Command without output - returns void
  * export const command = defineCommand({
- *   label: 'Format code',
- *   run: async (r, ctx) => {
- *     // Only tasks with no context requirements can be run
- *     // ctx.args is still available
- *     await r.exec('prettier --write .');
+ *   label: 'Deploy',
+ *   run: async (r) => {
+ *     await r.exec('deploy.sh');
  *   },
  * });
  * ```
