@@ -20,6 +20,8 @@ export type SelectOption<T> = {
   label: string;
   /** Optional hint text displayed alongside the label */
   hint?: string;
+  /** Optional group name for visual grouping (like HTML <optgroup>) */
+  group?: string;
 };
 
 // =============================================================================
@@ -222,6 +224,8 @@ export type MultiselectOption<T> = {
   label: string;
   /** Optional hint text displayed alongside the label */
   hint?: string;
+  /** Optional group name for visual grouping */
+  group?: string;
 };
 
 /**

@@ -908,9 +908,20 @@ export async function resolveInteractiveContext<C extends ContextDef>(
             : info.default !== undefined
               ? String(info.default)
               : undefined;
+
+        // Build options with optional group assignment from choiceGroups
+        const choiceGroupMap = fieldDef.choiceGroups
+          ? buildChoiceGroupMap(fieldDef.choiceGroups)
+          : undefined;
+        const selectOptions = fieldChoices.map((c) => ({
+          value: c,
+          label: c,
+          group: choiceGroupMap?.get(c),
+        }));
+
         const selected = await prompter.select({
           message: fieldDef.description || `Select ${name}:`,
-          options: fieldChoices.map((c) => ({ value: c, label: c })),
+          options: selectOptions,
           initialValue,
         });
         (resolved as Record<string, unknown>)[name] = selected;
@@ -984,6 +995,19 @@ export function validateRequiredContext<C extends ContextDef>(
       }
     }
   }
+}
+
+/**
+ * Build a reverse lookup map from choiceGroups: value → group name
+ */
+function buildChoiceGroupMap(choiceGroups: Record<string, string[]>): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [group, values] of Object.entries(choiceGroups)) {
+    for (const value of values) {
+      map.set(value, group);
+    }
+  }
+  return map;
 }
 
 /**

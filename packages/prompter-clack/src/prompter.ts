@@ -418,6 +418,61 @@ async function handleDynamicSelectWithTypeahead<T>(
 }
 
 // =============================================================================
+// Grouped Options Helpers
+// =============================================================================
+
+/**
+ * Check if any options in the array have a group property set
+ */
+function hasGroups(options: readonly { group?: string }[]): boolean {
+  return options.some((opt) => opt.group);
+}
+
+/**
+ * Organize flat options into a group → options record for clack's groupMultiselect.
+ * Options without a group are placed under an empty-string key.
+ */
+function toGroupedRecord<T>(
+  options: { value: T; label: string; hint?: string; group?: string }[]
+): Record<string, { value: T; label: string; hint?: string }[]> {
+  const groups: Record<string, { value: T; label: string; hint?: string }[]> = {};
+  for (const opt of options) {
+    const key = opt.group ?? '';
+    if (!groups[key]) groups[key] = [];
+    groups[key]!.push({ value: opt.value, label: opt.label, hint: opt.hint });
+  }
+  return groups;
+}
+
+/**
+ * Sort options by group order (preserving insertion order of first occurrence)
+ * and add group name as hint prefix for visual separation in flat select.
+ */
+function flattenGroupedForSelect<T>(
+  options: { value: T; label: string; hint?: string; group?: string }[]
+): { value: T; label: string; hint?: string }[] {
+  // Collect groups in order of first occurrence
+  const groupOrder: string[] = [];
+  for (const opt of options) {
+    const key = opt.group ?? '';
+    if (!groupOrder.includes(key)) groupOrder.push(key);
+  }
+
+  const result: { value: T; label: string; hint?: string }[] = [];
+  for (const group of groupOrder) {
+    const groupOpts = options.filter((opt) => (opt.group ?? '') === group);
+    for (const opt of groupOpts) {
+      result.push({
+        value: opt.value,
+        label: group ? `${group} › ${opt.label}` : opt.label,
+        hint: opt.hint,
+      });
+    }
+  }
+  return result;
+}
+
+// =============================================================================
 // Main Prompter Factory
 // =============================================================================
 
@@ -440,10 +495,15 @@ export function createPrompter(): Prompter {
         return handleDynamicSelect(options);
       }
 
-      // Static options - existing behavior
+      // Static options - handle grouped or flat
+      const opts = options.options;
+      const clackOptions = opts.some((o) => o.group)
+        ? flattenGroupedForSelect(opts)
+        : opts.map((opt) => ({ value: opt.value, label: opt.label, hint: opt.hint }));
+
       const result = await p.select({
         message: options.message,
-        options: options.options as Parameters<typeof p.select<T>>[0]['options'],
+        options: clackOptions as Parameters<typeof p.select<T>>[0]['options'],
         initialValue: options.initialValue,
       });
 
@@ -455,6 +515,23 @@ export function createPrompter(): Prompter {
     },
 
     async multiselect<T>(options: MultiselectOptions<T>): Promise<T[]> {
+      // Use groupMultiselect when options have groups
+      const msOpts = options.options;
+      if (msOpts.some((o) => o.group)) {
+        const grouped = toGroupedRecord(msOpts);
+        const result = await p.groupMultiselect({
+          message: options.message,
+          options: grouped as any,
+          required: options.required,
+        });
+
+        if (p.isCancel(result)) {
+          throw new CancelError('Cancelled');
+        }
+
+        return result as T[];
+      }
+
       const result = await p.multiselect({
         message: options.message,
         options: options.options as Parameters<typeof p.multiselect<T>>[0]['options'],
