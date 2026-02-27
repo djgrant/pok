@@ -19,6 +19,7 @@
 - [Events](https://github.com/djgrant/pok/blob/main/docs/concepts/events.md): Event system for inter-component communication
 - [Command History](https://github.com/djgrant/pok/blob/main/docs/concepts/history.md): Rerunning recent commands with `poks`
 - [Dry Run](https://github.com/djgrant/pok/blob/main/docs/concepts/dry-run.md): Understanding and implementing dry-run modes
+- [Structured Output](https://github.com/djgrant/pok/blob/main/docs/concepts/output.md): Typed command output with automatic format routing
 
 ## API Reference
 

@@ -102,6 +102,31 @@ Strips ANSI color codes from all output. This is automatically enabled when:
 - `NO_COLOR` environment variable is set
 - Output is not a TTY (e.g., piped to a file)
 
+## Format
+
+Specify the output format for commands with structured output.
+
+```bash
+mycli list --format json
+mycli list --format table
+mycli list --format csv
+```
+
+When a command defines an `output` schema, the `--format` flag controls how the data is rendered:
+
+- **No flag**: Calls the command's `format()` function for human-readable display
+- **`--format json`**: Outputs `JSON.stringify(data)` to stdout
+- **`--format table`**: Table format (falls back to JSON currently)
+- **`--format csv`**: CSV format (falls back to JSON currently)
+
+This enables piping structured data to other tools:
+
+```bash
+mycli list --format json | jq '.tasks[] | .id'
+```
+
+Only applies to commands that define an `output` schema. Commands without output are unaffected.
+
 ## Flag Combinations
 
 Flags can be combined:
@@ -112,6 +137,9 @@ mycli deploy --no-tty --no-unicode --no-color
 
 # Debugging: full output with colors
 mycli deploy --verbose
+
+# Machine-readable: structured JSON output
+mycli list --format json --no-tty
 ```
 
 ## Environment Variables
