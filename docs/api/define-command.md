@@ -27,6 +27,8 @@ function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandC
 | `mount`                | `MountableLike`                          | Mount a dynamic subcommand tree                         |
 | `enableRunAllChildren` | `'sequential' \| 'parallel'`             | Enable "run all" for parent commands                    |
 | `quietRunAll`          | `boolean`                                | Capture output when running all children. Default: true |
+| `output`               | `z.ZodType`                              | Output schema for typed, structured command output      |
+| `format`               | `FormatFn<O>`                            | Human-readable format function for output data          |
 
 ## Context Definition
 
@@ -135,6 +137,41 @@ export const command = defineCommand({
   },
 });
 ```
+
+### Structured Output
+
+Define an `output` schema to make `run()` return typed data:
+
+```typescript
+import { z } from 'zod';
+import { defineCommand } from '@pokit/core';
+
+export const command = defineCommand({
+  label: 'List users',
+  output: z.object({
+    users: z.array(z.object({ id: z.string(), name: z.string() })),
+    total: z.number(),
+  }),
+  format(data, r) {
+    r.info(`${data.total} users`);
+    for (const u of data.users) {
+      r.info(`  ${u.id}  ${u.name}`);
+    }
+  },
+  run: async () => {
+    const users = await loadUsers();
+    return { users, total: users.length };
+  },
+});
+```
+
+When `output` is defined:
+- `run()` must return data matching the schema (TypeScript-enforced)
+- The framework auto-injects `--format` flag support (json, table, csv)
+- `format()` is called for human display (no `--format` flag)
+- Data goes to stdout, diagnostics to stderr via reporter
+
+See [Structured Output](../concepts/output.md) for details.
 
 ## Examples
 
@@ -321,3 +358,4 @@ Fields with `resolve` prompt from resolver-provided options when a value is need
 - [defineTask](./define-task.md) - Define reusable tasks
 - [defineCheck](./define-check.md) - Define pre-flight checks
 - [Runner](./runner.md) - Execution API
+- [Structured Output](../concepts/output.md) - Typed command output
