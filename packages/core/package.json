@@ -1,6 +1,6 @@
 {
   "name": "@pokit/core",
-  "version": "0.0.58-rc.1",
+  "version": "0.0.59-rc.1",
   "description": "Core framework for building CLI applications with pok",
   "keywords": [
     "cli",
