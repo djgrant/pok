@@ -1,0 +1,44 @@
+{
+  "name": "@pokit/sdk-gen",
+  "version": "0.0.39",
+  "description": "Generate a typed in-process SDK from a pok command tree",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notation-dev/openpok.git",
+    "directory": "packages/sdk-gen"
+  },
+  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "bugs": {
+    "url": "https://github.com/notation-dev/openpok/issues"
+  },
+  "bin": {
+    "pok-sdk": "./bin/pok-sdk.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "test"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@pokit/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "keywords": [
+    "pok",
+    "pokit",
+    "sdk",
+    "codegen",
+    "cli"
+  ]
+}
+

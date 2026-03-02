@@ -92,6 +92,14 @@ import { createRawPrompter, createRawReporterAdapter } from '@pokit/core';
 
 Test-friendly implementations with no TTY dependencies.
 
+### SDK Runtime (In-Process)
+
+```typescript
+import { createSdkRuntime } from '@pokit/core';
+```
+
+Invoke commands in-process (no subprocess). Useful for generated clients and programmatic usage.
+
 ## Types
 
 All types are exported:
@@ -179,3 +187,4 @@ await run(process.argv.slice(2), {
 - [Runner](../api/runner.md)
 - [Router](../api/router.md)
 - [Events](../api/events.md)
+- [SDK Runtime](../api/sdk-runtime.md)
