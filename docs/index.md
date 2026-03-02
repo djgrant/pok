@@ -81,4 +81,6 @@ $ mycli deploy
 - [Tasks](./concepts/tasks.md) - Reusable tasks
 - [Command History](./concepts/history.md) - Rerunning recent commands
 - [Structured Output](./concepts/output.md) - Typed command output with automatic format routing
+- [SDK Runtime (In-Process)](./api/sdk-runtime.md) - Invoke commands programmatically without spawning a subprocess
+- [SDK Generator](./packages/sdk-gen.md) - Generate a typed TypeScript client from your command tree
 - [API Reference](./api/define-command.md) - Full API documentation

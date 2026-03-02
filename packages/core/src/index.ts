@@ -29,10 +29,13 @@ export type { WithDryRun, DryRunReporter } from './lib/dry-run';
 
 export type {
   CommandConfig,
+  CommandConfigWithOutput,
   ContextDef,
   ContextFieldDef,
   ContextSource,
   InferContext,
+  InferContextInput,
+  InferContextOutput,
   RunContext,
   HookContext,
   HookFn,
@@ -47,6 +50,7 @@ export type {
   MountResult,
   Mountable,
   MountableLike,
+  OptionalizeUndefined,
 } from './lib/command';
 
 // =============================================================================
@@ -131,6 +135,23 @@ export type {
 
 export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
+
+// =============================================================================
+// SDK (in-process invocation)
+// =============================================================================
+
+export {
+  createSdkRuntime,
+} from './sdk/invoke';
+export type {
+  SdkRuntime,
+  SdkRuntimeOptions,
+  InvokeInput,
+  CommandContextDef,
+  CommandContextInput,
+  CommandContextOutput,
+  CommandReturn,
+} from './sdk/invoke';
 
 // =============================================================================
 // Cancellation

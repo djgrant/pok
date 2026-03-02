@@ -104,7 +104,12 @@ export function tagNodes(node: import('./command').CommandNode, sourceId: string
 /**
  * Helper to insert into tree
  */
-function insertIntoTree(tree: CommandTree, segments: string[], config: CommandConfig): void {
+function insertIntoTree(
+  tree: CommandTree,
+  segments: string[],
+  config: CommandConfig,
+  file?: string
+): void {
   let currentLevel = tree;
   let currentPath: string[] = [];
 
@@ -125,6 +130,10 @@ function insertIntoTree(tree: CommandTree, segments: string[], config: CommandCo
       currentLevel.set(segment, node);
     } else if (isLast) {
       node.config = config;
+    }
+
+    if (isLast && file) {
+      node.file = file;
     }
 
     currentLevel = node.children;
@@ -239,7 +248,7 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
           const segments = commandPath.split('.');
           const config = module.command as CommandConfig;
 
-          insertIntoTree(tree, segments, config);
+          insertIntoTree(tree, segments, config, filePath);
         } catch (e) {
           context.reporter.warn(
             `Failed to load command "${file}": ${e instanceof Error ? e.message : String(e)}`

@@ -216,6 +216,16 @@ importers:
         specifier: ^18.2.0
         version: 18.3.27
 
+  packages/sdk-gen:
+    dependencies:
+      '@pokit/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/bun':
+        specifier: latest
+        version: 1.3.9
+
   packages/tabs-core:
     devDependencies:
       '@pokit/core':

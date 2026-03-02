@@ -253,6 +253,29 @@ export type InferContext<C extends ContextDef> = {
 };
 
 /**
+ * Infer the accepted input context type from a context definition.
+ *
+ * This uses z.input<schema> so transforms/preprocesses accept their input shapes.
+ */
+export type InferContextInput<C extends ContextDef> = {
+  [K in keyof C]: C[K] extends ContextFieldDef ? z.input<C[K]['schema']> : C[K];
+};
+
+/** Alias for the resolved (output) context type. */
+export type InferContextOutput<C extends ContextDef> = InferContext<C>;
+
+/**
+ * Turn properties that allow undefined into optional properties.
+ *
+ * Useful for SDK-facing "context input" objects where defaults may apply.
+ */
+export type OptionalizeUndefined<T extends Record<string, unknown>> = {
+  [K in keyof T as undefined extends T[K] ? never : K]: T[K];
+} & {
+  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<T[K], undefined>;
+};
+
+/**
  * Context passed to hooks
  */
 export type HookContext<C extends ContextDef = any> = InferContext<C> & {
@@ -495,6 +518,20 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
 };
 
 /**
+ * Command configuration for commands with an output schema, preserving the schema type.
+ *
+ * This is primarily used for SDK typing (e.g. CommandReturn<typeof command>).
+ */
+export type CommandConfigWithOutput<C extends ContextDef, O extends z.ZodType> = Omit<
+  CommandConfig<C>,
+  'output' | 'run' | 'format'
+> & {
+  output: O;
+  format?: FormatFn<O>;
+  run?: OutputRunFn<C, O>;
+};
+
+/**
  * Define a command with output schema - run must return typed data
  */
 export function defineCommand<C extends ContextDef, O extends z.ZodType>(
@@ -503,7 +540,7 @@ export function defineCommand<C extends ContextDef, O extends z.ZodType>(
     format?: FormatFn<O>;
     run?: OutputRunFn<C, O>;
   }
-): CommandConfig<C>;
+): CommandConfigWithOutput<C, O>;
 
 /**
  * Define a command without output schema - run returns void
@@ -573,6 +610,8 @@ export type CommandNode = {
   children: Map<string, CommandNode>;
   /** Provenance: where this node came from (plugin ID, directory, etc.) */
   source?: string;
+  /** Absolute path to the source module, when known (used for SDK codegen). */
+  file?: string;
   /** Optional project root override for this subtree */
   projectRoot?: string;
 };
