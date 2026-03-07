@@ -2,7 +2,7 @@
 
 The SDK runtime lets you invoke a pok `CommandConfig` **in-process** (no subprocess) using an object-based context.
 
-It is designed for generated clients (see `pok-sdk generate`), but you can also use it directly.
+It is designed for generated clients (see `generateSdk()` from `@pokit/sdk-gen` or `pok-sdk generate`), but you can also use it directly.
 
 ## Import
 
@@ -66,4 +66,3 @@ If you create a runtime, close it when you’re done (stops the reporter adapter
 ```ts
 runtime.close();
 ```
-

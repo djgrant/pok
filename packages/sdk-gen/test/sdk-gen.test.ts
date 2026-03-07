@@ -3,24 +3,21 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { main } from '../src/main';
+import { generateSdk } from '../src';
 
 describe('@pokit/sdk-gen', () => {
   it('generates a TS client file with typed methods for file-based commands', async () => {
     const fixtureDir = path.resolve(import.meta.dir, 'fixtures/basic');
     const outFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pok-sdk-gen-')), 'sdk.ts');
 
-    await main([
-      'generate',
-      '--config',
-      fixtureDir,
-      '--out',
-      outFile,
-      '--include-pm',
-      'false',
-    ]);
+    const result = await generateSdk({
+      config: fixtureDir,
+      out: outFile,
+      includePm: false,
+    });
 
     const text = fs.readFileSync(outFile, 'utf8');
+    expect(result.outPath).toBe(outFile);
     expect(text).toContain('export function createClient');
     expect(text).toContain('export type Client');
     expect(text).toContain('import { command as cmd_0 }');
@@ -28,4 +25,3 @@ describe('@pokit/sdk-gen', () => {
     expect(text).toContain('CommandReturn<typeof cmd_0>');
   });
 });
-
