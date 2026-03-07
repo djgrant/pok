@@ -10,24 +10,46 @@ The generated SDK mirrors your CLI command tree as nested methods (for example `
 pnpm add -D @pokit/sdk-gen
 ```
 
-## Generate
+## Generate Programmatically
 
-```bash
-pok-sdk generate
+```ts
+import { generateSdk } from '@pokit/sdk-gen';
+
+const result = await generateSdk({
+  config: './pok.config.ts',
+  out: './pok.sdk.gen.ts',
+  includePm: false,
+});
+
+console.log(result.outPath);
 ```
 
-By default, this:
+By default, this API:
 
 - discovers `pok.config.ts` by walking up from `process.cwd()`
 - writes `./pok.sdk.gen.ts` relative to the config directory
 - **does not include** package-manager commands (`pmScripts` / `pmCommands`)
 
-### Flags
+### Options
 
-- `--config <path>`: a `pok.config.ts` file path or a directory containing one
-- `--out <path>`: output TS file (default `./pok.sdk.gen.ts` relative to config dir)
-- `--import-extension <preserve|ts|js>`: control generated import specifiers (default `preserve`)
-- `--include-pm <true|false>`: include pm-generated commands (default `false`)
+- `config`: a `pok.config.ts` file path or a directory containing one
+- `out`: output TS file (default `./pok.sdk.gen.ts` relative to config dir)
+- `importExtension`: control generated import specifiers (`preserve` | `ts` | `js`, default `preserve`)
+- `includePm`: include pm-generated commands (default `false`)
+- `cwd`: working directory used for config discovery and relative paths (default `process.cwd()`)
+
+## CLI
+
+```bash
+pok-sdk generate
+```
+
+CLI flags map directly to the same programmatic options:
+
+- `--config <path>`
+- `--out <path>`
+- `--import-extension <preserve|ts|js>`
+- `--include-pm <true|false>`
 
 ## Use The Generated SDK
 
@@ -51,4 +73,3 @@ client.close();
 
 - [SDK Runtime](../api/sdk-runtime.md)
 - [@pokit/core](./core.md)
-

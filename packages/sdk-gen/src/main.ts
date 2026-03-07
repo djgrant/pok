@@ -6,62 +6,15 @@ import { validateConfig, findConfigFile } from '@pokit/core';
 import { buildCommandTree } from '@pokit/core';
 import type { CommandNode, CommandTree } from '@pokit/core';
 
-type ImportExtensionMode = 'preserve' | 'ts' | 'js';
+export type ImportExtensionMode = 'preserve' | 'ts' | 'js';
 
-type GenerateOptions = {
+export type GenerateSdkOptions = {
   config?: string;
   out?: string;
   importExtension?: ImportExtensionMode;
   includePm?: boolean;
+  cwd?: string;
 };
-
-function usage(): string {
-  return `pok-sdk generate [--config <path>] [--out <path>] [--import-extension <preserve|ts|js>] [--include-pm <true|false>]`;
-}
-
-function parseBool(v: string | undefined, defaultValue: boolean): boolean {
-  if (v === undefined) return defaultValue;
-  if (v === 'true' || v === '1' || v === 'yes') return true;
-  if (v === 'false' || v === '0' || v === 'no') return false;
-  throw new Error(`Invalid boolean: ${v}`);
-}
-
-function parseArgs(argv: string[]): { cmd: string | null; opts: GenerateOptions } {
-  const cmd = argv[0] ?? null;
-  const opts: GenerateOptions = {};
-
-  for (let i = 1; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === '--config') {
-      opts.config = argv[++i];
-      continue;
-    }
-    if (a === '--out') {
-      opts.out = argv[++i];
-      continue;
-    }
-    if (a === '--import-extension') {
-      const v = argv[++i] as ImportExtensionMode | undefined;
-      if (v !== 'preserve' && v !== 'ts' && v !== 'js') {
-        throw new Error(`Invalid --import-extension: ${String(v)}`);
-      }
-      opts.importExtension = v;
-      continue;
-    }
-    if (a === '--include-pm') {
-      opts.includePm = parseBool(argv[++i], true);
-      continue;
-    }
-    if (a === '--help' || a === '-h') {
-      console.log(usage());
-      process.exit(0);
-    }
-
-    throw new Error(`Unknown arg: ${a}`);
-  }
-
-  return { cmd, opts };
-}
 
 function findConfigInDir(dir: string): { configPath: string; configDir: string } | null {
   const configPath = path.join(dir, 'pok.config.ts');
@@ -71,16 +24,19 @@ function findConfigInDir(dir: string): { configPath: string; configDir: string }
   return null;
 }
 
-function resolveConfigTarget(target: string | undefined): { configPath: string; configDir: string } {
+function resolveConfigTarget(
+  target: string | undefined,
+  cwd: string
+): { configPath: string; configDir: string } {
   if (!target) {
-    const found = findConfigFile(process.cwd());
+    const found = findConfigFile(cwd);
     if (!found) {
       throw new Error('No pok.config.ts found (use --config)');
     }
     return found;
   }
 
-  const abs = path.resolve(target);
+  const abs = path.resolve(cwd, target);
   if (!fs.existsSync(abs)) {
     throw new Error(`Config target not found: ${abs}`);
   }
@@ -292,14 +248,17 @@ function buildClientObjectSource(
   return lines.join('\n');
 }
 
-export async function main(argv: string[]): Promise<void> {
-  const { cmd, opts } = parseArgs(argv);
-  if (cmd !== 'generate') {
-    console.error(usage());
-    process.exit(1);
-  }
+export type GenerateSdkResult = {
+  outPath: string;
+  configPath: string;
+  commandCount: number;
+  typedCommandCount: number;
+  untypedCommandCount: number;
+};
 
-  const { configPath, configDir } = resolveConfigTarget(opts.config);
+export async function generateSdk(opts: GenerateSdkOptions = {}): Promise<GenerateSdkResult> {
+  const cwd = path.resolve(opts.cwd ?? process.cwd());
+  const { configPath, configDir } = resolveConfigTarget(opts.config, cwd);
   const rawConfigMod = await import(configPath);
   const resolved = validateConfig(rawConfigMod.default, configPath);
 
@@ -489,5 +448,11 @@ export async function main(argv: string[]): Promise<void> {
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, body.join('\n'), 'utf8');
 
-  console.log(`Generated SDK: ${outPath}`);
+  return {
+    outPath,
+    configPath,
+    commandCount: resolvedLeaves.length,
+    typedCommandCount: resolvedLeaves.filter((leaf) => !leaf.untyped).length,
+    untypedCommandCount: resolvedLeaves.filter((leaf) => leaf.untyped).length,
+  };
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { main } from '../src/main';
+import { runCli } from '../src/cli';
 
-await main(process.argv.slice(2));
-
+const exitCode = await runCli(process.argv.slice(2));
+if (exitCode !== 0) process.exit(exitCode);
