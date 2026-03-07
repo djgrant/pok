@@ -17,3 +17,4 @@ dist/
 
 # Screenshots for development tooling
 .screenshots/
+.looped/
