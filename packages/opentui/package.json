@@ -1,6 +1,6 @@
 {
   "name": "@pokit/opentui",
-  "version": "0.0.68-rc.3",
+  "version": "0.0.68-rc.4",
   "description": "OpenTUI adapters for tabs and fullscreen apps in pok CLI applications",
   "keywords": [
     "cli",
