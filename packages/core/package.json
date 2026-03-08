@@ -1,6 +1,6 @@
 {
   "name": "@pokit/core",
-  "version": "0.0.68-rc.2",
+  "version": "0.0.68-rc.3",
   "description": "Core framework for building CLI applications with pok",
   "keywords": [
     "cli",
@@ -40,6 +40,11 @@
     "LICENSE",
     "src"
   ],
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node scripts/fix-dist-imports.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
   "publishConfig": {
     "access": "public"
   },
