@@ -68,8 +68,3 @@ client.close();
 
 - The generator emits typed methods for commands that come from real command modules (file-based commands and mounted sub-app commands).
 - If you enable `--include-pm true`, pm-generated commands are callable but untyped.
-
-## Related
-
-- [Full documentation](https://github.com/djgrant/pok/blob/main/docs/packages/sdk-gen.md)
-- [@pokit/core](https://github.com/djgrant/pok/blob/main/docs/packages/core.md)

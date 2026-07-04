@@ -54,4 +54,3 @@ $ mycli deploy
 
 ## Documentation
 
-See the [full documentation](https://github.com/openpok/pok/blob/main/docs/packages/prompter-clack.md).

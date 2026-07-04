@@ -42,4 +42,3 @@ import { STATUS_INDICATORS, getStatusIndicator } from '@pokit/tabs-core';
 
 ## Documentation
 
-See the [full documentation](https://github.com/openpok/pok/blob/main/docs/packages/tabs-core.md).

@@ -33,7 +33,3 @@ This approach ensures you always use the project's version of core, avoiding ver
 
 - Bun >= 1.0.0
 - `@pokit/core` installed in your project
-
-## Documentation
-
-See the [full documentation](https://github.com/openpok/pok).
