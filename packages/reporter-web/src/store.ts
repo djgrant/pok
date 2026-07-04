@@ -185,7 +185,7 @@ export function createReporterStore(
           childGroupIds: [],
           hasFailure: false,
           startedAt: Date.now(),
-          justStarted_group: true,
+          justStartedGroup: true,
         };
 
         const newGroups = new Map(state.groups);
@@ -207,7 +207,7 @@ export function createReporterStore(
           groups: newGroups,
         };
         notifyListeners();
-        scheduleGroupMarkerClear(event.id, ['justStarted_group']);
+        scheduleGroupMarkerClear(event.id, ['justStartedGroup']);
         break;
       }
 
@@ -394,7 +394,7 @@ export function createReporterStore(
 
   return {
     getState(): ReporterState {
-      return state;
+      return this.getSnapshot();
     },
 
     getSnapshot(): ReporterState {

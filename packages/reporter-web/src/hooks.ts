@@ -116,7 +116,7 @@ export function useGroup(store: ReporterStore, id: GroupId): GroupState | undefi
       prevGroupRef.current.id === group.id &&
       prevGroupRef.current.label === group.label &&
       prevGroupRef.current.hasFailure === group.hasFailure &&
-      prevGroupRef.current.justStarted_group === group.justStarted_group &&
+      prevGroupRef.current.justStartedGroup === group.justStartedGroup &&
       prevGroupRef.current.justEnded === group.justEnded &&
       prevGroupRef.current.endedAt === group.endedAt &&
       prevGroupRef.current.activityIds.length === group.activityIds.length &&

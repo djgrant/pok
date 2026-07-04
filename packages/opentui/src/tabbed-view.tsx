@@ -298,7 +298,7 @@ export function TabbedView({
           width="100%"
           height="100%"
         >
-          <HelpOverlay onClose={onCloseHelp} />
+          <HelpOverlay />
         </box>
       )}
     </box>

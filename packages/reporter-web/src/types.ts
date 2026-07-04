@@ -29,7 +29,7 @@ export type TemporalMarkers = {
   /** Activity just failed (for error animations) */
   justFailed?: boolean;
   /** Group just started */
-  justStarted_group?: boolean;
+  justStartedGroup?: boolean;
   /** Group just ended */
   justEnded?: boolean;
 };

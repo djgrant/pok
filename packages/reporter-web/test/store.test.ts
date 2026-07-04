@@ -76,7 +76,7 @@ describe('createReporterStore', () => {
       expect(group!.childGroupIds).toEqual([]);
       expect(group!.hasFailure).toBe(false);
       expect(group!.startedAt).toBeDefined();
-      expect(group!.justStarted_group).toBe(true);
+      expect(group!.justStartedGroup).toBe(true);
     });
 
     it('adds nested group to parent childGroupIds', () => {
@@ -413,14 +413,14 @@ describe('temporal marker clearing', () => {
       layout: 'sequence',
     });
 
-    // Initially has justStarted_group
-    expect(store.getState().groups.get('g1')!.justStarted_group).toBe(true);
+    // Initially has justStartedGroup
+    expect(store.getState().groups.get('g1')!.justStartedGroup).toBe(true);
 
     // Wait for marker to clear
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Marker should be cleared
-    expect(store.getState().groups.get('g1')!.justStarted_group).toBeUndefined();
+    expect(store.getState().groups.get('g1')!.justStartedGroup).toBeUndefined();
   });
 
   it('clears justCompleted marker', async () => {

@@ -115,11 +115,7 @@ export async function getField(vault: string, item: string, field: string): Prom
   validateIdentifier(vault, 'vault');
   validateIdentifier(item, 'item');
   validateIdentifier(field, 'field');
-  const result = await $`op read op://${vault}/${item}/${field}`.nothrow().quiet();
-  if (result.exitCode !== 0) {
-    return null;
-  }
-  return result.text().trim();
+  return resolveSecret(`op://${vault}/${item}/${field}`);
 }
 
 /**

@@ -41,6 +41,7 @@ import type {
   OutputConfig,
 } from '@pokit/core';
 import { detectOutputConfig, CommandError } from '@pokit/core';
+import { getSymbols, type SymbolSet } from './symbols';
 
 /**
  * Extract error message and optional output from an error.
@@ -55,7 +56,6 @@ function formatErrorMessage(error: Error | string): string {
   }
   return error.message;
 }
-import { getSymbols, type SymbolSet } from './symbols';
 
 /**
  * Helper to conditionally apply color.

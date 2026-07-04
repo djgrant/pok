@@ -51,7 +51,7 @@ export {
 
 export type { TabSpec, ProcessManagerCallbacks, ProcessManagerOptions } from './process-manager.js';
 
-export { ProcessManager, OUTPUT_BATCH_MS } from './process-manager.js';
+export { ProcessManager, OUTPUT_BATCH_MS, killProcessTree } from './process-manager.js';
 
 // =============================================================================
 // Constants
