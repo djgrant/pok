@@ -1,6 +1,6 @@
 # pok
 
-[![Experimental](https://img.shields.io/badge/status-experimental-orange.svg)](https://github.com/anomalyco/ai)
+[![Experimental](https://img.shields.io/badge/status-experimental-orange.svg)](https://github.com/djgrant/pok)
 [![npm version](https://img.shields.io/npm/v/@pokit/core.svg)](https://www.npmjs.com/package/@pokit/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -53,7 +53,7 @@ $ mycli deploy
 Structured output with spinners, progress indicators, and grouped activities—powered by adapters so you choose your UI:
 
 ```typescript
-await r.group('Database Setup', async (g) => {
+await r.group('Database Setup', { layout: 'sequence' }, async (g) => {
   await g.activity('Running migrations', async () => {
     await r.exec('prisma migrate deploy');
   });
@@ -103,6 +103,8 @@ bun add @pokit/core zod
 | `@pokit/op`             | Operation utilities for common CLI patterns                  |
 | `@pokit/prompter-clack` | Interactive prompts adapter (Clack)                          |
 | `@pokit/reporter-clack` | Terminal output adapter (Clack)                              |
+| `@pokit/reporter-web`   | Web/React event reporter for pok CLI applications             |
+| `@pokit/sdk-gen`        | Generate a typed in-process SDK from a pok command tree       |
 | `@pokit/tabs-core`      | Shared tabs state management                                 |
 | `@pokit/opentui`        | Tabbed + app terminal UI (OpenTUI/React)                     |
 
