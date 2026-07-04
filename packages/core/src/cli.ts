@@ -95,7 +95,6 @@ export type RunCliConfig = {
 };
 
 /**
-
  * Extract detailed error information from process execution errors
  */
 function getErrorDetails(error: unknown): string {

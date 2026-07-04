@@ -12,6 +12,7 @@ import { withCapabilities } from '../prompter';
 import type { OptionsRequest, Prompter, SelectOption } from '../prompter';
 import { findClosestMatch } from './string-distance';
 import { CLIError, type ErrorContext } from './cli-error';
+import { camelToKebab, kebabToCamel } from './string-case';
 
 type ResolvePrimitive = string | number | boolean;
 
@@ -24,17 +25,6 @@ export type ParseContextOptions = {
   /** When true, unknown flags are ignored and added to 'rest' instead of throwing */
   ignoreUnknownFlags?: boolean;
 };
-
-/**
- * Convert kebab-case to camelCase
- *
- * @example
- * kebabToCamel('dry-run') // 'dryRun'
- * kebabToCamel('no-git-checks') // 'noGitChecks'
- */
-function kebabToCamel(str: string): string {
-  return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-}
 
 /**
  * Parsed arguments result
@@ -271,13 +261,6 @@ function extractLiteralsFromUnion(options: z.ZodType[]): string[] | undefined {
  */
 export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefined {
   return extractEnumChoices(schema);
-}
-
-/**
- * Convert camelCase to kebab-case for CLI flags
- */
-function camelToKebab(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
 /**

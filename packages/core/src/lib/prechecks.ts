@@ -61,15 +61,7 @@ export async function runPreChecks(
   if (!config.pre) return;
 
   const checks = await resolveChecks(config.pre, hookContext);
-  if (checks.length === 0) return;
-
-  await reporter.group('Pre-flight Checks', { layout: 'sequence' }, async (groupReporter) => {
-    for (const check of checks) {
-      await groupReporter.activity(check.label, async () => {
-        await executeCheck(check);
-      });
-    }
-  });
+  await runChecksGroup(checks, reporter);
 }
 
 /**

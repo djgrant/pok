@@ -73,14 +73,14 @@ export function createEventBus(options?: EventBusOptions): EventBus {
   };
 
   const emit = (event: CLIEvent): void => {
-      for (const listener of listeners) {
-        try {
-          listener(event);
-        } catch (error) {
-          handleError(error, event);
-        }
+    for (const listener of listeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        handleError(error, event);
       }
-    };
+    }
+  };
 
   const on = (listener: EventListener): Unsubscribe => {
     listeners.add(listener);

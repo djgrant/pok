@@ -10,8 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 /**
-  * Detect if running in Bun runtime
-
+ * Detect if running in Bun runtime
  */
 export function isBun(): boolean {
   return typeof globalThis.Bun !== 'undefined';
@@ -60,9 +59,11 @@ export async function getRuntime(): Promise<Runtime> {
 }
 
 /**
- * Detect the package manager used in the project
+ * Detect the package manager used in the project from lockfiles
  */
-export function getPackageManager(projectRoot: string): 'npm' | 'pnpm' | 'yarn' | 'bun' {
+export function detectPackageManagerFromLockfile(
+  projectRoot: string
+): 'npm' | 'pnpm' | 'yarn' | 'bun' {
   if (fs.existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) return 'pnpm';
   if (
     fs.existsSync(path.join(projectRoot, 'bun.lockb')) ||

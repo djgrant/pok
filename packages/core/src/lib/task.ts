@@ -90,7 +90,7 @@ export const BackoffStrategies = {
 /**
  * Backoff strategy for retries.
  * - `'fixed'`: Same delay between each retry
- * - `'linear'`: Delay increases linearly (`delay * attempt`)
+ * - `'linear'`: Delay increases linearly (`delay * (attempt + 1)`)
  * - `'exponential'`: Delay doubles each attempt (`delay * 2^attempt`)
  */
 export type BackoffStrategy = (typeof BackoffStrategies)[keyof typeof BackoffStrategies];
@@ -113,7 +113,7 @@ export type RetryConfig = {
    * Backoff strategy for calculating delay between retries.
    *
    * - `'fixed'`: Same delay between each retry
-   * - `'linear'`: Delay increases linearly (`delay * attempt`)
+   * - `'linear'`: Delay increases linearly (`delay * (attempt + 1)`)
    * - `'exponential'`: Delay doubles each attempt (`delay * 2^attempt`)
    *
    * @default 'fixed'

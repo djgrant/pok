@@ -11,6 +11,7 @@
 import type { ContextDef } from './command';
 import { isContextFieldDef } from './command';
 import { getSchemaInfo } from './args';
+import { camelToKebab } from './string-case';
 
 // =============================================================================
 // Types
@@ -33,10 +34,33 @@ export type ErrorContext = {
 // =============================================================================
 
 /**
- * Convert camelCase to kebab-case for CLI flags
+ * Build the `--flag <...>` parts for a usage line from a context definition.
  */
-function camelToKebab(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+function buildUsageFlagParts(contextDef: ContextDef): string[] {
+  const parts: string[] = [];
+
+  for (const [name, def] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(def)) continue;
+
+    const info = getSchemaInfo(def.schema);
+    const kebabName = camelToKebab(name);
+
+    if (info.type === 'enum' && info.choices) {
+      // Show choices for enum flags
+      const choicesStr = info.choices.join('|');
+      parts.push(
+        info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`
+      );
+    } else if (info.type === 'boolean') {
+      // Boolean flags are always optional in usage display
+      parts.push(`[--${kebabName}]`);
+    } else {
+      // String flags show <value> placeholder
+      parts.push(info.isOptional ? `[--${kebabName} <value>]` : `--${kebabName} <value>`);
+    }
+  }
+
+  return parts;
 }
 
 // =============================================================================
@@ -106,31 +130,7 @@ export class CLIError extends Error {
    */
   private formatFlags(): string {
     if (!this.context.contextDef) return '';
-
-    const parts: string[] = [];
-
-    for (const [name, def] of Object.entries(this.context.contextDef)) {
-      if (!isContextFieldDef(def)) continue;
-
-      const info = getSchemaInfo(def.schema);
-      const kebabName = camelToKebab(name);
-
-      if (info.type === 'enum' && info.choices) {
-        // Show choices for enum flags
-        const choicesStr = info.choices.join('|');
-        parts.push(
-          info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`
-        );
-      } else if (info.type === 'boolean') {
-        // Boolean flags are always optional in usage display
-        parts.push(`[--${kebabName}]`);
-      } else {
-        // String flags show <value> placeholder
-        parts.push(info.isOptional ? `[--${kebabName} <value>]` : `--${kebabName} <value>`);
-      }
-    }
-
-    return parts.join(' ');
+    return buildUsageFlagParts(this.context.contextDef).join(' ');
   }
 }
 
@@ -149,25 +149,7 @@ export function generateUsageLine(
   contextDef: ContextDef
 ): string {
   const cmd = [appName, ...commandPath].join(' ');
-  const flags: string[] = [];
-
-  for (const [name, def] of Object.entries(contextDef)) {
-    if (!isContextFieldDef(def)) continue;
-
-    const info = getSchemaInfo(def.schema);
-    const kebabName = camelToKebab(name);
-
-    if (info.type === 'enum' && info.choices) {
-      const choicesStr = info.choices.join('|');
-      flags.push(
-        info.isOptional ? `[--${kebabName} <${choicesStr}>]` : `--${kebabName} <${choicesStr}>`
-      );
-    } else if (info.type === 'boolean') {
-      flags.push(`[--${kebabName}]`);
-    } else {
-      flags.push(info.isOptional ? `[--${kebabName} <value>]` : `--${kebabName} <value>`);
-    }
-  }
+  const flags = buildUsageFlagParts(contextDef);
 
   return flags.length > 0 ? `${cmd} ${flags.join(' ')}` : cmd;
 }

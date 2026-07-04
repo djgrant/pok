@@ -11,6 +11,7 @@ import { isContextFieldDef } from './command';
 import type { CheckConfig } from './check';
 import type { SchemaInfo } from './args';
 import { getSchemaInfo } from './args';
+import { camelToKebab } from './string-case';
 
 // =============================================================================
 // Types
@@ -57,13 +58,6 @@ const MIN_PADDING = 2;
 // =============================================================================
 // Formatting Helpers
 // =============================================================================
-
-/**
- * Convert camelCase to kebab-case for CLI flags
- */
-function camelToKebab(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
 
 function normalizeAlias(alias: string): string {
   return alias.replace(/^--/, '').trim();
