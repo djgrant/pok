@@ -55,6 +55,9 @@ export async function runCli(argv: string[]): Promise<number> {
     const { cmd, opts, help } = parseArgs(argv);
 
     if (help || cmd !== 'generate') {
+      if (!help && cmd !== 'generate') {
+        console.error(`Unknown command: ${cmd}`);
+      }
       console.log(usage());
       return help ? 0 : 1;
     }

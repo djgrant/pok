@@ -1,7 +1,7 @@
 /**
  * Tabs App for OpenTUI
  *
- * Wires ProcessManager from core to React state.
+ * Spawns and manages tab child processes directly, wiring their output into React state.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -13,21 +13,13 @@ import {
   MAX_OUTPUT_LINES,
   MAX_LINE_LENGTH,
   BUFFER_WARNING_THRESHOLD,
+  OUTPUT_BATCH_MS,
+  killProcessTree,
 } from '@pokit/tabs-core';
 import type { TabSpec, TabProcess } from '@pokit/tabs-core';
 import type { TabsOptions } from '@pokit/core';
 import type { ScrollBoxRenderable } from '@opentui/core';
 
-function killProcessTree(proc: ChildProcess): void {
-  if (proc.killed || proc.pid == null) return;
-  try {
-    process.kill(-proc.pid, 'SIGTERM');
-  } catch {
-    // Process may have already exited
-  }
-}
-
-const OUTPUT_BATCH_MS = 16;
 /** How many pixels from bottom to consider "near bottom" for auto-scroll */
 const NEAR_BOTTOM_THRESHOLD = 50;
 /** Delay before scrolling to allow React to render new content */

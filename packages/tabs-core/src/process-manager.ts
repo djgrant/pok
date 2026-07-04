@@ -8,7 +8,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import type { TabStatus, TabProcess } from './types.js';
 
-function killProcessTree(proc: ChildProcess): void {
+export function killProcessTree(proc: ChildProcess): void {
   if (proc.killed || proc.pid == null) return;
   try {
     process.kill(-proc.pid, 'SIGTERM');

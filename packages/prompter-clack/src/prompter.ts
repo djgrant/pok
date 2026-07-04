@@ -26,9 +26,6 @@ import { patchedAutocomplete } from './autocomplete-prompt.js';
 /** Symbol value for the "Load more" option */
 const LOAD_MORE_SYMBOL = Symbol('__pok_load_more__');
 
-/** Default debounce time for filter requests */
-const DEFAULT_FILTER_DEBOUNCE_MS = 150;
-
 // =============================================================================
 // Types
 // =============================================================================
@@ -55,20 +52,6 @@ type ErrorAction = 'retry' | 'cancel';
 // =============================================================================
 // Utility Functions
 // =============================================================================
-
-/**
- * Creates a debounced version of a function
- */
-function debounce<T extends (...args: any[]) => any>(
-  fn: T,
-  ms: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), ms);
-  };
-}
 
 /**
  * Client-side filter for options
@@ -126,9 +109,6 @@ async function showErrorRecovery(errorMessage: string): Promise<ErrorAction> {
 async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): Promise<T> {
   const controller = new AbortController();
   const provider = dynamicOptions.provider;
-  const capabilities = provider.capabilities;
-  const supportsFilter = capabilities?.supportsFilter ?? false;
-  const filterDebounceMs = capabilities?.filterDebounceMs ?? DEFAULT_FILTER_DEBOUNCE_MS;
 
   // State
   const state: DynamicSelectState<T> = {
@@ -139,14 +119,9 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
   };
 
   // Load options from provider
-  async function loadOptions(
-    cursor?: string,
-    filter?: string,
-    append = false
-  ): Promise<OptionsPage<T>> {
+  async function loadOptions(cursor?: string): Promise<OptionsPage<T>> {
     const result = await provider({
       cursor,
-      filter,
       signal: controller.signal,
     });
     return result;
@@ -163,7 +138,7 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
     state.nextCursor = initialPage.nextCursor ?? null;
     state.totalCount = initialPage.totalCount;
     state.isLoading = false;
-    spinner.stop(loadingMessage);
+    spinner.stop(`Loaded ${state.options.length}`);
   } catch (error) {
     spinner.stop('Failed to load options');
     const errorMessage =
@@ -193,15 +168,8 @@ async function handleDynamicSelect<T>(dynamicOptions: DynamicSelectOptions<T>): 
     const displayOptions: { value: T | typeof LOAD_MORE_SYMBOL; label: string; hint?: string }[] =
       [];
 
-    // Determine which options to show (filter if needed)
-    let optionsToShow = state.options;
-    if (state.filter && !supportsFilter) {
-      // Client-side filtering
-      optionsToShow = filterOptionsClientSide(state.options, state.filter);
-    }
-
     // Add user options
-    for (const opt of optionsToShow) {
+    for (const opt of state.options) {
       displayOptions.push({
         value: opt.value,
         label: opt.label,
@@ -293,7 +261,6 @@ async function handleDynamicSelectWithTypeahead<T>(
   const provider = dynamicOptions.provider;
   const capabilities = provider.capabilities;
   const supportsServerFilter = capabilities?.supportsFilter ?? false;
-  const filterDebounceMs = capabilities?.filterDebounceMs ?? DEFAULT_FILTER_DEBOUNCE_MS;
 
   // State
   let allOptions: SelectOption<T>[] = [];
@@ -320,7 +287,7 @@ async function handleDynamicSelectWithTypeahead<T>(
     allOptions = initialPage.options;
     nextCursor = initialPage.nextCursor ?? null;
     totalCount = initialPage.totalCount;
-    spinner.stop(loadingMessage);
+    spinner.stop(`Loaded ${allOptions.length}`);
   } catch (error) {
     spinner.stop('Failed to load options');
     const errorMessage =

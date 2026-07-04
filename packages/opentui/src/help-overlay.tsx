@@ -6,9 +6,7 @@
 
 import { HELP_CONTENT } from '@pokit/tabs-core';
 
-export type HelpOverlayProps = {
-  onClose: () => void;
-};
+export type HelpOverlayProps = Record<string, never>;
 
 export function HelpOverlay(_props: HelpOverlayProps): React.ReactNode {
   return (

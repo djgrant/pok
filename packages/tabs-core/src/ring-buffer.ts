@@ -258,7 +258,6 @@ const DEFAULT_WARN_PERCENTAGE = 80;
 export class OutputBuffer {
   private buffer: RingBuffer<string>;
   private readonly tabId: string;
-  private lastReportedDropped = 0;
 
   constructor(options: OutputBufferOptions = {}) {
     this.tabId = options.tabId ?? 'unknown';
@@ -300,7 +299,6 @@ export class OutputBuffer {
    */
   clear(): void {
     this.buffer.clear();
-    this.lastReportedDropped = 0;
   }
 
   /**
@@ -310,10 +308,6 @@ export class OutputBuffer {
   toArray(): string[] {
     const lines = this.buffer.toArray();
     const dropped = this.buffer.droppedCount;
-
-    if (dropped > 0 && dropped !== this.lastReportedDropped) {
-      this.lastReportedDropped = dropped;
-    }
 
     if (dropped > 0) {
       return [`... (${dropped.toLocaleString()} lines dropped) ...`, ...lines];

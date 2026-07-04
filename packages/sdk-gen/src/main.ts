@@ -142,8 +142,7 @@ function collectLeaves(tree: CommandTree): LeafInfo[] {
 }
 
 function propKey(seg: string): string {
-  if (isValidIdent(seg) && !RESERVED.has(seg)) return seg;
-  return JSON.stringify(seg);
+  return propAccess(seg).key;
 }
 
 function buildTypeTree(
