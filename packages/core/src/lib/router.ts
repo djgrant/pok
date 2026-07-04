@@ -288,45 +288,40 @@ async function expandTree(
         path: [...ctx.path, node.segment],
       };
 
-      try {
-        const result = await resolveMountable(node.config.mount, childContext);
+      const result = await resolveMountable(node.config.mount, childContext);
 
-        if (!result.mountSourceId) {
-          throw new Error(`Mount result missing mountSourceId at path "${node.path.join('.')}"`);
-        }
+      if (!result.mountSourceId) {
+        throw new Error(`Mount result missing mountSourceId at path "${node.path.join('.')}"`);
+      }
 
-        if (result.mountSourceId) {
-          if (visited.has(result.mountSourceId)) {
-            ctx.reporter.warn(`Cycle detected in mount source: ${result.mountSourceId}. Skipping.`);
-            continue;
-          }
-
-          branchVisited = new Set(visited);
-          branchVisited.add(result.mountSourceId);
-        }
-
-        // Merge children
-        for (const [childKey, childNode] of result.tree) {
-          if (node.children.has(childKey)) {
-            // Collision policy: fail fast
-            throw new Error(
-              `Command collision: "${childKey}" already exists in "${node.path.join('.')}"`
-            );
-          }
-
-          // Tag with provenance
-          tagNodes(childNode, result.mountSourceId);
-
-          // Fix paths: mounted children have paths relative to the sub-tree,
-          // but need to include the parent's path prefix for correct history replay
-          rebasePaths(childNode, node.path);
-
-          node.children.set(childKey, childNode);
-        }
-      } catch (e) {
-        ctx.reporter.error(
-          `Failed to mount plugin at ${node.path.join('.')}: ${e instanceof Error ? e.message : String(e)}`
+      // Cycle detection: a mount source reappearing on the same branch means a
+      // mount is (directly or transitively) mounting itself. Fail fast.
+      if (visited.has(result.mountSourceId)) {
+        throw new Error(
+          `Cycle detected while mounting at "${node.path.join('.')}": mount source "${result.mountSourceId}" is already on this branch`
         );
+      }
+
+      branchVisited = new Set(visited);
+      branchVisited.add(result.mountSourceId);
+
+      // Merge children
+      for (const [childKey, childNode] of result.tree) {
+        if (node.children.has(childKey)) {
+          // Collision policy: fail fast
+          throw new Error(
+            `Command collision: "${childKey}" already exists in "${node.path.join('.')}"`
+          );
+        }
+
+        // Tag with provenance
+        tagNodes(childNode, result.mountSourceId);
+
+        // Fix paths: mounted children have paths relative to the sub-tree,
+        // but need to include the parent's path prefix for correct history replay
+        rebasePaths(childNode, node.path);
+
+        node.children.set(childKey, childNode);
       }
     }
 

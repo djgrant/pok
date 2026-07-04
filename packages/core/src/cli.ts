@@ -178,23 +178,17 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
       return exitCode;
     }
 
-    // Handle unexpected errors with clean messages
-    const isDebug = process.env.DEBUG !== undefined;
+    // Handle unexpected errors. Always surface the full error — we never hide
+    // errors from the user behind a debug flag.
     const errorDetails = getErrorDetails(error);
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    if (isDebug) {
-      // In debug mode, show full stack trace
-      console.error('Error:', error);
-    } else {
-      // Show the detailed error (stderr/stdout from process) if available
-      if (errorDetails !== errorMessage) {
-        console.error(`Error: ${errorDetails}`);
-      } else {
-        console.error(`Error: ${errorMessage}`);
-      }
-      console.error('\nSet DEBUG=1 for full stack trace.');
+    // Show the detailed error (stderr/stdout from process) if it adds anything
+    // beyond the message, then always show the full error (including stack).
+    if (errorDetails !== errorMessage) {
+      console.error(`Error: ${errorDetails}`);
     }
+    console.error('Error:', error);
 
     if (config.throwOnError) {
       throw error;
