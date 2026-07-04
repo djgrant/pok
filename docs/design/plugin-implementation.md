@@ -1,6 +1,6 @@
 # Plugin System Implementation Notes (Non-Prescriptive)
 
-This document distills `PLUGIN_VISION.md` into:
+This document distills `plugin-vision.md` into:
 
 - Invariants (must-haves)
 - Options (deliberate choices)

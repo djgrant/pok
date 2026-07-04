@@ -7,7 +7,6 @@
     "test",
     "test/utils",
     ".test-projects/*",
-    "website",
     "playground"
   ],
   "license": "MIT",
