@@ -8,6 +8,7 @@
 import type { CommandTree, CommandNode } from './command';
 import { isContextFieldDef } from './command';
 import { getSchemaInfo, extractEnumChoices } from './args';
+import { camelToKebab, kebabToCamel } from './string-case';
 
 // =============================================================================
 // Types
@@ -326,22 +327,8 @@ function getChoicesForFlag(flagName: string, node: CommandNode | null): string[]
   return undefined;
 }
 
-/**
- * Convert camelCase to kebab-case
- */
-function camelToKebab(str: string): string {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
-
 function normalizeFlagName(str: string): string {
   return kebabToCamel(str.replace(/^--/, ''));
-}
-
-/**
- * Convert kebab-case to camelCase
- */
-function kebabToCamel(str: string): string {
-  return str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
 
 // =============================================================================

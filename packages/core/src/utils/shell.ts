@@ -59,7 +59,7 @@ export async function runQuiet(cmd: string, args: string[] = []): Promise<boolea
  * Detect which package manager was used to invoke the CLI.
  * Falls back to 'npm' if detection fails.
  */
-export function getPackageManager(): 'npm' | 'pnpm' | 'yarn' | 'bun' {
+export function detectPackageManagerFromUserAgent(): 'npm' | 'pnpm' | 'yarn' | 'bun' {
   // Check npm_config_user_agent which is set by package managers
   const userAgent = process.env.npm_config_user_agent;
   if (userAgent) {

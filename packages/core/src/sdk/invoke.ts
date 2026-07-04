@@ -88,7 +88,8 @@ function resolveContextForSdk<C extends ContextDef>(
     const fieldDef = def as ContextFieldDef;
     const parsed = fieldDef.schema.safeParse(rawValue);
     if (!parsed.success) {
-      throw new Error(`Invalid value for context field "${key}"`);
+      const reason = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new Error(`Invalid value for context field "${key}": ${reason}`);
     }
 
     base[key] = parsed.data;

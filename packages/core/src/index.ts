@@ -181,16 +181,8 @@ export type { HelpOptions, RootHelpOptions, RecursiveHelpOptions } from './lib/h
  * Shell utilities for command execution and environment detection.
  *
  * Note: `shellRun` and `shellRunQuiet` are aliases for `run` and `runQuiet` from
- * the shell utilities module. They are renamed on export to avoid naming conflicts
- * with the router's `run` function. These functions execute shell commands directly,
- * while the router's `run` function is the CLI entry point.
- *
- * Alternative naming considerations:
- * - `execShell` / `execShellQuiet` - More explicit about shell execution
- * - `runShell` / `runShellQuiet` - Maintains "run" naming but clarifies context
- *
- * The current `shellRun` naming follows the pattern of prefixing with the module
- * context to disambiguate from other `run` functions in the codebase.
+ * the shell utilities module, renamed on export to avoid conflicting with the
+ * router's `run` function (the CLI entry point).
  */
 export {
   commandExists,
@@ -198,7 +190,8 @@ export {
   getNodeMajorVersion,
   run as shellRun,
   runQuiet as shellRunQuiet,
-  getPackageManager,
+  detectPackageManagerFromUserAgent,
+  detectPackageManagerFromUserAgent as getPackageManager,
 } from './utils/shell';
 
 // =============================================================================

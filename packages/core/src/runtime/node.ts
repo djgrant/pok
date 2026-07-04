@@ -19,6 +19,7 @@ import type {
   ShellResult,
   GlobOptions,
 } from './types';
+import { normalizeStdio } from './util';
 
 const execAsync = promisify(nodeExec);
 
@@ -152,24 +153,6 @@ export function createNodeRuntime(): Runtime {
     readFile,
     escapeShell,
   };
-}
-
-/**
- * Normalize stdio option to Node.js expected format
- */
-function normalizeStdio(
-  stdio?: SpawnOptions['stdio']
-): ['inherit', 'inherit', 'inherit'] | ['inherit', 'pipe', 'pipe'] {
-  if (!stdio) {
-    return ['inherit', 'inherit', 'inherit'];
-  }
-  if (stdio === 'inherit') {
-    return ['inherit', 'inherit', 'inherit'];
-  }
-  if (stdio === 'pipe') {
-    return ['inherit', 'pipe', 'pipe'];
-  }
-  return stdio;
 }
 
 /**

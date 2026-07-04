@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { CommandConfig } from './command';
-import { getPackageManager } from '../runtime';
+import { detectPackageManagerFromLockfile } from '../runtime';
 
 export type ParsedPmCommand = {
   pm: 'pnpm' | 'bun' | 'npm' | 'yarn';
@@ -349,7 +349,7 @@ export function createPmAction(
   cwd: string,
   requestArgs: boolean = false
 ): CommandConfig {
-  const pm = getPackageManager(cwd);
+  const pm = detectPackageManagerFromLockfile(cwd);
   const isPnpmWorkspace = pm === 'pnpm' && fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml'));
   const isYarnWorkspace =
     pm === 'yarn' &&
@@ -397,7 +397,7 @@ export function createPmAction(
     ignoreUnknownFlags: true,
     requestArgs,
     run: async (r, ctx) => {
-      const pm = getPackageManager(cwd);
+      const pm = detectPackageManagerFromLockfile(cwd);
       const actualCommandTokens = actualName.split(' ');
       const cmd =
         type === 'run'

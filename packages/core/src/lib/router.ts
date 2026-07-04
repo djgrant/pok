@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import picomatch from 'picomatch';
 
-import { getRuntime, getPackageManager } from '../runtime';
+import { getRuntime, detectPackageManagerFromLockfile } from '../runtime';
 import type {
   CommandConfig,
   ContextDef,
