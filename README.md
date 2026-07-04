@@ -110,10 +110,8 @@ bun add @pokit/core zod
 
 ## Documentation
 
-- [Getting Started](./docs/getting-started.md)
-- [Architecture](./docs/architecture.md)
-- [API Reference](./docs/api/)
-- [Concepts](./docs/concepts/)
+See the [guides](./docs/guides) for standalone-CLI setup, interactive apps, and
+dynamic menus.
 
 ## License
 

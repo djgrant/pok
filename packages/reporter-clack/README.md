@@ -53,4 +53,3 @@ import { getSymbols, UNICODE_SYMBOLS, ASCII_SYMBOLS } from '@pokit/reporter-clac
 
 ## Documentation
 
-See the [full documentation](https://github.com/openpok/pok/blob/main/docs/packages/reporter-clack.md).

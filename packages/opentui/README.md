@@ -26,4 +26,3 @@ export default defineConfig({
 - `createEventAdapter(bus, options?)`
 - `createAppAdapter()`
 
-See docs: `docs/packages/opentui.md`.
