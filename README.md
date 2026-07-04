@@ -108,11 +108,6 @@ bun add @pokit/core zod
 | `@pokit/tabs-core`      | Shared tabs state management                                 |
 | `@pokit/opentui`        | Tabbed + app terminal UI (OpenTUI/React)                     |
 
-## Documentation
-
-See the [guides](./docs/guides) for standalone-CLI setup, interactive apps, and
-dynamic menus.
-
 ## License
 
 MIT
