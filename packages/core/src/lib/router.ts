@@ -13,6 +13,7 @@ import * as path from 'path';
 import picomatch from 'picomatch';
 
 import { getRuntime, detectPackageManagerFromLockfile } from '../runtime';
+import { formatTable, formatCsv } from './tabular';
 import type {
   CommandConfig,
   ContextDef,
@@ -716,8 +717,21 @@ function handleCommandOutput(
   if (format === 'json') {
     console.log(JSON.stringify(data, null, 2));
   } else if (format === 'table' || format === 'csv') {
-    // TODO: Auto-derive table/csv from schema
-    console.log(JSON.stringify(data, null, 2));
+    const rendered =
+      format === 'table'
+        ? formatTable(data, config.output)
+        : formatCsv(data, config.output);
+    if (rendered === null) {
+      // Data can't be represented as a table/CSV (e.g. a scalar or a nested
+      // value). Note the fallback on stderr and emit JSON instead of silently
+      // mis-rendering.
+      process.stderr.write(
+        `Note: output is not tabular; falling back to JSON (--format ${format} ignored).\n`
+      );
+      console.log(JSON.stringify(data, null, 2));
+    } else {
+      console.log(rendered);
+    }
   } else if (config.format) {
     // Human-readable format via the command's format function
     const reporter = ctx.reporter as import('../events').CommandReporter;

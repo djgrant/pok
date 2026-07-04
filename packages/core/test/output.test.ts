@@ -47,6 +47,36 @@ describe('Command Output', () => {
     });
   });
 
+  describe('with --format table', () => {
+    it('renders a key/value table for the object output', async () => {
+      const { stdout, error } = await captureEvents(['with-output'], {
+        outputFormat: 'table',
+      });
+      expect(error).toBeUndefined();
+      const lines = stdout.trim().split('\n');
+      expect(lines[0]).toBe('key    value');
+      // tasks is a nested array → JSON-stringified into the value cell
+      expect(lines.some((l) => l.startsWith('tasks'))).toBe(true);
+      expect(lines.some((l) => l.startsWith('total') && l.includes('3'))).toBe(
+        true
+      );
+    });
+  });
+
+  describe('with --format csv', () => {
+    it('renders a header + row for the object output', async () => {
+      const { stdout, error } = await captureEvents(['with-output'], {
+        outputFormat: 'csv',
+      });
+      expect(error).toBeUndefined();
+      const lines = stdout.trim().split('\n');
+      expect(lines[0]).toBe('tasks,total');
+      // nested tasks array is JSON-stringified and CSV-quoted
+      expect(lines[1]).toContain('"[');
+      expect(lines[1]).toContain(',3');
+    });
+  });
+
   describe('backwards compatibility', () => {
     it('commands without output still work (return void)', async () => {
       const { error } = await captureEvents(['simple']);
