@@ -106,15 +106,12 @@ describe('Plugin System', () => {
     expect(rootNode.children.get('sub')?.source).toContain('static:');
   });
 
-  it('does not treat missing mountSourceId as a cycle', async () => {
-    let calls = 0;
+  it('fails fast when a mount result is missing mountSourceId', async () => {
     const mountWithoutId = async () => {
-      calls += 1;
       return { tree: new Map(), mountSourceId: undefined } as any;
     };
 
     const cmdA = defineCommand({ label: 'A', mount: mountWithoutId });
-    const cmdB = defineCommand({ label: 'B', mount: mountWithoutId });
 
     const ctx = {
       config: {
@@ -124,7 +121,6 @@ describe('Plugin System', () => {
         prompter: createRawPrompter(),
         extraCommands: {
           a: cmdA,
-          b: cmdB,
         },
       },
       projectRoot: '/tmp',
@@ -138,9 +134,168 @@ describe('Plugin System', () => {
       eventBus: { emit: () => {}, on: () => () => {} } as any,
     };
 
-    await buildCommandTree('/tmp/dummy', ctx as any);
+    await expect(buildCommandTree('/tmp/dummy', ctx as any)).rejects.toThrow(
+      /missing mountSourceId/
+    );
+  });
 
-    expect(calls).toBe(2);
+  it('fails fast on a mount-time command collision', async () => {
+    // The parent statically defines a child "sub" AND mounts another "sub".
+    const parentCmd = defineCommand({
+      label: 'Parent',
+      mount: fromStatic({
+        sub: defineCommand({ label: 'Mounted Sub', run: () => {} }),
+      }),
+    });
+
+    const ctx = {
+      config: {
+        commandsDir: '/tmp', // dummy
+        projectRoot: '/tmp',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        extraCommands: {
+          parent: parentCmd,
+          'parent.sub': defineCommand({ label: 'Static Sub', run: () => {} }),
+        },
+      },
+      projectRoot: '/tmp',
+      reporter: {
+        error: () => {},
+        warn: () => {},
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    await expect(buildCommandTree('/tmp/dummy', ctx as any)).rejects.toThrow(
+      /Command collision/
+    );
+  });
+
+  it('fails fast on a cycle (self-referential mount source on one branch)', async () => {
+    // Force a stable mountSourceId that recurs down a single branch.
+    const withId = (m: any, id: string) => async (ctx: any) => {
+      const res = await resolveMountable(m, ctx);
+      res.mountSourceId = id;
+      return res;
+    };
+
+    // Child B re-mounts the same source id ("cyclic") as its parent A.
+    const childB = defineCommand({
+      label: 'B',
+      mount: withId(fromStatic({ leaf: defineCommand({ label: 'Leaf', run: () => {} }) }), 'cyclic'),
+    });
+
+    const parentA = defineCommand({
+      label: 'A',
+      mount: withId(fromStatic({ b: childB }), 'cyclic'),
+    });
+
+    const ctx = {
+      config: {
+        commandsDir: '/tmp', // dummy
+        projectRoot: '/tmp',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        extraCommands: {
+          a: parentA,
+        },
+      },
+      projectRoot: '/tmp',
+      reporter: {
+        error: () => {},
+        warn: () => {},
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    await expect(buildCommandTree('/tmp/dummy', ctx as any)).rejects.toThrow(
+      /Cycle detected/
+    );
+  });
+
+  it('allows a diamond (same mount source on separate branches)', async () => {
+    const withId = (m: any, id: string) => async (ctx: any) => {
+      const res = await resolveMountable(m, ctx);
+      res.mountSourceId = id;
+      return res;
+    };
+
+    // Both parents mount the SAME source id, but on separate root branches.
+    const shared = withId(
+      fromStatic({ leaf: defineCommand({ label: 'Leaf', run: () => {} }) }),
+      'shared-id'
+    );
+
+    const p1 = defineCommand({ label: 'P1', mount: shared });
+    const p2 = defineCommand({ label: 'P2', mount: shared });
+
+    const ctx = {
+      config: {
+        commandsDir: '/tmp', // dummy
+        projectRoot: '/tmp',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        extraCommands: {
+          p1,
+          p2,
+        },
+      },
+      projectRoot: '/tmp',
+      reporter: {
+        error: () => {},
+        warn: () => {},
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    const tree = await buildCommandTree('/tmp/dummy', ctx as any);
+
+    expect(tree.get('p1')?.children.has('leaf')).toBe(true);
+    expect(tree.get('p2')?.children.has('leaf')).toBe(true);
+  });
+
+  it('mounts a file-based sub-app via fromDirectory', async () => {
+    const adminCmd = defineCommand({
+      label: 'Admin',
+      mount: fromDirectory(import.meta.url, './fixtures/admin'),
+    });
+
+    const ctx = {
+      config: {
+        commandsDir: '/tmp', // dummy
+        projectRoot: '/tmp',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        extraCommands: {
+          admin: adminCmd,
+        },
+      },
+      projectRoot: '/tmp',
+      reporter: {
+        error: () => {},
+        warn: () => {},
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    const tree = await buildCommandTree('/tmp/dummy', ctx as any);
+
+    const adminNode = tree.get('admin')!;
+    expect(adminNode.children.has('users')).toBe(true);
+    expect(adminNode.children.has('settings')).toBe(true);
   });
 
   it('mounts plugins from config at root', async () => {
