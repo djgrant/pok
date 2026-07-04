@@ -1,6 +1,6 @@
 # Plugin System Implementation Notes (Non-Prescriptive)
 
-This document distills `PLUGIN_PLAN.md` into:
+This document distills `PLUGIN_VISION.md` into:
 
 - Invariants (must-haves)
 - Options (deliberate choices)
@@ -71,7 +71,7 @@ Regression avoidance matters more than refactoring quality for the first extract
   - alias validation via `validateAliases(tree)`
   - command files continue to be able to `export const command = defineCommand(...)` with no new boilerplate
 
-- Stable IDs: `PLUGIN_PLAN.md` calls out `stableStringify(...)` as the mechanism to produce deterministic `mountSourceId` values when IDs incorporate config.
+- Stable IDs: `stableStringify(...)` is the mechanism to produce deterministic `mountSourceId` values when IDs incorporate config.
 
 ### Notes: Possible Implementation Sequence (Non-Binding)
 

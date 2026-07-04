@@ -39,7 +39,7 @@ export default defineConfig({
       { text: 'Packages', link: '/packages/core' },
       {
         text: 'GitHub',
-        link: 'https://github.com/notation-dev/openpok',
+        link: 'https://github.com/djgrant/pok',
       },
     ],
 
@@ -96,7 +96,7 @@ export default defineConfig({
     },
 
     // Social links
-    socialLinks: [{ icon: 'github', link: 'https://github.com/notation-dev/openpok' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/djgrant/pok' }],
 
     // Search
     search: {
@@ -111,7 +111,7 @@ export default defineConfig({
 
     // Edit link
     editLink: {
-      pattern: 'https://github.com/notation-dev/openpok/edit/main/docs/:path',
+      pattern: 'https://github.com/djgrant/pok/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
   },
