@@ -6,7 +6,8 @@
     "packages/*",
     "test",
     "test/utils",
-    ".test-projects/*"
+    ".test-projects/*",
+    "demo"
   ],
   "license": "MIT",
   "repository": {
@@ -18,12 +19,12 @@
     "url": "https://github.com/djgrant/pok/issues"
   },
   "scripts": {
-    "workspace-pok": "bun packages/cmd/bin/pok.ts",
     "quick-check": "echo 'quick check'"
   },
   "devDependencies": {
-    "@pokit/core": "workspace:*",
-    "@pokit/terminal": "workspace:*",
+    "@pokit/core": "npm:@pokit/core@0.1.0",
+    "@pokit/reporter-clack": "npm:@pokit/reporter-clack@0.1.0",
+    "@pokit/prompter-clack": "npm:@pokit/prompter-clack@0.1.0",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "typescript": "^5.8.3",
