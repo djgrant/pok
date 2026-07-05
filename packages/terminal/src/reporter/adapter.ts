@@ -138,10 +138,6 @@ type AdapterState = {
   parallelSpinner: SpinnerEntry | null;
   /** The group ID that owns the parallel spinner */
   parallelSpinnerGroupId: GroupId | null;
-  /** When true, ignore all events (for fullscreen TUI takeover) */
-  suspended: boolean;
-  /** Activities that were suspended - we'll show completion for these on resume */
-  suspendedActivities: Map<ActivityId, { label: string }>;
   /** Logs buffered during active spinners, to be flushed on activity completion */
   bufferedLogs: BufferedLog[];
   /** Verbose mode - when true, all logs are displayed immediately (no buffering) */
@@ -291,8 +287,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
         parallelActivities: new Map(),
         parallelSpinner: null,
         parallelSpinnerGroupId: null,
-        suspended: false,
-        suspendedActivities: new Map(),
         bufferedLogs: [],
         verbose: outputConfig.verbose,
         outputConfig,
@@ -309,8 +303,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
           // Group lifecycle (command-level intro/outro)
           case 'group:start': {
-            if (state.suspended) break;
-
             state.groups.set(event.id, {
               label: event.label,
               layout: event.layout,
@@ -328,8 +320,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
           }
 
           case 'group:end': {
-            if (state.suspended) break;
-
             const group = state.groups.get(event.id);
             state.groups.delete(event.id);
 
@@ -482,8 +472,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
           // Activity lifecycle (task-level spinner)
           case 'activity:start': {
-            if (state.suspended) break;
-
             // Find the parent group to determine layout
             const parentGroup = event.parentId ? state.groups.get(event.parentId as GroupId) : null;
 
@@ -542,8 +530,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
           }
 
           case 'activity:update': {
-            if (state.suspended) break;
-
             // Check if this is a parallel activity
             const parallelActivity = state.parallelActivities.get(event.id);
             if (parallelActivity) {
@@ -601,22 +587,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
               // Flush any buffered logs for this activity
               flushLogsForActivity(state, event.id);
-            } else {
-              // Check if this was a suspended activity
-              const suspended = state.suspendedActivities.get(event.id);
-              if (suspended && !state.suspended) {
-                if (isPlainOutput(state.outputConfig)) {
-                  const prefix = colorize(
-                    state.symbols.success,
-                    pc.green,
-                    state.outputConfig.color
-                  );
-                  writeLine(`  ${prefix} ${suspended.label}`);
-                } else {
-                  p.log.success(suspended.label);
-                }
-                state.suspendedActivities.delete(event.id);
-              }
             }
             break;
           }
@@ -681,26 +651,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
               // Flush any buffered logs for this activity
               flushLogsForActivity(state, event.id);
-            } else {
-              // Check if this was a suspended activity
-              const suspended = state.suspendedActivities.get(event.id);
-              if (suspended && !state.suspended) {
-                if (isPlainOutput(state.outputConfig)) {
-                  const prefix = colorize(state.symbols.error, pc.red, state.outputConfig.color);
-                  writeLine(`  ${prefix} ${suspended.label}: ${errorMessage}`);
-                } else {
-                  p.log.error(`${suspended.label}: ${errorMessage}`);
-                }
-                state.suspendedActivities.delete(event.id);
-              }
             }
             break;
           }
 
           // Log events
           case 'log': {
-            if (state.suspended) break;
-
             // Verbose mode: always display logs immediately
             if (state.verbose) {
               displayLog(event.level, event.message, state, false);
@@ -751,41 +707,6 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
             // No active spinners - display immediately
             displayLog(event.level, event.message, state, false);
-            break;
-          }
-
-          // Reporter control events
-          case 'reporter:suspend': {
-            state.suspended = true;
-            // Stop all active spinners and track them for completion messages
-            if (canUseInteractiveUI(state.outputConfig)) {
-              for (const [id, entry] of state.spinners) {
-                try {
-                  if (entry.spinner) {
-                    entry.spinner.stop(entry.label + '...');
-                  }
-                  state.suspendedActivities.set(id, { label: entry.label });
-                } catch {
-                  // Spinner may already be stopped
-                }
-              }
-              state.spinners.clear();
-
-              // Also stop parallel spinner
-              if (state.parallelSpinner) {
-                try {
-                  state.parallelSpinner.spinner.stop('Paused...');
-                } catch {
-                  // Spinner may already be stopped
-                }
-                state.parallelSpinner = null;
-              }
-            }
-            break;
-          }
-
-          case 'reporter:resume': {
-            state.suspended = false;
             break;
           }
         }

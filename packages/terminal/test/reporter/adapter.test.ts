@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'bun:test';
 import { createEventBus, type CLIEvent } from '@pokit/core';
-import { createReporterAdapter } from '../src';
+import { createReporterAdapter } from '../../src/reporter/adapter';
 import { createVirtualTerminal, type VirtualTerminal } from './utils';
 import * as fixtures from './fixtures';
 
@@ -181,23 +181,6 @@ describe('ClackReporterAdapter', () => {
 
       const lines = await getScreenshot(events);
       expect(lines).toEqual(fixtures.parallelGroupFailure.lines);
-    });
-  });
-
-  describe('suspend and resume', () => {
-    it('suppresses output when suspended', async () => {
-      const events: CLIEvent[] = [
-        { type: 'group:start', id: 'g1', label: 'Test', layout: 'sequence' },
-        { type: 'activity:start', id: 'a1', parentId: 'g1', label: 'Running' },
-        { type: 'reporter:suspend' },
-        { type: 'log', level: 'info', message: 'Should not appear' },
-        { type: 'reporter:resume' },
-        { type: 'activity:success', id: 'a1' },
-        { type: 'group:end', id: 'g1' },
-      ];
-
-      const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.suspendResume.lines);
     });
   });
 
