@@ -1,9 +1,9 @@
 import { defineConfig } from '@pokit/core';
-import { createTerminalUI } from '@pokit/terminal';
 
+// UI surfaces (reporter/prompter/navigator) are omitted: the pok launcher
+// wires in @pokit/terminal's createTerminalUI() by default.
 export default defineConfig({
   commandsDir: './commands',
-  ...createTerminalUI(),
   appName: 'pok',
   pmScripts: ['quick-check'],
   pmCommands: ['repo'],

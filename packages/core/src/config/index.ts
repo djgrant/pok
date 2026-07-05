@@ -205,12 +205,12 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
 
 /**
  * Template string for scaffolding new pok.config.ts files.
- * Points to @pokit/core now.
+ *
+ * Zero-config by default: the pok launcher wires in the default terminal UI
+ * (@pokit/terminal) when reporter/prompter/navigator are omitted. Spread
+ * `createTerminalUI(options)` only when passing options.
  */
 export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
-import { createTerminalUI } from '@pokit/terminal'
 
-export default defineConfig({
-  ...createTerminalUI(),
-})
+export default defineConfig({})
 `;
