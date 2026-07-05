@@ -1,0 +1,144 @@
+# @pokit/prompter-clack
+
+`@pokit/prompter-clack` provides a `Prompter` implementation backed by [@clack/prompts](https://github.com/natemoo-re/clack).
+
+## Installation
+
+```bash
+bun add @pokit/prompter-clack
+```
+
+## Configuration
+
+```typescript
+import { run } from '@pokit/core';
+import { createPrompter } from '@pokit/prompter-clack';
+
+await run(args, {
+  prompter: createPrompter(),
+  // ...
+});
+```
+
+## Prompt rendering
+
+The adapter renders interactive select, multiselect, confirm, and text prompts:
+
+```
+◆  mycli
+│
+◇  What would you like to do?
+│  ● build - Build the project
+│  ○ deploy - Deploy to environment
+│  ○ test - Run tests
+│
+◇  Select environment
+│  ● staging
+│  ○ production
+│
+└  Selected: build → staging
+```
+
+## Prompt Types
+
+### Select
+
+Single choice from options:
+
+```
+◇  Select environment
+│  ● staging
+│  ○ production
+```
+
+Triggered by enum context fields:
+
+```typescript
+context: {
+  env: {
+    from: 'flag',
+    schema: z.enum(['staging', 'production']),
+  },
+}
+```
+
+### Multiselect
+
+Multiple choices:
+
+```
+◆  Select features
+│  ◼ TypeScript
+│  ◻ ESLint
+│  ◼ Prettier
+```
+
+### Confirm
+
+Yes/no prompt:
+
+```
+◇  Deploy to production?
+│  ● Yes / ○ No
+```
+
+Triggered by boolean context fields:
+
+```typescript
+context: {
+  force: {
+    from: 'flag',
+    schema: z.boolean(),
+  },
+}
+```
+
+### Text
+
+Free-form input:
+
+```
+◇  Enter project name
+│  my-awesome-project
+```
+
+Triggered by string context fields:
+
+```typescript
+context: {
+  name: {
+    from: 'flag',
+    schema: z.string(),
+  },
+}
+```
+
+## Cancellation
+
+Pressing `Ctrl+C` throws a `CancelError` (exit code `130`) so callers can decide
+whether to terminate the process:
+
+```typescript
+import { CancelError } from '@pokit/core';
+
+if (p.isCancel(result)) {
+  throw new CancelError();
+}
+```
+
+## Features
+
+- **Accessible** - Screen reader support
+- **Keyboard navigation** - Arrow keys, enter, space
+- **Visual feedback** - Spinners, checkmarks, colors
+- **Graceful cancellation** - Clean exit on Ctrl+C
+
+## API
+
+### createPrompter
+
+```typescript
+function createPrompter(): Prompter;
+```
+
+Returns a Prompter implementation using Clack.
