@@ -7,6 +7,8 @@
  * Exit code follows common shell convention for SIGINT cancellation.
  */
 
+import { markOperational, markPresented } from './errors';
+
 export const CANCEL_EXIT_CODE = 130;
 
 export class CancelError extends Error {
@@ -16,5 +18,9 @@ export class CancelError extends Error {
     super(message);
     this.name = 'CancelError';
     this.exitCode = exitCode;
+    markOperational(this);
+    // User-initiated cancellation exits silently (no "Error: Cancelled" line);
+    // only the exit code matters at the top level.
+    markPresented(this);
   }
 }

@@ -44,6 +44,8 @@
  * ```
  */
 
+import { markOperational } from './errors';
+
 /**
  * Check function type - throws on failure
  */
@@ -71,6 +73,7 @@ export class CheckError extends Error {
     this.name = 'CheckError';
     this.remediation = options?.remediation;
     this.documentationUrl = options?.documentationUrl;
+    markOperational(this);
   }
 }
 

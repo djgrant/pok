@@ -40,7 +40,7 @@ import type {
   LogLevel,
   OutputConfig,
 } from '@pokit/core';
-import { detectOutputConfig, CommandError } from '@pokit/core';
+import { detectOutputConfig, CommandError, markPresented } from '@pokit/core';
 import { getSymbols, type SymbolSet } from './symbols';
 
 /**
@@ -593,6 +593,10 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
           case 'activity:failure': {
             const errorMessage = formatErrorMessage(event.error);
+
+            // Record that we've surfaced this error to the user, so the
+            // top-level CLI handler doesn't print it a second time.
+            markPresented(event.error);
 
             // Check if this is a parallel activity
             const parallelActivity = state.parallelActivities.get(event.id);

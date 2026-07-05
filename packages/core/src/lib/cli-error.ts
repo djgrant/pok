@@ -12,6 +12,7 @@ import type { ContextDef } from './command';
 import { isContextFieldDef } from './command';
 import { getSchemaInfo } from './args';
 import { camelToKebab } from './string-case';
+import { markOperational } from './errors';
 
 // =============================================================================
 // Types
@@ -95,6 +96,7 @@ export class CLIError extends Error {
     super(message);
     this.name = 'CLIError';
     this.context = context;
+    markOperational(this);
   }
 
   /**

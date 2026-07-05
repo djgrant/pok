@@ -17,8 +17,9 @@
  */
 
 import * as path from 'path';
-import { run, RouterError } from './lib/router';
-import { CancelError } from './lib/cancel';
+import { run } from './lib/router';
+import { isOperationalError, wasPresented } from './lib/errors';
+import { CommandError } from './lib/runner';
 import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
 import type { Prompter, Navigator } from './prompter';
@@ -164,12 +165,30 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
     });
     return 0;
   } catch (error) {
-    if (error instanceof RouterError || error instanceof CancelError) {
+    // Operational errors are expected failures (a subprocess exiting non-zero,
+    // a bad flag, a failed check, a cancellation). Their message — and, for a
+    // CommandError, the captured subprocess output — is the useful diagnostic;
+    // a stack trace back into pok's own source frames is only noise. Present a
+    // clean message and never a stack.
+    if (isOperationalError(error)) {
       if (config.throwOnError) {
         throw error;
       }
 
-      const exitCode = Number.isFinite(error.exitCode) ? error.exitCode : 1;
+      const rawExitCode = (error as { exitCode?: unknown }).exitCode;
+      const exitCode = typeof rawExitCode === 'number' && Number.isFinite(rawExitCode)
+        ? rawExitCode
+        : 1;
+
+      // Only print if a presenter (e.g. the reporter's failure box) hasn't
+      // already surfaced this error, to avoid showing it twice.
+      if (!wasPresented(error)) {
+        console.error(`Error: ${error.message}`);
+        if (error instanceof CommandError && error.output) {
+          console.error(error.output);
+        }
+      }
+
       process.exitCode = exitCode;
       return exitCode;
     }

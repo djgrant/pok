@@ -149,6 +149,20 @@ export { CLIError, generateUsageLine } from './lib/cli-error';
 export type { ErrorContext } from './lib/cli-error';
 
 // =============================================================================
+// Error classification (operational vs. unexpected)
+// =============================================================================
+
+export {
+  isOperationalError,
+  markOperational,
+  markPresented,
+  wasPresented,
+  OPERATIONAL_ERROR,
+  PRESENTED_ERROR,
+} from './lib/errors';
+export type { OperationalError } from './lib/errors';
+
+// =============================================================================
 // Help generation
 // =============================================================================
 

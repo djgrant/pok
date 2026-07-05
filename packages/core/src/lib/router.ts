@@ -14,6 +14,7 @@ import picomatch from 'picomatch';
 
 import { getRuntime, detectPackageManagerFromLockfile } from '../runtime';
 import { formatTable, formatCsv } from './tabular';
+import { markOperational, markPresented } from './errors';
 import type {
   CommandConfig,
   ContextDef,
@@ -72,6 +73,11 @@ export class RouterError extends Error {
   ) {
     super(message);
     this.name = 'RouterError';
+    markOperational(this);
+    // RouterError is an exit-code carrier: it is thrown only after its message
+    // has already been surfaced (via reporter.error / CLIError.format), so the
+    // top-level handler should stay silent and just honour the exit code.
+    markPresented(this);
   }
 }
 
