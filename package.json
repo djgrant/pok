@@ -6,8 +6,7 @@
     "packages/*",
     "test",
     "test/utils",
-    ".test-projects/*",
-    "playground"
+    ".test-projects/*"
   ],
   "license": "MIT",
   "repository": {
@@ -24,8 +23,7 @@
   },
   "devDependencies": {
     "@pokit/core": "workspace:*",
-    "@pokit/prompter-clack": "workspace:*",
-    "@pokit/reporter-clack": "workspace:*",
+    "@pokit/terminal": "workspace:*",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "typescript": "^5.8.3",

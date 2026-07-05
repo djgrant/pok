@@ -1,11 +1,9 @@
 import { defineConfig } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createPrompter } from '@pokit/prompter-clack';
 
+// UI surfaces (reporter/prompter/navigator) are omitted: the pok launcher
+// wires in @pokit/terminal's createTerminalUI() by default.
 export default defineConfig({
   commandsDir: './commands',
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
   appName: 'pok',
   pmScripts: ['quick-check'],
   pmCommands: ['repo'],

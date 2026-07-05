@@ -9,10 +9,6 @@
     { "path": "packages/cmd" },
     { "path": "packages/create" },
     { "path": "packages/op" },
-    { "path": "packages/prompter-clack" },
-    { "path": "packages/reporter-clack" },
-    { "path": "packages/reporter-web" },
-    { "path": "packages/tabs-core" },
-    { "path": "packages/opentui" }
+    { "path": "packages/terminal" }
   ]
 }

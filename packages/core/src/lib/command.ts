@@ -14,7 +14,6 @@ import type { CheckConfig } from './check';
 import type { Runner } from './runner';
 import type { Reporter, CommandReporter } from '../events';
 import type { Prompter } from '../prompter';
-import type { OptionsRequest } from '../prompter';
 
 type ResolvePrimitive = string | number | boolean;
 export type ResolveOption = ResolvePrimitive | { value: ResolvePrimitive; label?: string };
@@ -24,6 +23,21 @@ export type ResolveOptionsPage = {
   totalCount?: number;
 };
 export type ResolveOptionsResult = ResolveOption[] | ResolveOptionsPage;
+
+/**
+ * Request context passed to a context field's `resolve()` function.
+ *
+ * Command authoring keeps the richer paginated/filtered request shape (this is
+ * resolver semantics). The UI-facing prompter contract is separate and simpler.
+ */
+export type ResolveOptionsRequest = {
+  /** Cursor from a previous page's `nextCursor`. Undefined on the first request. */
+  cursor?: string;
+  /** Current filter/search text, if the user has typed one. */
+  filter?: string;
+  /** AbortSignal for cancellation. */
+  signal: AbortSignal;
+};
 
 // =============================================================================
 // Plugin / Mount Types
@@ -113,7 +127,7 @@ export type ContextFieldDef = {
    * - async iterator yielding option pages
    */
   resolve?: (
-    request: OptionsRequest,
+    request: ResolveOptionsRequest,
     context: Record<string, unknown>
   ) =>
     | ResolveOptionsResult

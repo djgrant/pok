@@ -11,9 +11,6 @@
       "@pokit/op": ["../packages/op/src/index.ts"],
       "@pokit/prompter-clack": ["../packages/prompter-clack/src/index.ts"],
       "@pokit/reporter-clack": ["../packages/reporter-clack/src/index.ts"],
-      "@pokit/reporter-web": ["../packages/reporter-web/src/index.ts"],
-      "@pokit/tabs-core": ["../packages/tabs-core/src/index.ts"],
-      "@pokit/opentui": ["../packages/opentui/src/index.ts"],
       "@pokit/test-utils": ["./utils/src/index.ts"]
     }
   },
@@ -22,8 +19,6 @@
     "reporter-clack/**/*",
     "prompter-clack/**/*",
     "op/**/*",
-    "tabs-core/**/*",
-    "opentui/**/*",
     "cases/**/*",
     "commands/**/*",
     "shared/**/*"
@@ -34,8 +29,6 @@
     { "path": "../packages/reporter-clack" },
     { "path": "../packages/prompter-clack" },
     { "path": "../packages/op" },
-    { "path": "../packages/tabs-core" },
-    { "path": "../packages/opentui" },
     { "path": "./utils" }
   ]
 }

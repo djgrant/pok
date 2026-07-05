@@ -36,12 +36,8 @@ describe('pokit', () => {
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
       fs.symlinkSync(
-        path.join(packagesDir, 'reporter-clack'),
-        path.join(nodeModulesDir, 'reporter-clack')
-      );
-      fs.symlinkSync(
-        path.join(packagesDir, 'prompter-clack'),
-        path.join(nodeModulesDir, 'prompter-clack')
+        path.join(packagesDir, 'terminal'),
+        path.join(nodeModulesDir, 'terminal')
       );
 
       // Create pok.config.ts with instantiated adapters
@@ -49,13 +45,11 @@ describe('pokit', () => {
         path.join(tempDir, 'pok.config.ts'),
         `
 import { defineConfig } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createPrompter } from '@pokit/prompter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 
 export default defineConfig({
   commandsDir: './commands',
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
+  ...createTerminalUI(),
 });
 `
       );
@@ -144,12 +138,8 @@ export const command = defineCommand({
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
       fs.symlinkSync(
-        path.join(packagesDir, 'reporter-clack'),
-        path.join(nodeModulesDir, 'reporter-clack')
-      );
-      fs.symlinkSync(
-        path.join(packagesDir, 'prompter-clack'),
-        path.join(nodeModulesDir, 'prompter-clack')
+        path.join(packagesDir, 'terminal'),
+        path.join(nodeModulesDir, 'terminal')
       );
     });
 
@@ -173,29 +163,46 @@ export const command = defineCommand({
     });
   });
 
-  describe('when config has missing required fields', () => {
+  describe('when config omits reporter and prompter', () => {
     let tempDir: string;
 
     beforeAll(() => {
-      // Create a temp directory with invalid config
+      // reporter/prompter are optional now: the launcher wires in the default
+      // terminal UI (@pokit/terminal) when they are omitted.
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-'));
       fs.writeFileSync(
         path.join(tempDir, 'package.json'),
         JSON.stringify({ name: 'test-project', type: 'module' })
       );
 
-      // Create pok.config.ts with missing required field
+      // Config with no reporter/prompter - defaults should be filled in.
       fs.writeFileSync(
         path.join(tempDir, 'pok.config.ts'),
         `
-export default {
+import { defineConfig } from '@pokit/core';
+
+export default defineConfig({
   commandsDir: './commands',
-  // Missing reporter and prompter
-};
+});
 `
       );
 
-      // Link packages
+      fs.mkdirSync(path.join(tempDir, 'commands'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, 'commands', 'hello.ts'),
+        `
+import { defineCommand } from '@pokit/core';
+
+export const command = defineCommand({
+  label: 'Say hello',
+  run: async () => {
+    console.log('Hello from default UI!');
+  },
+});
+`
+      );
+
+      // Link packages (only core - @pokit/terminal resolves from the launcher).
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
@@ -207,20 +214,17 @@ export default {
       fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
-    it('shows error about missing required field', async () => {
-      // Create commands directory so it doesn't fail on directory check first
-      fs.mkdirSync(path.join(tempDir, 'commands'), { recursive: true });
-
-      const proc = spawn(['bun', CMD_BIN], {
+    it('runs using the default terminal UI', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'hello'], {
         cwd: tempDir,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       const exitCode = await proc.exited;
-      const stderr = await new Response(proc.stderr).text();
+      const stdout = await new Response(proc.stdout).text();
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain('reporter');
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Hello from default UI!');
     });
   });
 
@@ -242,12 +246,8 @@ export default {
       const packagesDir = path.resolve(import.meta.dir, '../..');
       fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
       fs.symlinkSync(
-        path.join(packagesDir, 'reporter-clack'),
-        path.join(nodeModulesDir, 'reporter-clack')
-      );
-      fs.symlinkSync(
-        path.join(packagesDir, 'prompter-clack'),
-        path.join(nodeModulesDir, 'prompter-clack')
+        path.join(packagesDir, 'terminal'),
+        path.join(nodeModulesDir, 'terminal')
       );
 
       // Create pok.config.ts pointing to non-existent directory
@@ -255,13 +255,11 @@ export default {
         path.join(tempDir, 'pok.config.ts'),
         `
 import { defineConfig } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createPrompter } from '@pokit/prompter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 
 export default defineConfig({
   commandsDir: './non-existent-commands',
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
+  ...createTerminalUI(),
 });
 `
       );

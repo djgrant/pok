@@ -18,12 +18,12 @@ export interface LauncherSkeleton {
   appName?: string;
   /** Version string */
   version?: string;
-  /** Reporter adapter instance */
-  reporter: any;
-  /** Prompter instance */
-  prompter: any;
-  /** Optional tabs adapter instance */
-  tabs?: any;
+  /** Reporter adapter instance (optional — launcher supplies @pokit/terminal default) */
+  reporter?: any;
+  /** Prompter instance (optional — launcher supplies @pokit/terminal default) */
+  prompter?: any;
+  /** Navigator instance (optional — launcher supplies @pokit/terminal default) */
+  navigator?: any;
   /**
    * Package manager scripts to include as commands.
    * - true: Include all scripts from root package.json

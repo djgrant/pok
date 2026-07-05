@@ -11,10 +11,7 @@ export type {
   // Dynamic options types
   StaticSelectOptions,
   DynamicSelectOptions,
-  OptionsPage,
-  OptionsRequest,
   OptionsProvider,
-  ProviderCapabilities,
   // Other prompt types
   MultiselectOption,
   MultiselectOptions,
@@ -23,7 +20,16 @@ export type {
   AutocompleteOptions,
 } from './types';
 
-export { isDynamicOptions, withCapabilities } from './types';
+export { isDynamicOptions } from './types';
+
+// Navigator (menu presentation policy)
+export type {
+  Navigator,
+  NavOption,
+  NavResult,
+  NavContext,
+} from './navigator';
+export { createMenuNavigator } from './navigator';
 
 // Raw Prompter (for testing and non-TTY environments)
 export type { PromptCall, ResponseProvider, RawPrompterOptions, RawPrompter } from './prompter.raw';

@@ -28,7 +28,7 @@ export const TEMPLATES: Template[] = [
     name: 'starter',
     label: 'Starter (recommended)',
     hint: 'Interactive prompts + beautiful output',
-    plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+    plugins: ['@pokit/terminal'],
   },
   {
     name: 'minimal',
@@ -39,8 +39,8 @@ export const TEMPLATES: Template[] = [
   {
     name: 'full',
     label: 'Full',
-    hint: 'All plugins including tabbed UI',
-    plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack', '@pokit/opentui'],
+    hint: 'All plugins',
+    plugins: ['@pokit/terminal'],
   },
   {
     name: 'custom',
@@ -56,19 +56,9 @@ export const TEMPLATES: Template[] = [
 
 export const AVAILABLE_PLUGINS: MultiselectOption<string>[] = [
   {
-    value: '@pokit/prompter-clack',
-    label: 'Prompter (clack)',
-    hint: 'Interactive prompts for user input',
-  },
-  {
-    value: '@pokit/reporter-clack',
-    label: 'Reporter (clack)',
-    hint: 'Beautiful CLI output and spinners',
-  },
-  {
-    value: '@pokit/opentui',
-    label: 'OpenTUI (tabs + app)',
-    hint: 'Tabbed and fullscreen interactive terminal UI',
+    value: '@pokit/terminal',
+    label: 'Terminal UI (clack)',
+    hint: 'Interactive prompts + beautiful CLI output',
   },
 ];
 

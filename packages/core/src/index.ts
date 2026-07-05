@@ -122,7 +122,6 @@ export type {
   Command,
   RunnerItem,
   DeferredTask,
-  TabsRunnerOptions,
   RunnerOptions,
   // Parallel execution options
   ParallelMode,
@@ -135,23 +134,6 @@ export type {
 
 export { run, buildCommandTree, RouterError } from './lib/router';
 export type { RouterConfig } from './lib/router';
-
-// =============================================================================
-// SDK (in-process invocation)
-// =============================================================================
-
-export {
-  createSdkRuntime,
-} from './sdk/invoke';
-export type {
-  SdkRuntime,
-  SdkRuntimeOptions,
-  InvokeInput,
-  CommandContextDef,
-  CommandContextInput,
-  CommandContextOutput,
-  CommandReturn,
-} from './sdk/invoke';
 
 // =============================================================================
 // Cancellation
@@ -248,16 +230,18 @@ export type {
   // Dynamic options types
   StaticSelectOptions,
   DynamicSelectOptions,
-  OptionsPage,
-  OptionsRequest,
   OptionsProvider,
-  ProviderCapabilities,
   // Other prompt types
   MultiselectOption,
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
   AutocompleteOptions,
+  // Navigator (menu presentation policy)
+  Navigator,
+  NavOption,
+  NavResult,
+  NavContext,
   // Raw Prompter (for testing and non-TTY environments)
   PromptCall,
   ResponseProvider,
@@ -265,13 +249,7 @@ export type {
   RawPrompter,
 } from './prompter';
 
-export { createRawPrompter, isDynamicOptions, withCapabilities } from './prompter';
-
-// =============================================================================
-// Tabs (Tabbed terminal UI interface)
-// =============================================================================
-
-export type { TabsAdapter, TabSpec, TabsOptions, AppAdapter, AnyComponent } from './tabs';
+export { createRawPrompter, isDynamicOptions, createMenuNavigator } from './prompter';
 
 // =============================================================================
 // Output Configuration

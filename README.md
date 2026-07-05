@@ -101,12 +101,7 @@ bun add @pokit/core zod
 | `pokit`                 | Global CLI launcher—install once, run anywhere               |
 | `create-pokit`          | Project scaffolding CLI                                      |
 | `@pokit/op`             | Operation utilities for common CLI patterns                  |
-| `@pokit/prompter-clack` | Interactive prompts adapter (Clack)                          |
-| `@pokit/reporter-clack` | Terminal output adapter (Clack)                              |
-| `@pokit/reporter-web`   | Web/React event reporter for pok CLI applications             |
-| `@pokit/sdk-gen`        | Generate a typed in-process SDK from a pok command tree       |
-| `@pokit/tabs-core`      | Shared tabs state management                                 |
-| `@pokit/opentui`        | Tabbed + app terminal UI (OpenTUI/React)                     |
+| `@pokit/terminal`       | Default terminal UI—reporter, prompter, and navigator (Clack) |
 
 ## License
 

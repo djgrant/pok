@@ -165,8 +165,7 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
       let resolvedOptions: SelectOption<T>[];
       if (isDynamicOptions(selectOptions)) {
         const controller = new AbortController();
-        const result = await selectOptions.provider({ signal: controller.signal });
-        resolvedOptions = result.options;
+        resolvedOptions = await selectOptions.provider(undefined, controller.signal);
       } else {
         resolvedOptions = selectOptions.options;
       }

@@ -864,8 +864,8 @@ describe('resolveInteractiveContext', () => {
           if (!('provider' in options)) {
             throw new Error('Expected dynamic provider options');
           }
-          const page = await options.provider({ signal: new AbortController().signal });
-          optionValues = page.options.map((option) => option.value);
+          const opts = await options.provider(undefined, new AbortController().signal);
+          optionValues = opts.map((option) => option.value);
           return 2 as T;
         },
         async multiselect<T>(): Promise<T[]> {
@@ -908,15 +908,8 @@ describe('resolveInteractiveContext', () => {
           if (!('provider' in options)) {
             throw new Error('Expected dynamic provider options');
           }
-          await options.provider({
-            signal: new AbortController().signal,
-            filter: 'task',
-          });
-          await options.provider({
-            signal: new AbortController().signal,
-            filter: 'task',
-            cursor: 'page-2',
-          });
+          // The provider takes a plain filter string and pages internally.
+          await options.provider('task', new AbortController().signal);
           return 'TASK-002' as T;
         },
         async multiselect<T>(): Promise<T[]> {
@@ -1095,7 +1088,7 @@ describe('resolveInteractiveContext', () => {
           if (!('provider' in options)) {
             throw new Error('Expected dynamic provider options');
           }
-          await options.provider({ signal: new AbortController().signal, cursor: 'loop' });
+          await options.provider(undefined, new AbortController().signal);
           return 'TASK-001' as T;
         },
         async multiselect<T>(): Promise<T[]> {
@@ -1130,8 +1123,8 @@ describe('resolveInteractiveContext', () => {
       const prompter: Prompter = {
         async select<T>(options): Promise<T> {
           if ('provider' in options) {
-            const page = await options.provider({ signal: new AbortController().signal });
-            optionLabels = page.options.map((option) => option.label);
+            const opts = await options.provider(undefined, new AbortController().signal);
+            optionLabels = opts.map((option) => option.label);
           } else {
             optionLabels = options.options.map((option) => option.label);
           }

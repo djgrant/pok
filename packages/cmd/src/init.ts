@@ -15,13 +15,8 @@ const CONFIG_FILENAME = 'pok.config.ts';
  * This enables bootstrapping new projects.
  */
 const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
-import { createReporterAdapter } from '@pokit/reporter-clack'
-import { createPrompter } from '@pokit/prompter-clack'
 
-export default defineConfig({
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
-})
+export default defineConfig({})
 `;
 
 /**
