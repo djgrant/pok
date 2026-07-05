@@ -15,12 +15,9 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:packages/core
-      '@pokit/prompter-clack':
+      '@pokit/terminal':
         specifier: workspace:*
-        version: link:packages/prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:packages/reporter-clack
+        version: link:packages/terminal
       '@types/bun':
         specifier: latest
         version: 1.3.14
@@ -39,12 +36,9 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@pokit/prompter-clack':
+      '@pokit/terminal':
         specifier: workspace:*
-        version: link:../../packages/prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../../packages/reporter-clack
+        version: link:../../packages/terminal
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -55,12 +49,9 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:../core
-      '@pokit/prompter-clack':
+      '@pokit/terminal':
         specifier: workspace:*
-        version: link:../prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../reporter-clack
+        version: link:../terminal
       '@types/bun':
         specifier: latest
         version: 1.3.14
@@ -80,12 +71,6 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@pokit/prompter-clack':
-        specifier: workspace:*
-        version: link:../prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../reporter-clack
       '@pokit/test-utils':
         specifier: workspace:*
         version: link:../../test/utils
@@ -107,12 +92,9 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:../core
-      '@pokit/prompter-clack':
+      '@pokit/terminal':
         specifier: workspace:*
-        version: link:../prompter-clack
-      '@pokit/reporter-clack':
-        specifier: workspace:*
-        version: link:../reporter-clack
+        version: link:../terminal
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -134,27 +116,11 @@ importers:
         specifier: latest
         version: 1.3.14
 
-  packages/prompter-clack:
+  packages/terminal:
     dependencies:
       '@clack/core':
         specifier: ^1.0.0
         version: 1.0.0
-      '@clack/prompts':
-        specifier: ^1.0.0
-        version: 1.0.0
-      '@pokit/core':
-        specifier: workspace:*
-        version: link:../core
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
-    devDependencies:
-      '@types/bun':
-        specifier: latest
-        version: 1.3.14
-
-  packages/reporter-clack:
-    dependencies:
       '@clack/prompts':
         specifier: ^1.0.0
         version: 1.0.0

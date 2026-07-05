@@ -12,19 +12,21 @@
 
 import * as path from 'path';
 import { runCli } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createPrompter } from '@pokit/prompter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const packageRoot = path.resolve(__dirname, '..');
 const commandsDir = path.join(packageRoot, 'commands');
 
+const ui = createTerminalUI();
+
 runCli(process.argv.slice(2), {
   projectRoot: packageRoot,
   commandsDir,
   appName: 'create-pokit',
-  reporterAdapter: createReporterAdapter(),
-  prompter: createPrompter(),
+  reporterAdapter: ui.reporter,
+  prompter: ui.prompter,
+  navigator: ui.navigator,
 }).catch((err) => {
   console.error(err);
   process.exit(1);

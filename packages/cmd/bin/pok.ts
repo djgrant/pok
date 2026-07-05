@@ -103,7 +103,10 @@ Run \`pok init\` to create a pok.config.ts file.
     process.exit(1);
   }
 
-  // Step 5: Import core and call runCli with config adapters
+  // Step 5: Resolve default terminal UI for any UI surface the config omitted.
+  const ui = await resolveTerminalDefaults(configDir, config);
+
+  // Step 6: Import core and call runCli with config adapters
   // (In merged architecture, configModule and core are the same package)
   const { runCli } = configModule as any;
 
@@ -112,13 +115,46 @@ Run \`pok init\` to create a pok.config.ts file.
     projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
-    reporterAdapter: config.reporter,
-    prompter: config.prompter,
-    tabs: config.tabs,
+    reporterAdapter: config.reporter ?? ui?.reporter,
+    prompter: config.prompter ?? ui?.prompter,
+    navigator: config.navigator ?? ui?.navigator,
     pmScripts: config.pmScripts,
     pmCommands: config.pmCommands,
     plugins: config.plugins,
   });
+}
+
+/**
+ * Resolve the default terminal UI (@pokit/terminal) when the config omits any
+ * of the reporter/prompter/navigator surfaces. Returns null when the config
+ * already provides both a reporter and a prompter (nothing to fill in).
+ */
+async function resolveTerminalDefaults(
+  configDir: string,
+  config: LauncherSkeleton
+): Promise<{ reporter: unknown; prompter: unknown; navigator: unknown } | null> {
+  if (config.reporter && config.prompter && config.navigator) {
+    return null;
+  }
+
+  let terminal = await resolveModule('@pokit/terminal', configDir);
+  if (!terminal) {
+    if (await ensureModulesInstalled(configDir, ['@pokit/terminal'])) {
+      terminal = await resolveModule('@pokit/terminal', configDir);
+    }
+  }
+
+  if (!terminal || typeof terminal.createTerminalUI !== 'function') {
+    const installCmd = getInstallCommand(configDir, ['@pokit/terminal']);
+    console.error(
+      `Error: pok.config.ts omits a reporter/prompter and the default UI (@pokit/terminal) is not installed.\n\n` +
+        `Install it with:\n  ${installCmd}\n\n` +
+        `Or provide reporter and prompter explicitly in your config.`
+    );
+    process.exit(1);
+  }
+
+  return terminal.createTerminalUI();
 }
 
 /**
@@ -300,29 +336,22 @@ async function ensureModulesInstalled(pkgDir: string, moduleNames: string[]): Pr
  */
 async function runInFallbackMode(pkgDir: string) {
   let core = await resolveModule('@pokit/core', pkgDir);
-  let reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
-  let prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+  let terminal = await resolveModule('@pokit/terminal', pkgDir);
 
-  if (!core || !reporter || !prompter) {
+  if (!core || !terminal) {
     const missing = [];
     if (!core) missing.push('@pokit/core');
-    if (!reporter) missing.push('@pokit/reporter-clack');
-    if (!prompter) missing.push('@pokit/prompter-clack');
+    if (!terminal) missing.push('@pokit/terminal');
 
     if (await ensureModulesInstalled(pkgDir, missing)) {
       // Retry resolution after installation
       core = await resolveModule('@pokit/core', pkgDir);
-      reporter = await resolveModule('@pokit/reporter-clack', pkgDir);
-      prompter = await resolveModule('@pokit/prompter-clack', pkgDir);
+      terminal = await resolveModule('@pokit/terminal', pkgDir);
     }
   }
 
-  if (!core || !reporter || !prompter) {
-    const installCmd = getInstallCommand(pkgDir, [
-      '@pokit/core',
-      '@pokit/reporter-clack',
-      '@pokit/prompter-clack',
-    ]);
+  if (!core || !terminal) {
+    const installCmd = getInstallCommand(pkgDir, ['@pokit/core', '@pokit/terminal']);
     console.error(
       `Error: Required pok modules not found.\n\n` +
         `Install them in your project to enable the fallback menu:\n` +
@@ -333,16 +362,17 @@ async function runInFallbackMode(pkgDir: string) {
   }
 
   const { runCli, defineCommand } = core;
-  const { createReporterAdapter } = reporter;
-  const { createPrompter } = prompter;
+  const { createTerminalUI } = terminal;
+  const ui = createTerminalUI();
   const { runInit } = await import('../src/init');
 
   await runCli(process.argv.slice(2), {
     commandsDir: path.join(pkgDir, 'commands'),
     projectRoot: pkgDir,
     appName: path.basename(pkgDir),
-    reporterAdapter: createReporterAdapter(),
-    prompter: createPrompter(),
+    reporterAdapter: ui.reporter,
+    prompter: ui.prompter,
+    navigator: ui.navigator,
     pmScripts: true,
     pmCommands: true,
     extraCommands: {

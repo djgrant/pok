@@ -1,11 +1,9 @@
 import { defineConfig } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createPrompter } from '@pokit/prompter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 
 export default defineConfig({
   commandsDir: './commands',
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
+  ...createTerminalUI(),
   appName: 'pok',
   pmScripts: ['quick-check'],
   pmCommands: ['repo'],

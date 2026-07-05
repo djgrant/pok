@@ -5,15 +5,14 @@ import { $ } from 'bun';
 const SCOPED_PACKAGES = [
   '@pokit/core',
   '@pokit/op',
-  '@pokit/prompter-clack',
-  '@pokit/reporter-clack',
+  '@pokit/terminal',
 ] as const;
 
 const CLI_PACKAGES = ['pokit', 'create-pokit'] as const;
 
 const PACKAGE_GROUPS = {
   scoped: {
-    label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
+    label: '@pokit/* packages (core, op, terminal)',
     packages: SCOPED_PACKAGES,
   },
   cli: {
