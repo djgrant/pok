@@ -13,14 +13,14 @@ importers:
         version: 2.1.11
     devDependencies:
       '@pokit/core':
-        specifier: npm:@pokit/core@0.2.2
-        version: 0.2.2(zod@4.3.6)
+        specifier: npm:@pokit/core@0.2.3
+        version: 0.2.3(zod@4.3.6)
       '@pokit/prompter-clack':
         specifier: npm:@pokit/prompter-clack@0.1.0
-        version: 0.1.0(@pokit/core@0.2.2(zod@4.3.6))
+        version: 0.1.0(@pokit/core@0.2.3(zod@4.3.6))
       '@pokit/reporter-clack':
         specifier: npm:@pokit/reporter-clack@0.1.0
-        version: 0.1.0(@pokit/core@0.2.2(zod@4.3.6))
+        version: 0.1.0(@pokit/core@0.2.3(zod@4.3.6))
       '@types/bun':
         specifier: latest
         version: 1.3.14
@@ -31,8 +31,8 @@ importers:
         specifier: ^10.3.2
         version: 10.3.2
       pokit:
-        specifier: 0.2.2
-        version: 0.2.2
+        specifier: 0.2.3
+        version: 0.2.3
       semver:
         specifier: ^7.7.0
         version: 7.7.3
@@ -208,8 +208,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@pokit/core@0.2.2':
-    resolution: {integrity: sha512-zlKFQR2n+JEO/P1YtNdYtasHnjm9BtMIRYnDxdg+34720aj3N4xC4AFnDwlGlSPKrFvOh0Omnbfh6Oask5X02w==}
+  '@pokit/core@0.2.3':
+    resolution: {integrity: sha512-wLNma7q4W1wWNaZDv0HXi0N0Y4r+wpH/3moRytmIG8sfKbSV8gRn8m4ZQ6U0QGwDGQKTEi7jvrHiQbtSd9Htjg==}
     engines: {bun: '>=1.0.0', node: '>=18.0.0'}
     peerDependencies:
       zod: ^4.3.6
@@ -464,8 +464,8 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
-  pokit@0.2.2:
-    resolution: {integrity: sha512-SotqS+WxA12isvU6Ak7clLmVXcxwJRhrz1qOZIttd3zs3MqMilGXMkDEB8zertT0E11n/Wvn/EOjiYvqogjAfg==}
+  pokit@0.2.3:
+    resolution: {integrity: sha512-zf4ehMiPAbz1I/tOHBNXXTC5vQ5i6mt5x0OalFtxpB092KY2hvhfWwCAVao6IAdJE+8nqyftBD289MTnUN3adg==}
     engines: {bun: '>=1.0.0'}
     hasBin: true
 
@@ -605,24 +605,24 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@pokit/core@0.2.2(zod@4.3.6)':
+  '@pokit/core@0.2.3(zod@4.3.6)':
     dependencies:
       '@folder/xdg': 4.0.1
       fast-glob: 3.3.3
       picomatch: 4.0.3
       zod: 4.3.6
 
-  '@pokit/prompter-clack@0.1.0(@pokit/core@0.2.2(zod@4.3.6))':
+  '@pokit/prompter-clack@0.1.0(@pokit/core@0.2.3(zod@4.3.6))':
     dependencies:
       '@clack/core': 1.0.0
       '@clack/prompts': 1.0.0
-      '@pokit/core': 0.2.2(zod@4.3.6)
+      '@pokit/core': 0.2.3(zod@4.3.6)
       picocolors: 1.1.1
 
-  '@pokit/reporter-clack@0.1.0(@pokit/core@0.2.2(zod@4.3.6))':
+  '@pokit/reporter-clack@0.1.0(@pokit/core@0.2.3(zod@4.3.6))':
     dependencies:
       '@clack/prompts': 1.0.0
-      '@pokit/core': 0.2.2(zod@4.3.6)
+      '@pokit/core': 0.2.3(zod@4.3.6)
       picocolors: 1.1.1
 
   '@types/bun@1.3.14':
@@ -854,7 +854,7 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  pokit@0.2.2: {}
+  pokit@0.2.3: {}
 
   queue-microtask@1.2.3: {}
 
