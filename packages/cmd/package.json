@@ -1,6 +1,6 @@
 {
   "name": "pokit",
-  "version": "0.2.3-dev.0",
+  "version": "0.2.3",
   "description": "Global CLI launcher for pok - install once, run anywhere",
   "type": "module",
   "license": "MIT",
