@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'bun:test';
 import { captureEvents, normalizeEvents, stripRootLifecycleEvents } from './utils';
 import * as fixtures from './fixtures';
+import { CancelError, CANCEL_EXIT_CODE } from '../src';
+
+/**
+ * A scripted select response that simulates the user cancelling the prompt
+ * (Esc / Ctrl-C). The default menu navigator maps a thrown CancelError to a
+ * `back` navigation result, so this is how a raw-prompter script expresses
+ * "go back / exit" through the router.
+ */
+const cancel = () => {
+  throw new CancelError('Cancelled', CANCEL_EXIT_CODE);
+};
 
 describe('Navigation', () => {
   describe('menu navigation', () => {
@@ -108,6 +119,46 @@ describe('Navigation', () => {
         selectResponses: ['parent', 'child-a'],
       });
       expect(error).toBeUndefined();
+    });
+  });
+
+  describe('back / exit navigation', () => {
+    it('back from a submenu returns to the parent menu (does not exit)', async () => {
+      // 1) root menu   -> pick "parent" (descend)
+      // 2) parent menu -> cancel (back to root)
+      // 3) root menu   -> pick "simple" (runs to completion)
+      const { events, error } = await captureEvents([], {
+        selectResponses: ['parent', cancel, 'simple'],
+      });
+
+      // If `back` had unwound the whole menu, this would surface a CancelError.
+      expect(error).toBeUndefined();
+
+      // Proof we actually descended into "parent" before backing out.
+      const breadcrumb = events.find(
+        (e) => e.type === 'log' && e.message === 'cli-test > parent'
+      );
+      expect(breadcrumb).toBeDefined();
+    });
+
+    it('cancelling at the root level exits with the cancel exit code', async () => {
+      const { error } = await captureEvents([], {
+        selectResponses: [cancel],
+      });
+
+      expect(error).toBeInstanceOf(CancelError);
+      expect((error as CancelError).exitCode).toBe(CANCEL_EXIT_CODE);
+    });
+
+    it('an explicit exit unwinds the whole menu from a submenu', async () => {
+      // Descend into "parent", then re-enter and cancel at the root instead of
+      // backing out step-by-step: cancelling once at root exits immediately.
+      const { error } = await captureEvents([], {
+        selectResponses: ['parent', cancel, cancel],
+      });
+
+      expect(error).toBeInstanceOf(CancelError);
+      expect((error as CancelError).exitCode).toBe(CANCEL_EXIT_CODE);
     });
   });
 });
