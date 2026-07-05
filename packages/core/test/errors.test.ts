@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'bun:test';
 import { captureEvents, eventTypes, stripRootLifecycleEvents } from './utils';
+import {
+  isOperationalError,
+  wasPresented,
+  markPresented,
+  markOperational,
+  CommandError,
+  TimeoutError,
+  AbortError,
+  CancelError,
+  RouterError,
+  CheckError,
+  CLIError,
+} from '../src';
 
 describe('Error Handling', () => {
   describe('pre-flight check errors', () => {
@@ -83,6 +96,63 @@ describe('Error Handling', () => {
       if (failureEvent?.type === 'activity:failure') {
         expect(failureEvent.error).toBeDefined();
       }
+    });
+  });
+
+  describe('operational error classification', () => {
+    it('brands the built-in error classes as operational', () => {
+      const cases: Error[] = [
+        new CommandError('Command failed: x', 'stderr'),
+        new TimeoutError('slow-cmd', 1000),
+        new AbortError(),
+        new CancelError(),
+        new RouterError('boom'),
+        new CheckError('check failed'),
+        new CLIError('bad flag', { appName: 'app', commandPath: [] }),
+      ];
+      for (const err of cases) {
+        expect(isOperationalError(err)).toBe(true);
+      }
+    });
+
+    it('does not classify plain errors as operational', () => {
+      expect(isOperationalError(new Error('bug'))).toBe(false);
+      expect(isOperationalError('nope')).toBe(false);
+      expect(isOperationalError(null)).toBe(false);
+      expect(isOperationalError(undefined)).toBe(false);
+    });
+
+    it('markOperational opts an arbitrary error in', () => {
+      const err = new Error('custom');
+      expect(isOperationalError(err)).toBe(false);
+      markOperational(err);
+      expect(isOperationalError(err)).toBe(true);
+    });
+
+    it('tracks presentation via markPresented / wasPresented', () => {
+      const err = new CommandError('Command failed: x', 'out');
+      expect(wasPresented(err)).toBe(false);
+      markPresented(err);
+      expect(wasPresented(err)).toBe(true);
+    });
+
+    it('treats RouterError and CancelError as pre-presented (silent at top level)', () => {
+      // These are exit-code carriers whose message is surfaced earlier (or is
+      // internal), so the top-level handler must not print them again.
+      expect(wasPresented(new RouterError('internal'))).toBe(true);
+      expect(wasPresented(new CancelError())).toBe(true);
+    });
+
+    it('does not pre-present a CommandError (top level may surface it)', () => {
+      expect(wasPresented(new CommandError('Command failed: x', 'out'))).toBe(false);
+    });
+
+    it('keeps operational/presented brands non-enumerable', () => {
+      const err = new CommandError('Command failed: x', 'out');
+      markPresented(err);
+      expect(Object.keys(err)).not.toContain('Symbol(pokit.operationalError)');
+      // JSON serialization must be unaffected by the brands.
+      expect(() => JSON.stringify({ output: err.output })).not.toThrow();
     });
   });
 });

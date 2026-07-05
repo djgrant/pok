@@ -9,6 +9,7 @@ import {
   execInputToString,
 } from './task';
 import { type Env, getEnvKeys } from './env';
+import { markOperational } from './errors';
 import { getRuntime, type SpawnResult } from '../runtime';
 import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
@@ -48,6 +49,7 @@ export class AbortError extends Error {
   constructor(message: string = 'Command aborted') {
     super(message);
     this.name = 'AbortError';
+    markOperational(this);
   }
 }
 
@@ -73,6 +75,7 @@ export class TimeoutError extends Error {
     this.name = 'TimeoutError';
     this.command = command;
     this.timeoutMs = timeoutMs;
+    markOperational(this);
   }
 }
 
@@ -467,6 +470,7 @@ export class CommandError extends Error {
   ) {
     super(message);
     this.name = 'CommandError';
+    markOperational(this);
   }
 }
 
