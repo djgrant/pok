@@ -177,25 +177,37 @@ export const command = defineCommand({
         }
       });
 
-      await g.activity('Reinstall to refresh lockfile', async (a) => {
-        // The versions we just repinned to may not be resolvable for a few
-        // seconds: npm registry propagation lags publish, so pnpm can report
-        // ERR_PNPM_NO_MATCHING_VERSION ("latest release is <previous>") even
-        // though the publish succeeded. Retry with backoff to ride it out.
-        const maxAttempts = 6;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          const result = await $`pnpm install`.cwd(repoRoot).nothrow();
-          if (result.exitCode === 0) break;
-          const stderr = result.stderr.toString();
-          const propagationLag = stderr.includes('ERR_PNPM_NO_MATCHING_VERSION');
-          if (attempt === maxAttempts || !propagationLag) {
-            throw new Error(`pnpm install failed:\n${stderr}`);
+      await g.activity('Wait for published versions to land on the registry', async (a) => {
+        // npm is eventually consistent: for a few seconds after publish the
+        // versions we just repinned to are not yet fetchable, so an immediate
+        // `pnpm install` would fail with ERR_PNPM_NO_MATCHING_VERSION even
+        // though the publish succeeded. Poll the registry until every version
+        // is visible before we try to install it.
+        const pending = new Map(toPublish);
+        const maxAttempts = 30;
+        const intervalMs = 2000;
+        for (let attempt = 1; attempt <= maxAttempts && pending.size > 0; attempt++) {
+          for (const [name, version] of [...pending]) {
+            const result = await $`npm view ${name}@${version} version --registry ${registry}`
+              .quiet()
+              .nothrow();
+            if (result.exitCode === 0 && result.stdout.toString().trim() === version) {
+              a.info(`${name}@${version} is live`);
+              pending.delete(name);
+            }
           }
-          a.info(
-            `pnpm install could not resolve the just-published versions yet (attempt ${attempt}/${maxAttempts}); registry propagation lag, retrying...`,
-          );
-          await Bun.sleep(3000 * attempt);
+          if (pending.size > 0) await Bun.sleep(intervalMs);
         }
+        if (pending.size > 0) {
+          const stuck = [...pending].map(([name, version]) => `${name}@${version}`).join(', ');
+          throw new Error(
+            `Timed out after ${(maxAttempts * intervalMs) / 1000}s waiting for these versions to appear on ${registry}: ${stuck}`,
+          );
+        }
+      });
+
+      await g.activity('Reinstall to refresh lockfile', async () => {
+        await r.exec('pnpm install');
       });
 
       await g.activity('Verify root resolves registry versions', async (a) => {
