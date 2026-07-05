@@ -12,9 +12,12 @@ import { createPrompter } from '@pokit/prompter-clack';
 // For manual UI / workspace testing use `demo/` instead (it links the workspace
 // code via workspace:*).
 //
-// TODO: after the next publish, migrate this back to the zero-config API
-// (`defineConfig({ commandsDir, appName, pmScripts })` with the terminal
-// defaults wired by the launcher).
+// TODO: after the next publish (which includes @pokit/terminal), migrate this
+// back to the zero-config API (`defineConfig({ commandsDir, appName, pmScripts })`
+// with the terminal defaults wired by the launcher). Note the publish command
+// now repins root deps to freshly published versions automatically — once
+// @pokit/terminal is pinned at root it will be kept current too; this config
+// migration is the only remaining manual step.
 export default defineConfig({
   commandsDir: './commands',
   appName: 'pok',
