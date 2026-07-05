@@ -16,13 +16,79 @@ import { resolve } from 'bun';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ConfigModule, LauncherSkeleton } from '../src/protocol';
+import {
+  DELEGATION_ENV,
+  findProjectRoot,
+  shouldDelegate,
+  coreSupportsTerminalDefaults,
+} from '../src/delegate';
+
+const args = process.argv.slice(2);
+
+// Step 0: Trampoline. If this project ships its own local `pokit` launcher that
+// is a different installation from the one running now, re-exec it (with the
+// same argv) and exit with its code. This keeps a project served entirely by
+// the launcher version it pinned. Guarded against infinite recursion by the
+// POK_DELEGATED env flag plus a same-install path check.
+await maybeDelegate();
 
 // Handle init before config discovery - must work without a config file
-const args = process.argv.slice(2);
 if (args[0] === 'init') {
   const { runInit } = await import('../src/init');
   await runInit();
   process.exit(0);
+}
+
+/**
+ * Resolve the local `pokit` launcher entry from a directory, realpath-normalized.
+ * Returns null when no local pokit is installed/resolvable.
+ */
+async function resolveLocalPokitEntry(fromDir: string): Promise<string | null> {
+  try {
+    const entry = await resolve('pokit', fromDir);
+    return fs.realpathSync(entry);
+  } catch {
+    return null;
+  }
+}
+
+/** The realpath of the currently-running launcher entry. */
+function currentEntry(): string {
+  try {
+    return fs.realpathSync(import.meta.path);
+  } catch {
+    return import.meta.path;
+  }
+}
+
+async function maybeDelegate(): Promise<void> {
+  const delegated = process.env[DELEGATION_ENV] === '1';
+  if (delegated) return;
+
+  const projectRoot = findProjectRoot(process.cwd());
+  if (!projectRoot) return;
+
+  const localEntry = await resolveLocalPokitEntry(projectRoot);
+  const debug = !!process.env.POK_DEBUG;
+
+  if (!shouldDelegate({ delegated, localEntry, currentEntry: currentEntry() })) {
+    if (debug) {
+      console.error(
+        `[pok] no delegation (running ${currentEntry()}, local=${localEntry ?? 'none'})`
+      );
+    }
+    return;
+  }
+
+  if (debug) {
+    console.error(`[pok] delegating to local launcher: ${localEntry}`);
+  }
+
+  const proc = Bun.spawnSync(['bun', localEntry!, ...args], {
+    stdio: ['inherit', 'inherit', 'inherit'],
+    env: { ...process.env, [DELEGATION_ENV]: '1' },
+  });
+  process.exit(proc.exitCode ?? 0);
 }
 
 main().catch((err: unknown) => {
@@ -104,7 +170,7 @@ Run \`pok init\` to create a pok.config.ts file.
   }
 
   // Step 5: Resolve default terminal UI for any UI surface the config omitted.
-  const ui = await resolveTerminalDefaults(configDir, config);
+  const ui = await resolveTerminalDefaults(configDir, config, configModule);
 
   // Step 6: Import core and call runCli with config adapters
   // (In merged architecture, configModule and core are the same package)
@@ -131,9 +197,18 @@ Run \`pok init\` to create a pok.config.ts file.
  */
 async function resolveTerminalDefaults(
   configDir: string,
-  config: LauncherSkeleton
+  config: LauncherSkeleton,
+  core: unknown
 ): Promise<{ reporter: unknown; prompter: unknown; navigator: unknown } | null> {
-  if (config.reporter && config.prompter && config.navigator) {
+  // A navigator default is only meaningful when the resolved core actually
+  // supports the navigator surface. An older core (pre zero-config) ignores it,
+  // so we must not treat a missing navigator as a reason to pull in
+  // @pokit/terminal — otherwise an explicit-adapter config on an old core would
+  // needlessly resolve (and leak) the terminal package.
+  const coreSupportsNavigator = coreSupportsTerminalDefaults(core);
+  const needsNavigator = !config.navigator && coreSupportsNavigator;
+
+  if (config.reporter && config.prompter && !needsNavigator) {
     return null;
   }
 
