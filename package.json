@@ -22,7 +22,7 @@
     "quick-check": "echo 'quick check'"
   },
   "devDependencies": {
-    "@pokit/core": "npm:@pokit/core@0.1.0",
+    "@pokit/core": "npm:@pokit/core@0.2.0",
     "@pokit/reporter-clack": "npm:@pokit/reporter-clack@0.1.0",
     "@pokit/prompter-clack": "npm:@pokit/prompter-clack@0.1.0",
     "@types/bun": "latest",

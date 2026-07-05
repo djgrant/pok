@@ -8,7 +8,7 @@
         "cli-highlight": "^2.1.11",
       },
       "devDependencies": {
-        "@pokit/core": "npm:@pokit/core@0.1.0",
+        "@pokit/core": "npm:@pokit/core@0.2.0",
         "@pokit/prompter-clack": "npm:@pokit/prompter-clack@0.1.0",
         "@pokit/reporter-clack": "npm:@pokit/reporter-clack@0.1.0",
         "@types/bun": "latest",
@@ -34,7 +34,7 @@
     },
     "packages/cmd": {
       "name": "pokit",
-      "version": "0.0.39",
+      "version": "0.2.0",
       "bin": {
         "pok": "./bin/pok.ts",
         "poks": "./bin/poks.ts",
@@ -47,7 +47,7 @@
     },
     "packages/core": {
       "name": "@pokit/core",
-      "version": "0.2.0-dev.0",
+      "version": "0.3.0-dev.0",
       "dependencies": {
         "@folder/xdg": "^4.0.1",
         "fast-glob": "^3.3.2",
@@ -66,7 +66,7 @@
     },
     "packages/create": {
       "name": "create-pokit",
-      "version": "0.0.39",
+      "version": "0.2.0",
       "bin": {
         "create-pokit": "./bin/create.ts",
       },
@@ -82,7 +82,7 @@
     },
     "packages/op": {
       "name": "@pokit/op",
-      "version": "0.1.0",
+      "version": "0.3.0-dev.0",
       "dependencies": {
         "@pokit/core": "workspace:*",
       },
@@ -95,7 +95,7 @@
     },
     "packages/terminal": {
       "name": "@pokit/terminal",
-      "version": "0.2.0-dev.0",
+      "version": "0.3.0-dev.0",
       "dependencies": {
         "@clack/core": "^1.0.0",
         "@clack/prompts": "^1.0.0",
@@ -149,7 +149,7 @@
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
-    "@pokit/core": ["@pokit/core@0.1.0", "", { "dependencies": { "@folder/xdg": "^4.0.1", "fast-glob": "^3.3.2", "picomatch": "^4.0.2", "zod": "^4.3.6" } }, "sha512-8v+WmB7pT8bByqpCLFnD83ZtslbxaCUXqBznIpyI7MR2OJO6W6Ba1C6IN20YWhfsINqnAR4ebcd6Jum5COzPsA=="],
+    "@pokit/core": ["@pokit/core@0.2.0", "", { "dependencies": { "@folder/xdg": "^4.0.1", "fast-glob": "^3.3.2", "picomatch": "^4.0.2", "zod": "^4.3.6" } }, "sha512-vInbqBUiVbYd4eD7JD2SNE7Z4X9N7utJBVq59+5+PkvaWDVZGq/DorliWQ5J8VYZAQNw3UEgBKbZusy3IYGWWQ=="],
 
     "@pokit/demo": ["@pokit/demo@workspace:demo"],
 

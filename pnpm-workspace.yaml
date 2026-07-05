@@ -8,3 +8,4 @@ minimumReleaseAgeExclude:
   - '@pokit/core@0.1.0'
   - '@pokit/prompter-clack@0.1.0'
   - '@pokit/reporter-clack@0.1.0'
+  - '@pokit/core@0.2.0'
