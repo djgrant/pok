@@ -10,7 +10,6 @@ import {
 } from './task';
 import { type Env, getEnvKeys } from './env';
 import { getRuntime, type SpawnResult } from '../runtime';
-import type { TabsAdapter, TabSpec, AppAdapter, AnyComponent } from '../tabs';
 import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
 import type { Prompter } from '../prompter';
@@ -97,7 +96,7 @@ function isCommand(item: unknown): item is Command {
 }
 
 /**
- * A deferred task that can be awaited or passed to r.tabs().
+* A deferred task that can be awaited or passed to r.parallel().
  * Created via r.run() - implements thenable interface for direct await.
  */
 export type DeferredTask<TReturn = void> = {
@@ -119,7 +118,7 @@ function isDeferredTask(item: unknown): item is DeferredTask<unknown> {
   );
 }
 
-/** Items that can be passed to r.parallel() or r.tabs() */
+/** Items that can be passed to r.parallel() */
 export type RunnerItem = Command | DeferredTask<unknown>;
 
 // =============================================================================
@@ -172,14 +171,6 @@ export type ParallelOptions = {
    * @default 'race'
    */
   mode?: ParallelMode;
-};
-
-/**
- * Options for the tabs runner.
- */
-export type TabsRunnerOptions = {
-  /** Name shown in console messages (e.g., "Opening {name} console...") */
-  name?: string;
 };
 
 /**
@@ -243,49 +234,8 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
   parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
 
   /**
-   * Run multiple commands or tasks in a tabbed terminal interface.
-   * Each tab shows the buffered output of its process.
-   * User can switch tabs and scroll through output.
-   *
-   * Accepts commands (r.exec) or deferred tasks (r.run).
-   * Task envs are resolved before spawning processes.
-   *
-   * @example
-   * // With tasks
-   * await r.tabs([r.run(startViteDev), r.run(startStripeListener)]);
-   *
-   * // With commands
-   * await r.tabs([r.exec('vite'), r.exec('stripe listen')]);
-   *
-   * // Mixed
-   * await r.tabs([r.run(startViteDev), r.exec('stripe listen')]);
-   *
-   * // With custom name
-   * await r.tabs([...], { name: 'Development' });
-   */
-  tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
-
-  /**
-   * Run a fullscreen interactive app.
-   * The component receives props and owns its own state via React hooks.
-   * The adapter handles terminal lifecycle (alternate screen, raw mode, cleanup).
-   *
-   * Requires an AppAdapter to be configured (e.g., from @pokit/opentui).
-   *
-   * @example
-  * await r.app(MyBoardApp, {
-  *   tasks,
-  *   onSave: async (id, data) => { ... },
-  * });
-  */
-  app<TProps>(
-    component: AnyComponent<TProps>,
-    props: TProps
-  ): Promise<void>;
-
-  /**
    * Run a task. Returns a deferred task that can be awaited directly
-   * or passed to r.tabs() for tabbed execution.
+   * or passed to r.parallel() for parallel execution.
    *
    * Task envs are resolved before execution.
    *
@@ -293,8 +243,8 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
    * // Execute immediately
    * await r.run(buildTask, { mode: 'dev' });
    *
-   * // Pass to tabs for tabbed execution
-   * await r.tabs([r.run(startViteDev), r.run(startStripeListener)]);
+   * // Pass to parallel for concurrent execution
+   * await r.parallel([r.run(startViteDev), r.run(startStripeListener)]);
    */
   run<TReturn = void>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
 
@@ -503,10 +453,6 @@ export type RunnerOptions<TContext extends Record<string, unknown>> = {
   signal?: AbortSignal;
   /** EventBus for event-driven output */
   eventBus: EventBus;
-  /** Optional tabs adapter for tabbed terminal UI */
-  tabs?: TabsAdapter;
-  /** Optional app adapter for fullscreen TUI applications */
-  app?: AppAdapter;
   /** Prompter for interactive input */
   prompter: Prompter;
 };
@@ -534,8 +480,6 @@ export function createRunner<TContext extends Record<string, unknown>>(
     timeout: defaultTimeout,
     quiet = false,
     signal,
-    tabs: tabsAdapter,
-    app: appAdapter,
     eventBus,
     prompter,
   } = options;
@@ -1253,207 +1197,6 @@ export function createRunner<TContext extends Record<string, unknown>>(
       },
     };
   };
-
-  const tabs = async (items: RunnerItem[], options?: TabsRunnerOptions): Promise<void> => {
-    if (!tabsAdapter) {
-      throw new Error(
-        'Tabs adapter not available. Please provide a TabsAdapter in RunnerOptions to use r.tabs().\n' +
-          'Install @pokit/opentui and pass the adapter:\n' +
-          '  import { createTabsAdapter } from "@pokit/opentui";\n' +
-          '  // In your router config:\n' +
-          '  tabs: createTabsAdapter()'
-      );
-    }
-
-    if (items.length === 0) return;
-
-    // Validate items first
-    for (const item of items) {
-      if (isDeferredTask(item)) {
-        const { task } = item;
-        if (!('exec' in task)) {
-          throw new Error(
-            `r.tabs() only supports exec tasks. Task "${task.label}" is not an exec task.`
-          );
-        }
-      } else if (!isCommand(item)) {
-        throw new Error('r.tabs() only accepts commands (r.exec) or tasks (r.run).');
-      }
-    }
-
-    // Collect all envs that need to be resolved
-    const envsToResolve: AnyEnv[] = [];
-    for (const item of items) {
-      if (isDeferredTask(item) && item.task.env) {
-        const taskEnvs: AnyEnv[] = Array.isArray(item.task.env) ? item.task.env : [item.task.env];
-        for (const env of taskEnvs) {
-          envsToResolve.push(env);
-        }
-      }
-    }
-
-    // Resolve envs with UI feedback if there are any
-    if (envsToResolve.length > 0) {
-      await reporter.group('Loading Secrets', { layout: 'sequence' }, async (groupReporter) => {
-        for (const env of envsToResolve) {
-          const keys = getEnvKeys(env);
-          // Skip if all keys are already cached
-          const uncachedKeys = keys.filter((k) => !envCache.has(k));
-          if (uncachedKeys.length === 0) continue;
-
-          // Build descriptive label showing which secrets are being loaded
-          const label =
-            uncachedKeys.length <= 3
-              ? uncachedKeys.join(', ')
-              : `${uncachedKeys.slice(0, 2).join(', ')} +${uncachedKeys.length - 2} more`;
-
-          await groupReporter.activity(label, async () => {
-            const resolver = env.resolver;
-            const rawEnv = await resolver.resolve(keys, context);
-            for (const [key, value] of Object.entries(rawEnv)) {
-              if (value !== undefined) {
-                envCache.set(key, value);
-              }
-            }
-          });
-        }
-      });
-    }
-
-    const allEnv = getAllCachedEnv();
-    const envVars = { ...process.env, ...allEnv };
-
-    // Get runtime for shell escaping
-    const runtime = await getRuntime();
-
-    // Helper to convert ExecInput to string for tabs (tabs always use shell)
-    const execInputToTabsString = (cmd: ExecInput): string => {
-      if (typeof cmd === 'string') {
-        return cmd;
-      }
-      if (Array.isArray(cmd)) {
-        // Convert array to shell-escaped string using runtime's escape
-        return cmd.map((arg) => runtime.escapeShell(arg)).join(' ');
-      }
-      // ShellPromise cannot be converted to string for tabs
-      throw new Error(
-        'r.tabs() does not support Bun shell ($`...`) commands. ' +
-          'Use string or array form instead.'
-      );
-    };
-
-    // Convert items to tab specs
-    const tabSpecs: TabSpec[] = items.map((item) => {
-      if (isCommand(item)) {
-        const execStr = execInputToTabsString(item.cmd);
-        // Command: use first word (binary name) as label
-        const label = execStr.split(/\s+/)[0] ?? execStr;
-        return { label, exec: execStr };
-      }
-
-      // DeferredTask: extract exec command from task
-      const { task, params } = item as DeferredTask<unknown>;
-      const execTask = task as ExecTaskConfig<any, any, any>;
-      let execCmd: ExecInput;
-
-      if (typeof execTask.exec === 'function') {
-        // Build task context for exec function
-        const taskEnvs: Record<string, unknown> = {};
-        if (execTask.env) {
-          const envs: AnyEnv[] = Array.isArray(execTask.env) ? execTask.env : [execTask.env];
-          for (const env of envs) {
-            for (const key of env.vars) {
-              const value = envCache.get(key);
-              if (value !== undefined) {
-                taskEnvs[key] = value;
-              }
-            }
-          }
-        }
-        const taskParams = execTask.params ? execTask.params.parse(params ?? {}) : {};
-        const taskContext = {
-          context,
-          cwd,
-          envs: taskEnvs,
-          params: taskParams,
-          extraArgs: forwardedArgs,
-          reporter,
-          writeEnvs: undefined,
-        };
-        execCmd = execTask.exec(taskContext as any);
-      } else {
-        execCmd = execTask.exec;
-      }
-
-      const execStr = execInputToTabsString(execCmd);
-
-      // Use shortLabel if provided, otherwise derive from exec command
-      const label =
-        execTask.shortLabel ??
-        (typeof execTask.exec === 'string'
-          ? (execTask.exec.split(/\s+/)[0] ?? execTask.label)
-          : execTask.label);
-      return { label, exec: execStr };
-    });
-
-    // Derive name from tab labels if not provided
-    const name = options?.name ?? tabSpecs.map((t) => t.label).join(' + ') ?? 'console';
-
-    // Single item - just run it directly with inherited stdio
-    if (tabSpecs.length === 1) {
-      const item = tabSpecs[0]!;
-      const proc = runtime.spawn(['sh', '-c', item.exec], {
-        cwd,
-        stdio: 'inherit',
-        env: envVars,
-      });
-
-      runnerProcesses.add(proc);
-      const exitCode = await proc.exited;
-      runnerProcesses.delete(proc);
-
-      if (exitCode !== 0 && exitCode !== null) {
-        throw new CommandError(
-          `Command failed with exit code ${exitCode}: ${item.exec}`,
-          '' // tabs single-item mode doesn't capture output
-        );
-      }
-      return;
-    }
-
-    // Multiple items - use tabbed UI
-    // Suspend reporter before OpenTUI takes over the terminal
-    reporter.suspend();
-    try {
-      await tabsAdapter.run(tabSpecs, { name, cwd, env: envVars });
-    } finally {
-      reporter.resume();
-    }
-  };
-
-  const app = async <TProps>(
-    component: AnyComponent<TProps>,
-    props: TProps
-  ): Promise<void> => {
-    if (!appAdapter) {
-      throw new Error(
-        'App adapter not available. Please provide an AppAdapter in your config to use r.app().\n' +
-          'Install @pokit/opentui and pass the adapter:\n' +
-          '  import { createAppAdapter } from "@pokit/opentui";\n' +
-          '  // In your pok.config.ts:\n' +
-          '  app: createAppAdapter()'
-      );
-    }
-
-    // Suspend reporter before app takes over the terminal
-    reporter.suspend();
-    try {
-      await appAdapter.run(component, props);
-    } finally {
-      reporter.resume();
-    }
-  };
-
   const group = <T>(
     label: string,
     options: GroupOptions,
@@ -1468,8 +1211,6 @@ export function createRunner<TContext extends Record<string, unknown>>(
     prompter,
     exec,
     parallel,
-    tabs,
-    app,
     run,
     group,
   };

@@ -4,7 +4,7 @@ export type GroupId = string;
 /**
  * Layout hints for groups - tells the UI how to arrange child activities
  */
-export type GroupLayout = 'sequence' | 'parallel' | 'tabs' | 'grid';
+export type GroupLayout = 'sequence' | 'parallel' | 'grid';
 
 /**
  * Log levels for log events
@@ -29,7 +29,7 @@ export type CLIEvent =
   | { type: 'root:end'; exitCode: number }
 
   // --- Grouping (Layout Hints) ---
-  // A group is a container for activities (e.g. parallel execution, tabs)
+  // A group is a container for activities (e.g. parallel execution)
   | {
       type: 'group:start';
       id: GroupId;
