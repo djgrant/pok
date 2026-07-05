@@ -14,9 +14,6 @@ const SCOPED_FILES = [
   'packages/op/package.json',
   'packages/prompter-clack/package.json',
   'packages/reporter-clack/package.json',
-  'packages/reporter-web/package.json',
-  'packages/tabs-core/package.json',
-  'packages/opentui/package.json',
 ];
 
 const CLI_FILES = ['packages/cmd/package.json', 'packages/create/package.json'];

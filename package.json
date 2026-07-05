@@ -6,8 +6,7 @@
     "packages/*",
     "test",
     "test/utils",
-    ".test-projects/*",
-    "playground"
+    ".test-projects/*"
   ],
   "license": "MIT",
   "repository": {
