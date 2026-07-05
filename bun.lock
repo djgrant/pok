@@ -12,8 +12,10 @@
         "@pokit/prompter-clack": "npm:@pokit/prompter-clack@0.1.0",
         "@pokit/reporter-clack": "npm:@pokit/reporter-clack@0.1.0",
         "@types/bun": "latest",
+        "@types/semver": "^7.7.0",
         "bumpp": "^10.3.2",
         "pokit": "0.0.38",
+        "semver": "^7.7.0",
         "typescript": "^5.8.3",
         "zod": "^4.3.6",
       },
@@ -168,6 +170,8 @@
     "@types/node": ["@types/node@26.1.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-O0A1G3xPGy4w7AgQdAQYUlQ+BKk2Oovw8eRpofyp5KdBZULnbe+WqaOVNrm705SHphCiG4XHsACrSmPu1f+Kgw=="],
 
     "@types/picomatch": ["@types/picomatch@3.0.2", "", {}, "sha512-n0i8TD3UDB7paoMMxA3Y65vUncFJXjcUf7lQY7YyKGl6031FNjfsLs6pdLFCy2GNFxItPJG8GvvpbZc2skH7WA=="],
+
+    "@types/semver": ["@types/semver@7.7.1", "", {}, "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="],
 
     "@xterm/headless": ["@xterm/headless@6.0.0", "", {}, "sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw=="],
 

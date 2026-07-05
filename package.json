@@ -28,6 +28,8 @@
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "pokit": "0.0.38",
+    "semver": "^7.7.0",
+    "@types/semver": "^7.7.0",
     "typescript": "^5.8.3",
     "zod": "^4.3.6"
   },
