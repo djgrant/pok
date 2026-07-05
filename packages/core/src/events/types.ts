@@ -4,7 +4,7 @@ export type GroupId = string;
 /**
  * Layout hints for groups - tells the UI how to arrange child activities
  */
-export type GroupLayout = 'sequence' | 'parallel' | 'grid';
+export type GroupLayout = 'sequence' | 'parallel';
 
 /**
  * Log levels for log events
