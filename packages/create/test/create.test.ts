@@ -205,7 +205,6 @@ describe('create-pokit template presets', () => {
       expect(full!.plugins).toEqual([
         '@pokit/prompter-clack',
         '@pokit/reporter-clack',
-        '@pokit/opentui',
       ]);
     });
 
@@ -227,8 +226,8 @@ describe('create-pokit template presets', () => {
   });
 
   describe('AVAILABLE_PLUGINS constant', () => {
-    it('has all three plugins', () => {
-      expect(AVAILABLE_PLUGINS).toHaveLength(3);
+    it('has all plugins', () => {
+      expect(AVAILABLE_PLUGINS).toHaveLength(2);
     });
 
     it('has prompter-clack plugin', () => {
@@ -241,12 +240,6 @@ describe('create-pokit template presets', () => {
       const reporter = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/reporter-clack');
       expect(reporter).toBeDefined();
       expect(reporter!.label).toBe('Reporter (clack)');
-    });
-
-    it('has opentui plugin', () => {
-      const tabs = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/opentui');
-      expect(tabs).toBeDefined();
-      expect(tabs!.label).toBe('OpenTUI (tabs + app)');
     });
 
     it('all plugins have required properties', () => {
@@ -290,7 +283,7 @@ describe('create-pokit template presets', () => {
   });
 
   describe('full template', () => {
-    it('includes all plugins including opentui', () => {
+    it('includes all plugins', () => {
       const full = TEMPLATES.find((t) => t.name === 'full')!;
       const config = {
         name: 'full-project',
@@ -300,7 +293,6 @@ describe('create-pokit template presets', () => {
 
       expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
       expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/opentui']).toBe('latest');
     });
   });
 

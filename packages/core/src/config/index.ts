@@ -11,11 +11,9 @@ import { z } from 'zod';
 import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
 import type { Prompter } from '../prompter';
-import type { TabsAdapter } from '../tabs';
 import type { MountableLike } from '../lib/command';
 
 export * from './prompter';
-export * from './tabs';
 export * from './events';
 
 // =============================================================================
@@ -71,9 +69,6 @@ export type PokConfig = {
   /** Prompter instance */
   prompter: Prompter;
 
-  /** Optional tabs adapter instance */
-  tabs?: TabsAdapter;
-
   /** Version string for --version flag */
   version?: string;
 
@@ -109,7 +104,6 @@ export const PokConfigSchema = z.object({
   appName: z.string().optional(),
   reporter: z.any(),
   prompter: z.any(),
-  tabs: z.any().optional(),
   version: z.string().optional(),
   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
@@ -128,7 +122,6 @@ export interface ResolvedPokConfig extends LauncherSkeleton {
   version?: string;
   reporter: ReporterAdapter;
   prompter: Prompter;
-  tabs?: TabsAdapter;
   pmScripts?: boolean | string[];
   pmCommands?: boolean | string[];
   plugins?: MountableLike[];
