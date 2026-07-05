@@ -6,10 +6,10 @@ import type {
   ResolveOption,
   ResolveOptionsPage,
   ResolveOptionsResult,
+  ResolveOptionsRequest,
 } from './command';
 import { isContextFieldDef } from './command';
-import { withCapabilities } from '../prompter';
-import type { OptionsRequest, Prompter, SelectOption } from '../prompter';
+import type { OptionsProvider, Prompter, SelectOption } from '../prompter';
 import { findClosestMatch } from './string-distance';
 import { CLIError, type ErrorContext } from './cli-error';
 import { camelToKebab, kebabToCamel } from './string-case';
@@ -583,43 +583,59 @@ async function loadOptionsFromAsyncIterable(
   return options;
 }
 
+/**
+ * Page through a paginated resolve() result, following `nextCursor` until
+ * exhausted. `first` is the already-resolved first page.
+ */
+async function pageThroughResolve(
+  resolve: NonNullable<ContextFieldDef['resolve']>,
+  context: Record<string, unknown>,
+  first: ResolveOptionsResult,
+  signal: AbortSignal,
+  filter: string | undefined
+): Promise<SelectOption<ResolvePrimitive>[]> {
+  const firstPage = normalizeOptionsResult(first);
+  const options = [...firstPage.options];
+  let nextCursor = firstPage.nextCursor ?? null;
+  const seenCursors = new Set<string>();
+
+  while (nextCursor) {
+    if (seenCursors.has(nextCursor)) {
+      throw new Error(`Context resolve() returned repeated cursor "${nextCursor}"`);
+    }
+    seenCursors.add(nextCursor);
+    const next = await resolve({ signal, cursor: nextCursor, filter }, context);
+    if (!(Array.isArray(next) || isOptionsPage(next))) {
+      throw new Error('Context resolve() returned invalid paginated result');
+    }
+    const nextPage = normalizeOptionsResult(next);
+    options.push(...nextPage.options);
+    nextCursor = nextPage.nextCursor ?? null;
+  }
+
+  return options;
+}
+
+/**
+ * Load the full set of options from a resolve() function, following pagination
+ * and async-iterator pages. `filter` is forwarded to resolve() when present.
+ */
 async function loadAllResolvedOptions(
   resolve: NonNullable<ContextFieldDef['resolve']>,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  filter?: string,
+  signal?: AbortSignal
 ): Promise<SelectOption<ResolvePrimitive>[]> {
-  const controller = new AbortController();
-  const request: OptionsRequest = { signal: controller.signal };
+  const abortSignal = signal ?? new AbortController().signal;
+  const request: ResolveOptionsRequest = { signal: abortSignal, filter };
   const result = await resolve(request, context);
 
-  if (
-    isAsyncIterable<
-      | ResolveOptionsResult
-    >(result)
-  ) {
+  if (isAsyncIterable<ResolveOptionsResult>(result)) {
     return loadOptionsFromAsyncIterable(result);
   }
 
   if (Array.isArray(result) || isOptionsPage(result)) {
-    const firstPage = normalizeOptionsResult(result);
-    const options = [...firstPage.options];
-    let nextCursor = firstPage.nextCursor ?? null;
-    const seenCursors = new Set<string>();
-
-    while (nextCursor) {
-      if (seenCursors.has(nextCursor)) {
-        throw new Error(`Context resolve() returned repeated cursor "${nextCursor}"`);
-      }
-      seenCursors.add(nextCursor);
-      const next = await resolve({ signal: controller.signal, cursor: nextCursor }, context);
-      if (!(Array.isArray(next) || isOptionsPage(next))) {
-        throw new Error('Context resolve() returned invalid paginated result');
-      }
-      const nextPage = normalizeOptionsResult(next);
-      options.push(...nextPage.options);
-      nextCursor = nextPage.nextCursor ?? null;
-    }
-
-    return options;
+    return pageThroughResolve(resolve, context, result, abortSignal, filter);
   }
 
   throw new Error(
@@ -628,54 +644,32 @@ async function loadAllResolvedOptions(
 }
 
 type DynamicResolveProviderSetup = {
-  provider: ReturnType<typeof withCapabilities<ResolvePrimitive>>;
-  initialPage: {
-    options: SelectOption<ResolvePrimitive>[];
-    nextCursor?: string | null;
-    totalCount?: number;
-  };
+  provider: OptionsProvider<ResolvePrimitive>;
+  initialOptions: SelectOption<ResolvePrimitive>[];
 };
 
+/**
+ * Build a prompter OptionsProvider from a context field's resolve() function.
+ *
+ * The provider matches the simplified prompter contract:
+ * `(filter, signal) => Promise<SelectOption[]>`. Pagination and async-iterator
+ * pages are collapsed internally into a single flat option list; the UI decides
+ * how to present loading/filtering.
+ */
 async function createDynamicResolveProvider(
   resolve: NonNullable<ContextFieldDef['resolve']>,
   context: Record<string, unknown>
 ): Promise<DynamicResolveProviderSetup> {
-  const controller = new AbortController();
-  const firstRequest: OptionsRequest = { signal: controller.signal };
-  const firstResult = await resolve(firstRequest, context);
-  if (isAsyncIterable<ResolveOptionsResult>(firstResult)) {
-    throw new Error('ASYNC_ITERABLE_RESOLVE_NOT_SUPPORTED_FOR_DYNAMIC_PROVIDER');
-  }
-  if (!(Array.isArray(firstResult) || isOptionsPage(firstResult))) {
-    throw new Error('Context resolve() must return options, an options page, or an async iterator');
-  }
+  const initialOptions = await loadAllResolvedOptions(resolve, context);
 
-  const initialPage = normalizeOptionsResult(firstResult);
+  const provider: OptionsProvider<ResolvePrimitive> = async (filter, signal) => {
+    if (!filter) {
+      return initialOptions;
+    }
+    return loadAllResolvedOptions(resolve, context, filter, signal);
+  };
 
-  const provider = withCapabilities<ResolvePrimitive>(
-    async (request) => {
-      if (!request.cursor && !request.filter) {
-        return initialPage;
-      }
-      const result = await resolve(request, context);
-      if (isAsyncIterable<ResolveOptionsResult>(result)) {
-        throw new Error(
-          'Async iterator resolve() is not supported for filtered/paginated provider requests'
-        );
-      }
-      if (!(Array.isArray(result) || isOptionsPage(result))) {
-        throw new Error('Context resolve() returned invalid paginated result');
-      }
-      const normalized = normalizeOptionsResult(result);
-      if (request.cursor && normalized.nextCursor === request.cursor) {
-        throw new Error(`Context resolve() returned repeated cursor "${request.cursor}"`);
-      }
-      return normalized;
-    },
-    { supportsFilter: true }
-  );
-
-  return { provider, initialPage };
+  return { provider, initialOptions };
 }
 
 function getResolutionOrder(contextDef: ContextDef): string[] {
@@ -842,41 +836,18 @@ export async function resolveInteractiveContext<C extends ContextDef>(
             : isResolvePrimitive(info.default)
               ? info.default
               : undefined;
-          let selected: ResolvePrimitive;
-          try {
-            const { provider, initialPage } = await createDynamicResolveProvider(
-              fieldDef.resolve,
-              resolved as Record<string, unknown>
-            );
-            if (initialPage.options.length === 0 && !initialPage.nextCursor) {
-              throw new Error(`No options available for --${name}`);
-            }
-            selected = await prompter.select({
-              message: fieldDef.description || `Select ${name}:`,
-              provider,
-              initialValue,
-            });
-          } catch (error) {
-            if (
-              error instanceof Error &&
-              error.message === 'ASYNC_ITERABLE_RESOLVE_NOT_SUPPORTED_FOR_DYNAMIC_PROVIDER'
-            ) {
-              const dynamicOptions = await loadAllResolvedOptions(
-                fieldDef.resolve,
-                resolved as Record<string, unknown>
-              );
-              if (dynamicOptions.length === 0) {
-                throw new Error(`No options available for --${name}`);
-              }
-              selected = await prompter.select({
-                message: fieldDef.description || `Select ${name}:`,
-                options: dynamicOptions,
-                initialValue,
-              });
-            } else {
-              throw error;
-            }
+          const { provider, initialOptions } = await createDynamicResolveProvider(
+            fieldDef.resolve,
+            resolved as Record<string, unknown>
+          );
+          if (initialOptions.length === 0) {
+            throw new Error(`No options available for --${name}`);
           }
+          const selected = await prompter.select({
+            message: fieldDef.description || `Select ${name}:`,
+            provider,
+            initialValue,
+          });
           const parsed = fieldDef.schema.safeParse(selected);
           if (!parsed.success) {
             throw new Error(`Invalid selected value for --${name}`);

@@ -21,7 +21,7 @@ import { run, RouterError } from './lib/router';
 import { CancelError } from './lib/cancel';
 import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
-import type { Prompter } from './prompter';
+import type { Prompter, Navigator } from './prompter';
 import type { ContextDef } from './lib/command';
 
 /**
@@ -41,6 +41,8 @@ export type RunCliConfig = {
   reporterAdapter: ReporterAdapter;
   /** Prompter (instantiated) */
   prompter: Prompter;
+  /** Optional navigator for menu presentation policy (defaults to built-in) */
+  navigator?: Navigator;
   /** Optional version string for --version flag */
   version?: string;
   /**
@@ -150,6 +152,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
       version,
       reporterAdapter,
       prompter,
+      navigator: config.navigator,
       noTty,
       outputFormat: outputConfig.format,
       pmScripts: config.pmScripts,

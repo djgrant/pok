@@ -29,74 +29,20 @@ export type SelectOption<T> = {
 // =============================================================================
 
 /**
- * Result page from a dynamic options provider.
- *
- * @template T - The type of the option's value
- */
-export type OptionsPage<T> = {
-  /** Options for this page */
-  options: SelectOption<T>[];
-  /**
-   * Cursor for fetching next page.
-   * Undefined/null means no more pages available.
-   */
-  nextCursor?: string | null;
-  /**
-   * Total count if known (for progress display).
-   * Optional - only set if the provider knows the total.
-   */
-  totalCount?: number;
-};
-
-/**
- * Request context passed to option providers.
- */
-export type OptionsRequest = {
-  /**
-   * Cursor from previous page's nextCursor.
-   * Undefined on first request.
-   */
-  cursor?: string;
-  /**
-   * Current filter/search text from typeahead.
-   * Only set if user has typed a filter.
-   */
-  filter?: string;
-  /**
-   * AbortSignal for cancellation.
-   * Provider should check signal.aborted and abort fetch if true.
-   */
-  signal: AbortSignal;
-};
-
-/**
- * Provider capabilities declaration.
- * Allows prompter to adapt UI based on provider features.
- */
-export type ProviderCapabilities = {
-  /**
-   * When true, provider handles filtering server-side.
-   * When false/undefined, prompter filters loaded options client-side.
-   */
-  supportsFilter?: boolean;
-  /**
-   * Debounce time in ms for filter requests.
-   * Only used when supportsFilter is true.
-   * @default 150
-   */
-  filterDebounceMs?: number;
-};
-
-/**
  * Dynamic options provider function.
  *
+ * Given an optional filter string (the user's current type-ahead query) and an
+ * AbortSignal, resolves to the full set of options to display. The UI adapter
+ * decides how to present loading and filtering — pagination, debounce, and
+ * server-vs-client filtering are implementation details of the UI, not the
+ * contract.
+ *
  * @template T - The type of the option's value
  */
-export type OptionsProvider<T> = {
-  (request: OptionsRequest): Promise<OptionsPage<T>>;
-  /** Optional capabilities declaration */
-  capabilities?: ProviderCapabilities;
-};
+export type OptionsProvider<T> = (
+  filter: string | undefined,
+  signal: AbortSignal
+) => Promise<SelectOption<T>[]>;
 
 /**
  * Static options configuration (current behavior).
@@ -129,7 +75,7 @@ export type DynamicSelectOptions<T> = {
   message: string;
   /**
    * Provider function for lazy-loading options.
-   * Called initially and again when loading more or filtering.
+   * Called with the current filter (if any) and an AbortSignal.
    */
   provider: OptionsProvider<T>;
   /** Initial value to pre-select (if found in loaded options) */
@@ -139,11 +85,6 @@ export type DynamicSelectOptions<T> = {
    * @default "Loading..."
    */
   loadingMessage?: string;
-  /**
-   * Label for the "load more" option when pagination is available.
-   * @default "Load more..."
-   */
-  loadMoreLabel?: string;
   /**
    * Error message shown when provider fails.
    * @default "Failed to load options"
@@ -164,19 +105,6 @@ export type SelectOptions<T> = StaticSelectOptions<T> | DynamicSelectOptions<T>;
  */
 export function isDynamicOptions<T>(options: SelectOptions<T>): options is DynamicSelectOptions<T> {
   return 'provider' in options;
-}
-
-/**
- * Create a provider with declared capabilities.
- * Utility for setting capabilities in a type-safe way.
- */
-export function withCapabilities<T>(
-  provider: (request: OptionsRequest) => Promise<OptionsPage<T>>,
-  capabilities: ProviderCapabilities
-): OptionsProvider<T> {
-  const fn = provider as OptionsProvider<T>;
-  fn.capabilities = capabilities;
-  return fn;
 }
 
 /**

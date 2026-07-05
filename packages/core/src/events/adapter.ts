@@ -5,7 +5,7 @@
  * Adapters consume events from the EventBus and render them to the terminal.
  *
  * Implementations:
- * - @pokit/reporter-clack (Clack-based, sequential output)
+ * - @pokit/terminal (Clack-based, sequential output)
  * - Custom reporter adapters (for alternative rendering strategies)
  */
 
