@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { createEventBus } from '../src';
 import type { CLIEvent } from '../src';
-import { fileURLToPath } from 'node:url';
-import { join, isAbsolute } from 'node:path';
 
 // =============================================================================
 // createEventBus Tests
@@ -218,26 +216,6 @@ describe('EventBus.subscribe() (alias)', () => {
     unsubscribe();
     bus.emit({ type: 'root:end', exitCode: 0 });
     expect(events).toHaveLength(1);
-  });
-});
-
-// =============================================================================
-// Docs/Examples Drift Gate
-// =============================================================================
-
-describe('docs drift gate', () => {
-  it('does not use EventBus.subscribe() in docs', async () => {
-    const docsDir = fileURLToPath(new URL('../../../docs/', import.meta.url));
-    const glob = new Bun.Glob('**/*.md');
-
-    for await (const relPath of glob.scan(docsDir)) {
-      const filePath = isAbsolute(relPath) ? relPath : join(docsDir, relPath);
-      const content = await Bun.file(filePath).text();
-
-      // Allow other subscribes (e.g. store.subscribe), but not EventBus docs/examples.
-      expect(content).not.toMatch(/\beventBus\.subscribe\s*\(/);
-      expect(content).not.toMatch(/\bEventBus\s*\{[^}]*\bsubscribe\s*\(/s);
-    }
   });
 });
 

@@ -268,9 +268,9 @@ describe('ProcessManager - killAll', () => {
 
     manager.destroy();
 
-    // Both processes should have been killed - they won't complete naturally
-    // Since killAll doesn't update status for each, we just verify no crash
-    expect(true).toBe(true);
+    // Killed processes must not complete naturally: no 'done'/'error' status
+    // should ever be emitted for the long-running sleeps.
+    expect(captured.statuses.some((s) => s.status === 'done' || s.status === 'error')).toBe(false);
   });
 });
 
@@ -327,24 +327,26 @@ describe('ProcessManager - restart', () => {
 // =============================================================================
 
 describe('ProcessManager - destroy', () => {
-  it('sets destroyed flag', async () => {
-    const { manager } = createTestManager([{ label: 'Test', exec: 'sleep 10' }]);
+  it('makes operations no-ops after destroy', async () => {
+    const { manager, captured } = createTestManager([{ label: 'Test', exec: 'sleep 10' }]);
 
     manager.start();
     await waitForBatch();
 
     manager.destroy();
 
-    // After destroy, operations should be no-ops
-    // Restart should not work
+    // Clear anything captured during start, then confirm restart is a no-op.
+    captured.outputs.length = 0;
+    captured.statuses.length = 0;
     manager.restart(0);
+    await waitForBatch();
 
-    // No crash expected
-    expect(true).toBe(true);
+    expect(captured.outputs).toHaveLength(0);
+    expect(captured.statuses).toHaveLength(0);
   });
 
   it('kills all running processes', async () => {
-    const { manager } = createTestManager([
+    const { manager, captured } = createTestManager([
       { label: 'Process 1', exec: 'sleep 10' },
       { label: 'Process 2', exec: 'sleep 10' },
     ]);
@@ -353,11 +355,10 @@ describe('ProcessManager - destroy', () => {
     await waitForBatch();
 
     manager.destroy();
-
-    // Processes should be killed, no zombie processes
-    // Just ensure no crash
     await waitForBatch();
-    expect(true).toBe(true);
+
+    // Killed sleeps must never report natural completion.
+    expect(captured.statuses.some((s) => s.status === 'done' || s.status === 'error')).toBe(false);
   });
 });
 
