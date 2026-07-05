@@ -5,7 +5,6 @@ packages:
   - .test-projects/*
   - demo
 minimumReleaseAgeExclude:
-  - '@pokit/core@0.1.0'
-  - '@pokit/prompter-clack@0.1.0'
-  - '@pokit/reporter-clack@0.1.0'
-  - '@pokit/core@0.2.0'
+  # Our own packages are dogfooded from the registry; never gate them by release age.
+  - '@pokit/*'
+  - 'pokit'
