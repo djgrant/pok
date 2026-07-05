@@ -177,8 +177,7 @@ export const command = defineCommand({
         }
       });
 
-      await g.activity('Reinstall to refresh lockfiles (bun + pnpm)', async () => {
-        await r.exec('bun install');
+      await g.activity('Reinstall to refresh lockfile', async () => {
         await r.exec('pnpm install');
       });
 
@@ -210,7 +209,6 @@ export const command = defineCommand({
       await g.activity('Commit bookkeeping changes', async () => {
         const files = [
           'package.json',
-          'bun.lock',
           'pnpm-lock.yaml',
           ...[...toPublish.keys()]
             .map((name) => workspacePackages.get(name))
