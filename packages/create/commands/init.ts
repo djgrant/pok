@@ -74,7 +74,7 @@ export const command = defineCommand({
         selectedPlugins = await r.prompter.multiselect({
           message: 'Select plugins to install:',
           options: AVAILABLE_PLUGINS,
-          initialValues: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+          initialValues: ['@pokit/terminal'],
           required: false,
         });
       } else {
@@ -97,7 +97,7 @@ export const command = defineCommand({
         selectedPlugins = await r.prompter.multiselect({
           message: 'Select plugins to install:',
           options: AVAILABLE_PLUGINS,
-          initialValues: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+          initialValues: ['@pokit/terminal'],
           required: false,
         });
       } else {

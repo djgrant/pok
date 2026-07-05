@@ -12,18 +12,14 @@ import { versionBump } from 'bumpp';
 const SCOPED_FILES = [
   'packages/core/package.json',
   'packages/op/package.json',
-  'packages/prompter-clack/package.json',
-  'packages/reporter-clack/package.json',
-  'packages/reporter-web/package.json',
-  'packages/tabs-core/package.json',
-  'packages/opentui/package.json',
+  'packages/terminal/package.json',
 ];
 
 const CLI_FILES = ['packages/cmd/package.json', 'packages/create/package.json'];
 
 const PACKAGE_GROUPS = {
   scoped: {
-    label: '@pokit/* packages (config, core, op, reporter-clack, etc.)',
+    label: '@pokit/* packages (core, op, terminal)',
     files: SCOPED_FILES,
     tag: 'v%s',
     commit: 'release: v%s',

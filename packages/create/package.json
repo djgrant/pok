@@ -28,8 +28,7 @@
   "dependencies": {
     "@clack/prompts": "^1.0.0",
     "@pokit/core": "workspace:*",
-    "@pokit/prompter-clack": "workspace:*",
-    "@pokit/reporter-clack": "workspace:*",
+    "@pokit/terminal": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -39,12 +39,11 @@ describe('create-pokit templates', () => {
     it('includes selected plugins as dependencies', () => {
       const config = {
         name: 'my-project',
-        plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+        plugins: ['@pokit/terminal'],
       };
       const result = JSON.parse(generatePackageJson(config));
 
-      expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
+      expect(result.dependencies['@pokit/terminal']).toBe('latest');
     });
 
     it('includes devDependencies', () => {
@@ -145,7 +144,7 @@ describe('create-pokit init command', () => {
     const projectPath = path.join(tempDir, projectName);
     const config = {
       name: projectName,
-      plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+      plugins: ['@pokit/terminal'],
     };
 
     // Manually simulate what init.ts does (without bun install)
@@ -172,8 +171,7 @@ describe('create-pokit init command', () => {
       fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8')
     );
     expect(packageJson.name).toBe(projectName);
-    expect(packageJson.dependencies['@pokit/prompter-clack']).toBeDefined();
-    expect(packageJson.dependencies['@pokit/reporter-clack']).toBeDefined();
+    expect(packageJson.dependencies['@pokit/terminal']).toBeDefined();
   });
 });
 
@@ -188,7 +186,7 @@ describe('create-pokit template presets', () => {
       const starter = TEMPLATES.find((t) => t.name === 'starter');
       expect(starter).toBeDefined();
       expect(starter!.label).toBe('Starter (recommended)');
-      expect(starter!.plugins).toEqual(['@pokit/prompter-clack', '@pokit/reporter-clack']);
+      expect(starter!.plugins).toEqual(['@pokit/terminal']);
     });
 
     it('has minimal template with no plugins', () => {
@@ -202,11 +200,7 @@ describe('create-pokit template presets', () => {
       const full = TEMPLATES.find((t) => t.name === 'full');
       expect(full).toBeDefined();
       expect(full!.label).toBe('Full');
-      expect(full!.plugins).toEqual([
-        '@pokit/prompter-clack',
-        '@pokit/reporter-clack',
-        '@pokit/opentui',
-      ]);
+      expect(full!.plugins).toEqual(['@pokit/terminal']);
     });
 
     it('has custom template with empty plugins array', () => {
@@ -227,26 +221,14 @@ describe('create-pokit template presets', () => {
   });
 
   describe('AVAILABLE_PLUGINS constant', () => {
-    it('has all three plugins', () => {
-      expect(AVAILABLE_PLUGINS).toHaveLength(3);
+    it('has all plugins', () => {
+      expect(AVAILABLE_PLUGINS).toHaveLength(1);
     });
 
-    it('has prompter-clack plugin', () => {
-      const prompter = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/prompter-clack');
-      expect(prompter).toBeDefined();
-      expect(prompter!.label).toBe('Prompter (clack)');
-    });
-
-    it('has reporter-clack plugin', () => {
-      const reporter = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/reporter-clack');
-      expect(reporter).toBeDefined();
-      expect(reporter!.label).toBe('Reporter (clack)');
-    });
-
-    it('has opentui plugin', () => {
-      const tabs = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/opentui');
-      expect(tabs).toBeDefined();
-      expect(tabs!.label).toBe('OpenTUI (tabs + app)');
+    it('has terminal plugin', () => {
+      const terminal = AVAILABLE_PLUGINS.find((p) => p.value === '@pokit/terminal');
+      expect(terminal).toBeDefined();
+      expect(terminal!.label).toBe('Terminal UI (clack)');
     });
 
     it('all plugins have required properties', () => {
@@ -259,7 +241,7 @@ describe('create-pokit template presets', () => {
   });
 
   describe('starter template', () => {
-    it('includes prompter-clack and reporter-clack plugins', () => {
+    it('includes the terminal plugin', () => {
       const starter = TEMPLATES.find((t) => t.name === 'starter')!;
       const config = {
         name: 'starter-project',
@@ -267,9 +249,7 @@ describe('create-pokit template presets', () => {
       };
       const result = JSON.parse(generatePackageJson(config));
 
-      expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/opentui']).toBeUndefined();
+      expect(result.dependencies['@pokit/terminal']).toBe('latest');
     });
   });
 
@@ -283,14 +263,12 @@ describe('create-pokit template presets', () => {
       const result = JSON.parse(generatePackageJson(config));
 
       expect(result.dependencies['@pokit/core']).toBe('latest');
-      expect(result.dependencies['@pokit/prompter-clack']).toBeUndefined();
-      expect(result.dependencies['@pokit/reporter-clack']).toBeUndefined();
-      expect(result.dependencies['@pokit/opentui']).toBeUndefined();
+      expect(result.dependencies['@pokit/terminal']).toBeUndefined();
     });
   });
 
   describe('full template', () => {
-    it('includes all plugins including opentui', () => {
+    it('includes all plugins', () => {
       const full = TEMPLATES.find((t) => t.name === 'full')!;
       const config = {
         name: 'full-project',
@@ -298,9 +276,7 @@ describe('create-pokit template presets', () => {
       };
       const result = JSON.parse(generatePackageJson(config));
 
-      expect(result.dependencies['@pokit/prompter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/opentui']).toBe('latest');
+      expect(result.dependencies['@pokit/terminal']).toBe('latest');
     });
   });
 
@@ -308,12 +284,12 @@ describe('create-pokit template presets', () => {
     it('can include any combination of plugins', () => {
       const config = {
         name: 'custom-project',
-        plugins: ['@pokit/reporter-clack'], // Only reporter, no prompter
+        plugins: ['@pokit/terminal'],
       };
       const result = JSON.parse(generatePackageJson(config));
 
-      expect(result.dependencies['@pokit/reporter-clack']).toBe('latest');
-      expect(result.dependencies['@pokit/prompter-clack']).toBeUndefined();
+      expect(result.dependencies['@pokit/terminal']).toBe('latest');
+      expect(result.dependencies['@pokit/core']).toBe('latest');
     });
   });
 });

@@ -76,11 +76,6 @@ describe('createRunner', () => {
     expect(typeof runner.parallel).toBe('function');
   });
 
-  it('provides tabs method', () => {
-    const runner = createTestRunner();
-    expect(typeof runner.tabs).toBe('function');
-  });
-
   it('provides group method', () => {
     const runner = createTestRunner();
     expect(typeof runner.group).toBe('function');
@@ -260,37 +255,6 @@ describe('runner.group()', () => {
     });
 
     expect(result).toEqual({ data: 123 });
-  });
-});
-
-// =============================================================================
-// tabs() Tests
-// =============================================================================
-
-describe('runner.tabs()', () => {
-  it('throws error when no tabs adapter provided', async () => {
-    const runner = createTestRunner();
-
-    try {
-      await runner.tabs([runner.exec('echo test')]);
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toContain('Tabs adapter not available');
-    }
-  });
-
-  it('handles empty array without error', async () => {
-    const runner = createTestRunner();
-
-    // Empty array should return immediately - but the implementation
-    // checks tabsAdapter before checking length, so this will throw
-    try {
-      await runner.tabs([]);
-    } catch (error) {
-      // Expected - no tabs adapter
-      expect(error).toBeInstanceOf(Error);
-    }
   });
 });
 

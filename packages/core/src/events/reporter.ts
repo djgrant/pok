@@ -103,25 +103,9 @@ type NestingReporter = {
 };
 
 /**
- * Suspend/resume capabilities for fullscreen takeover (TUI apps)
+ * Restricted reporter for tasks - only basic logging and updates
  */
-type SuspendReporter = {
-  /**
-   * Suspend reporter output. Call before taking over the terminal (e.g., for TUI).
-   * While suspended, the reporter adapter will stop all spinners and ignore events.
-   */
-  suspend(): void;
-
-  /**
-   * Resume reporter output. Call after releasing the terminal.
-   */
-  resume(): void;
-};
-
-/**
- * Restricted reporter for tasks - only basic logging, updates, and suspend/resume
- */
-export type TaskReporter = LogReporter & UpdateReporter & SuspendReporter;
+export type TaskReporter = LogReporter & UpdateReporter;
 
 /**
  * Reporter for commands - logging and sectioning only, no nesting
@@ -134,7 +118,6 @@ export type CommandReporter = LogReporter & StepReporter;
 export type Reporter = LogReporter &
   UpdateReporter &
   StepReporter &
-  SuspendReporter &
   NestingReporter;
 
 /**
@@ -212,14 +195,6 @@ export class ScopedReporter implements Reporter {
 
   step(message: string): void {
     this.log('step', message);
-  }
-
-  suspend(): void {
-    this.bus.emit({ type: 'reporter:suspend' });
-  }
-
-  resume(): void {
-    this.bus.emit({ type: 'reporter:resume' });
   }
 
   async activity<T>(label: string, fn: (reporter: Reporter) => Promise<T> | T): Promise<T> {

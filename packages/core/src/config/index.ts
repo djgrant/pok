@@ -10,12 +10,10 @@ import * as path from 'path';
 import { z } from 'zod';
 import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
-import type { Prompter } from '../prompter';
-import type { TabsAdapter } from '../tabs';
+import type { Prompter, Navigator } from '../prompter';
 import type { MountableLike } from '../lib/command';
 
 export * from './prompter';
-export * from './tabs';
 export * from './events';
 
 // =============================================================================
@@ -65,14 +63,23 @@ export type PokConfig = {
   /** App name for CLI display */
   appName?: string;
 
-  /** Reporter adapter instance */
-  reporter: ReporterAdapter;
+  /**
+   * Reporter adapter instance.
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  reporter?: ReporterAdapter;
 
-  /** Prompter instance */
-  prompter: Prompter;
+  /**
+   * Prompter instance.
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  prompter?: Prompter;
 
-  /** Optional tabs adapter instance */
-  tabs?: TabsAdapter;
+  /**
+   * Navigator instance (menu presentation policy).
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  navigator?: Navigator;
 
   /** Version string for --version flag */
   version?: string;
@@ -107,9 +114,9 @@ export const PokConfigSchema = z.object({
   cwd: z.string().optional(),
   commandsDir: z.string().optional(),
   appName: z.string().optional(),
-  reporter: z.any(),
-  prompter: z.any(),
-  tabs: z.any().optional(),
+  reporter: z.any().optional(),
+  prompter: z.any().optional(),
+  navigator: z.any().optional(),
   version: z.string().optional(),
   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
@@ -126,9 +133,9 @@ export interface ResolvedPokConfig extends LauncherSkeleton {
   commandsDir: string;
   appName?: string;
   version?: string;
-  reporter: ReporterAdapter;
-  prompter: Prompter;
-  tabs?: TabsAdapter;
+  reporter?: ReporterAdapter;
+  prompter?: Prompter;
+  navigator?: Navigator;
   pmScripts?: boolean | string[];
   pmCommands?: boolean | string[];
   plugins?: MountableLike[];
@@ -198,14 +205,12 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
 
 /**
  * Template string for scaffolding new pok.config.ts files.
- * Points to @pokit/core now.
+ *
+ * Zero-config by default: the pok launcher wires in the default terminal UI
+ * (@pokit/terminal) when reporter/prompter/navigator are omitted. Spread
+ * `createTerminalUI(options)` only when passing options.
  */
 export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
-import { createReporterAdapter } from '@pokit/reporter-clack'
-import { createPrompter } from '@pokit/prompter-clack'
 
-export default defineConfig({
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
-})
+export default defineConfig({})
 `;

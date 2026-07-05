@@ -21,8 +21,7 @@ import { run, RouterError } from './lib/router';
 import { CancelError } from './lib/cancel';
 import { detectOutputConfig, extractOutputFlags } from './lib/output-config';
 import type { ReporterAdapter } from './events';
-import type { Prompter } from './prompter';
-import type { TabsAdapter, AppAdapter } from './tabs';
+import type { Prompter, Navigator } from './prompter';
 import type { ContextDef } from './lib/command';
 
 /**
@@ -42,10 +41,8 @@ export type RunCliConfig = {
   reporterAdapter: ReporterAdapter;
   /** Prompter (instantiated) */
   prompter: Prompter;
-  /** Optional tabs adapter (instantiated) */
-  tabs?: TabsAdapter;
-  /** Optional app adapter for fullscreen TUI applications (instantiated) */
-  app?: AppAdapter;
+  /** Optional navigator for menu presentation policy (defaults to built-in) */
+  navigator?: Navigator;
   /** Optional version string for --version flag */
   version?: string;
   /**
@@ -137,7 +134,7 @@ function getErrorDetails(error: unknown): string {
  * @returns Process-style exit code
  */
 export async function runCli(args: string[], config: RunCliConfig): Promise<number> {
-  const { commandsDir, projectRoot, reporterAdapter, prompter, tabs, app, version } = config;
+  const { commandsDir, projectRoot, reporterAdapter, prompter, version } = config;
 
   // Detect output configuration from args
   const { outputArgs, remainingArgs } = extractOutputFlags(args);
@@ -155,8 +152,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
       version,
       reporterAdapter,
       prompter,
-      tabs,
-      app,
+      navigator: config.navigator,
       noTty,
       outputFormat: outputConfig.format,
       pmScripts: config.pmScripts,

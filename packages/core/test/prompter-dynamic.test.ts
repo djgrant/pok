@@ -6,7 +6,6 @@ import { describe, it, expect } from 'bun:test';
 import {
   createRawPrompter,
   isDynamicOptions,
-  withCapabilities,
   type SelectOptions,
   type StaticSelectOptions,
   type DynamicSelectOptions,
@@ -32,9 +31,7 @@ describe('isDynamicOptions', () => {
   it('returns true for dynamic options', () => {
     const dynamicOpts: DynamicSelectOptions<string> = {
       message: 'Pick one',
-      provider: async () => ({
-        options: [{ value: 'a', label: 'A' }],
-      }),
+      provider: async () => [{ value: 'a', label: 'A' }],
     };
 
     expect(isDynamicOptions(dynamicOpts)).toBe(true);
@@ -43,7 +40,7 @@ describe('isDynamicOptions', () => {
   it('works with SelectOptions union type', () => {
     const opts: SelectOptions<string> = {
       message: 'Pick one',
-      provider: async () => ({ options: [] }),
+      provider: async () => [],
     };
 
     if (isDynamicOptions(opts)) {
@@ -54,34 +51,26 @@ describe('isDynamicOptions', () => {
 });
 
 // =============================================================================
-// withCapabilities Helper Tests
+// Provider Contract Tests
 // =============================================================================
 
-describe('withCapabilities', () => {
-  it('attaches capabilities to provider function', () => {
-    const provider = withCapabilities(async () => ({ options: [{ value: 'a', label: 'A' }] }), {
-      supportsFilter: true,
-      filterDebounceMs: 200,
-    });
+describe('OptionsProvider contract', () => {
+  it('receives the filter and signal arguments', async () => {
+    let receivedFilter: string | undefined = 'unset';
+    let receivedSignal: AbortSignal | undefined;
 
-    expect(provider.capabilities).toEqual({
-      supportsFilter: true,
-      filterDebounceMs: 200,
-    });
-  });
-
-  it('provider remains callable after adding capabilities', async () => {
-    const provider = withCapabilities(
-      async ({ filter }) => ({
-        options: [{ value: filter ?? 'default', label: 'Label' }],
-      }),
-      { supportsFilter: true }
-    );
+    const provider: DynamicSelectOptions<string>['provider'] = async (filter, signal) => {
+      receivedFilter = filter;
+      receivedSignal = signal;
+      return [{ value: filter ?? 'default', label: 'Label' }];
+    };
 
     const controller = new AbortController();
-    const result = await provider({ signal: controller.signal, filter: 'test' });
+    const result = await provider('test', controller.signal);
 
-    expect(result.options).toEqual([{ value: 'test', label: 'Label' }]);
+    expect(receivedFilter).toBe('test');
+    expect(receivedSignal).toBe(controller.signal);
+    expect(result).toEqual([{ value: 'test', label: 'Label' }]);
   });
 });
 
@@ -95,12 +84,10 @@ describe('createRawPrompter with dynamic options', () => {
 
     const result = await prompter.select({
       message: 'Select item',
-      provider: async () => ({
-        options: [
-          { value: 'first', label: 'First' },
-          { value: 'second', label: 'Second' },
-        ],
-      }),
+      provider: async () => [
+        { value: 'first', label: 'First' },
+        { value: 'second', label: 'Second' },
+      ],
     });
 
     expect(result).toBe('first');
@@ -113,30 +100,13 @@ describe('createRawPrompter with dynamic options', () => {
 
     const result = await prompter.select({
       message: 'Select item',
-      provider: async () => ({
-        options: [
-          { value: 'first', label: 'First' },
-          { value: 'selected-value', label: 'Selected' },
-        ],
-      }),
+      provider: async () => [
+        { value: 'first', label: 'First' },
+        { value: 'selected-value', label: 'Selected' },
+      ],
     });
 
     expect(result).toBe('selected-value');
-  });
-
-  it('handles provider with pagination info', async () => {
-    const prompter = createRawPrompter();
-
-    const result = await prompter.select({
-      message: 'Select item',
-      provider: async () => ({
-        options: [{ value: 'item', label: 'Item' }],
-        nextCursor: 'page-2',
-        totalCount: 100,
-      }),
-    });
-
-    expect(result).toBe('item');
   });
 
   it('passes abort signal to provider', async () => {
@@ -146,9 +116,9 @@ describe('createRawPrompter with dynamic options', () => {
 
     await prompter.select({
       message: 'Select item',
-      provider: async ({ signal }) => {
+      provider: async (_filter, signal) => {
         receivedSignal = signal;
-        return { options: [{ value: 'a', label: 'A' }] };
+        return [{ value: 'a', label: 'A' }];
       },
     });
 
@@ -161,12 +131,10 @@ describe('createRawPrompter with dynamic options', () => {
 
     const result = await prompter.select({
       message: 'Select item',
-      provider: async () => ({
-        options: [
-          { value: 'a', label: 'A' },
-          { value: 'b', label: 'B' },
-        ],
-      }),
+      provider: async () => [
+        { value: 'a', label: 'A' },
+        { value: 'b', label: 'B' },
+      ],
       initialValue: 'b',
     });
 
@@ -179,9 +147,7 @@ describe('createRawPrompter with dynamic options', () => {
 
     await prompter.select({
       message: 'Select item',
-      provider: async () => ({
-        options: [{ value: 'a', label: 'A' }],
-      }),
+      provider: async () => [{ value: 'a', label: 'A' }],
     });
 
     const calls = prompter.getCalls();
@@ -195,7 +161,7 @@ describe('createRawPrompter with dynamic options', () => {
 // Backwards Compatibility Tests
 // =============================================================================
 
-describe('backwards compatibility', () => {
+describe('static options', () => {
   it('static options work unchanged', async () => {
     const prompter = createRawPrompter({
       selectResponses: ['blue'],
@@ -238,7 +204,7 @@ describe('backwards compatibility', () => {
 
     const dynamicOpts: SelectOptions<string> = {
       message: 'Pick one',
-      provider: async () => ({ options: [] }),
+      provider: async () => [],
     };
 
     // Runtime check
@@ -246,36 +212,3 @@ describe('backwards compatibility', () => {
     expect('provider' in dynamicOpts).toBe(true);
   });
 });
-
-// =============================================================================
-// Typeahead/Filter Tests
-// =============================================================================
-
-describe('typeahead filtering', () => {
-  it('provider receives filter parameter', async () => {
-    let receivedFilter: string | undefined;
-
-    const provider = withCapabilities(
-      async ({ filter }) => {
-        receivedFilter = filter;
-        return { options: [{ value: 'a', label: 'A' }] };
-      },
-      { supportsFilter: true }
-    );
-
-    const controller = new AbortController();
-    await provider({ signal: controller.signal, filter: 'test-query' });
-
-    expect(receivedFilter).toBe('test-query');
-  });
-
-  it('filterDebounceMs is configurable', () => {
-    const provider = withCapabilities(async () => ({ options: [] }), {
-      supportsFilter: true,
-      filterDebounceMs: 300,
-    });
-
-    expect(provider.capabilities?.filterDebounceMs).toBe(300);
-  });
-});
-

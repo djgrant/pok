@@ -1,0 +1,63 @@
+{
+  "name": "@pokit/terminal",
+  "version": "0.1.0",
+  "description": "Terminal UI (reporter + prompter + navigator) for pok CLI applications, built on clack",
+  "keywords": [
+    "cli",
+    "command-line",
+    "typescript",
+    "bun",
+    "terminal",
+    "pok",
+    "pokjs",
+    "clack",
+    "reporter",
+    "prompter",
+    "interactive"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djgrant/pok.git",
+    "directory": "packages/terminal"
+  },
+  "homepage": "https://github.com/djgrant/pok#readme",
+  "bugs": {
+    "url": "https://github.com/djgrant/pok/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@clack/core": "^1.0.0",
+    "@clack/prompts": "^1.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@pokit/core": "workspace:*",
+    "@pokit/test-utils": "workspace:*"
+  },
+  "peerDependencies": {
+    "@pokit/core": "workspace:*"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
