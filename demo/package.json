@@ -1,0 +1,18 @@
+{
+  "name": "@pokit/demo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Manual-testing playground that runs the CURRENT workspace pok code",
+  "scripts": {
+    "lint": "echo 'demo: lint ok'",
+    "typecheck": "echo 'demo: typecheck ok'",
+    "ci:build": "echo 'demo: ci build ok'",
+    "ci:test": "echo 'demo: ci test ok'"
+  },
+  "dependencies": {
+    "@pokit/core": "workspace:*",
+    "@pokit/terminal": "workspace:*",
+    "zod": "^4.3.6"
+  }
+}
