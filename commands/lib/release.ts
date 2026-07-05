@@ -15,7 +15,7 @@
  *
  * These helpers make that invariant self-maintaining across a publish:
  *  - `computeRepins`      -> repin root deps to the freshly published versions
- *  - `computeAheadVersion`-> advance a just-published pkg to its next dev version
+ *  - `computeAheadVersion`-> advance a just-published pkg to its next patch dev version
  *  - `findBrokenInvariant`-> guard: workspace version must never equal a pin
  *  - `isWorkspaceLinked`  -> detect a root dep that resolved to workspace source
  */
@@ -108,7 +108,13 @@ export function computeRepins(
 export function computeAheadVersion(published: string): string {
   const clean = semver.valid(published);
   if (!clean) throw new Error(`Cannot advance invalid version: "${published}"`);
-  const next = semver.inc(clean, 'preminor', 'dev');
+  // Open the next PATCH dev prerelease (e.g. 0.2.1 -> 0.2.2-dev.0). This is the
+  // smallest bump that keeps the workspace version strictly ahead of the just-
+  // published pin (satisfying the dogfooding invariant) while leaving the patch
+  // line open: from 0.2.2-dev.0 a follow-up release can still ship 0.2.2, 0.3.0,
+  // or 1.0.0. Using preminor here would skip the whole 0.2.x line and make patch
+  // releases unreachable.
+  const next = semver.inc(clean, 'prepatch', 'dev');
   if (!next) throw new Error(`Failed to compute ahead version for "${published}"`);
   return next;
 }
