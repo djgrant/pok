@@ -13,6 +13,7 @@
         "@pokit/reporter-clack": "npm:@pokit/reporter-clack@0.1.0",
         "@types/bun": "latest",
         "bumpp": "^10.3.2",
+        "pokit": "0.0.38",
         "typescript": "^5.8.3",
         "zod": "^4.3.6",
       },
@@ -24,6 +25,9 @@
         "@pokit/core": "workspace:*",
         "@pokit/terminal": "workspace:*",
         "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "pokit": "workspace:*",
       },
     },
     "packages/cmd": {
@@ -281,7 +285,7 @@
 
     "pkg-types": ["pkg-types@2.3.1", "", { "dependencies": { "confbox": "^0.2.4", "exsolve": "^1.0.8", "pathe": "^2.0.3" } }, "sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg=="],
 
-    "pokit": ["pokit@workspace:packages/cmd"],
+    "pokit": ["pokit@0.0.38", "", { "bin": { "pok": "bin/pok.ts", "poks": "bin/poks.ts" } }, "sha512-r1VFw1uhMycCJFXYIC9lTyNs6H7lhzv+JdYkIi8LWvOOW/QdIjAJInrT+bh2mZgFk6njwiAjXf1n8ZcuM3lzeQ=="],
 
     "queue-microtask": ["queue-microtask@1.2.3", "", {}, "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A=="],
 
@@ -341,6 +345,8 @@
 
     "@pokit/demo/@pokit/core": ["@pokit/core@workspace:packages/core"],
 
+    "@pokit/demo/pokit": ["pokit@workspace:packages/cmd"],
+
     "@pokit/integration-tests/@pokit/core": ["@pokit/core@workspace:packages/core"],
 
     "@pokit/op/@pokit/core": ["@pokit/core@workspace:packages/core"],
@@ -353,6 +359,12 @@
 
     "parse5-htmlparser2-tree-adapter/parse5": ["parse5@6.0.1", "", {}, "sha512-Ofn/CTFzRGTTxwpNEs9PP93gXShHcTq255nzRYSKe8AkVpZY7e1fpmTfOyoIvjP5HG7Z2ZM7VS9PPhQGW2pOpw=="],
 
-    "pokit/@pokit/core": ["@pokit/core@workspace:packages/core"],
+    "@pokit/integration-tests/@pokit/core/pokit": ["pokit@workspace:packages/cmd"],
+
+    "@pokit/op/@pokit/core/pokit": ["pokit@workspace:packages/cmd"],
+
+    "@pokit/terminal/@pokit/core/pokit": ["pokit@workspace:packages/cmd"],
+
+    "create-pokit/@pokit/core/pokit": ["pokit@workspace:packages/cmd"],
   }
 }
