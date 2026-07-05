@@ -1,7 +1,7 @@
 {
-  "name": "@pokit/prompter-clack",
+  "name": "@pokit/terminal",
   "version": "0.1.0",
-  "description": "Clack-based prompter adapter for pok CLI applications",
+  "description": "Terminal UI (reporter + prompter + navigator) for pok CLI applications, built on clack",
   "keywords": [
     "cli",
     "command-line",
@@ -11,20 +11,20 @@
     "pok",
     "pokjs",
     "clack",
-    "prompts",
-    "interactive",
-    "input"
+    "reporter",
+    "prompter",
+    "interactive"
   ],
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/notation-dev/openpok.git",
-    "directory": "packages/prompter-clack"
+    "url": "git+https://github.com/djgrant/pok.git",
+    "directory": "packages/terminal"
   },
-  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "homepage": "https://github.com/djgrant/pok#readme",
   "bugs": {
-    "url": "https://github.com/notation-dev/openpok/issues"
+    "url": "https://github.com/djgrant/pok/issues"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -50,7 +50,9 @@
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@pokit/core": "workspace:*",
+    "@pokit/test-utils": "workspace:*"
   },
   "peerDependencies": {
     "@pokit/core": "workspace:*"
