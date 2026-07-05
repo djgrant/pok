@@ -15,11 +15,8 @@ const CONFIG_FILENAME = 'pok.config.ts';
  * This enables bootstrapping new projects.
  */
 const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
-import { createTerminalUI } from '@pokit/terminal'
 
-export default defineConfig({
-  ...createTerminalUI(),
-})
+export default defineConfig({})
 `;
 
 /**
