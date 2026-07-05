@@ -5,9 +5,10 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@pokit/core": ["../core/src/index.ts"]
+      "@pokit/core": ["../core/src/index.ts"],
+      "@pokit/terminal": ["../terminal/src/index.ts"]
     }
   },
   "include": ["bin/**/*", "commands/**/*", "src/**/*"],
-  "references": [{ "path": "../core" }]
+  "references": [{ "path": "../core" }, { "path": "../terminal" }]
 }
