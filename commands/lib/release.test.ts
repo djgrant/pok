@@ -141,11 +141,11 @@ describe('computeRepins', () => {
 });
 
 describe('computeAheadVersion', () => {
-  test('bumps minor and opens a dev prerelease (matches existing convention)', () => {
-    expect(computeAheadVersion('0.1.0')).toBe('0.2.0-dev.0');
-    expect(computeAheadVersion('0.2.0')).toBe('0.3.0-dev.0');
-    expect(computeAheadVersion('0.0.39')).toBe('0.1.0-dev.0');
-    expect(computeAheadVersion('1.4.2')).toBe('1.5.0-dev.0');
+  test('opens the next patch dev prerelease, keeping the patch line shippable', () => {
+    expect(computeAheadVersion('0.1.0')).toBe('0.1.1-dev.0');
+    expect(computeAheadVersion('0.2.1')).toBe('0.2.2-dev.0');
+    expect(computeAheadVersion('0.0.39')).toBe('0.0.40-dev.0');
+    expect(computeAheadVersion('1.4.2')).toBe('1.4.3-dev.0');
   });
 
   test('result is strictly ahead of the published version', () => {
