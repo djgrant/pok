@@ -27,6 +27,9 @@ importers:
       bumpp:
         specifier: ^10.3.2
         version: 10.3.2
+      pokit:
+        specifier: 0.0.38
+        version: 0.0.38
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
@@ -58,6 +61,10 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
+    devDependencies:
+      pokit:
+        specifier: workspace:*
+        version: link:../packages/cmd
 
   packages/cmd:
     devDependencies:
@@ -461,6 +468,11 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
+  pokit@0.0.38:
+    resolution: {integrity: sha512-r1VFw1uhMycCJFXYIC9lTyNs6H7lhzv+JdYkIi8LWvOOW/QdIjAJInrT+bh2mZgFk6njwiAjXf1n8ZcuM3lzeQ==}
+    engines: {bun: '>=1.0.0'}
+    hasBin: true
+
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
@@ -843,6 +855,8 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  pokit@0.0.38: {}
 
   queue-microtask@1.2.3: {}
 

@@ -27,6 +27,7 @@
     "@pokit/prompter-clack": "npm:@pokit/prompter-clack@0.1.0",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
+    "pokit": "0.0.38",
     "typescript": "^5.8.3",
     "zod": "^4.3.6"
   },
