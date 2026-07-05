@@ -56,7 +56,8 @@ import {
   isValidShell,
   type Shell,
 } from './completion';
-import type { Prompter } from '../prompter';
+import type { Prompter, Navigator, NavOption } from '../prompter';
+import { createMenuNavigator } from '../prompter';
 import type { ReporterAdapter, ReporterAdapterController, Reporter, EventBus } from '../events';
 import { createEventBus, createRootReporter, emitRootEnd } from '../events';
 
@@ -88,6 +89,11 @@ export type RouterConfig = {
   reporterAdapter: ReporterAdapter;
   /** Prompter for interactive input */
   prompter: Prompter;
+  /**
+   * Navigator for interactive menu presentation policy.
+   * Defaults to the built-in menu navigator (createMenuNavigator) when omitted.
+   */
+  navigator?: Navigator;
   /** Optional version string (auto-discovered from package.json if not provided) */
   version?: string;
   /** Disable interactive prompts and menus */
@@ -155,6 +161,8 @@ export type RouterContext = {
   projectRoot: string;
   /** Prompter for interactive input */
   prompter: Prompter;
+  /** Navigator for interactive menu presentation policy */
+  navigator: Navigator;
   /** Resolved app-level/global context values */
   globalContext: Record<string, unknown>;
 };
@@ -485,6 +493,31 @@ async function executeNode(
 }
 
 /**
+ * Build the list of menu options for a node's children, optionally including
+ * the synthetic "all" option when the node supports running all children.
+ */
+function buildMenuOptions(
+  enableRunAllChildren: CommandConfig['enableRunAllChildren'],
+  children: CommandNode[]
+): NavOption[] {
+  const options: NavOption[] = [];
+
+  if (enableRunAllChildren) {
+    options.push({ value: '__all__', label: 'all - Run all commands' });
+  }
+
+  for (const child of [...children].sort((a, b) => a.segment.localeCompare(b.segment))) {
+    const description = child.config.description || child.config.label;
+    options.push({
+      value: child.segment,
+      label: `${child.segment} - ${description}`,
+    });
+  }
+
+  return options;
+}
+
+/**
  * Show submenu for a parent node and handle selection
  */
 async function showParentSubmenu(
@@ -496,37 +529,26 @@ async function showParentSubmenu(
   signal?: AbortSignal
 ): Promise<void> {
   const { config } = node;
-  const { reporter, prompter } = ctx;
+  const { reporter, navigator } = ctx;
   const children = Array.from(node.children.values());
 
   // Build menu options
-  const options: Array<{ value: string; label: string }> = [];
+  const options = buildMenuOptions(config.enableRunAllChildren, children);
 
-  // Add "all" option if enabled
-  if (config.enableRunAllChildren) {
-    options.push({
-      value: '__all__',
-      label: 'all - Run all commands',
-    });
-  }
-
-  // Add child commands
-  for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
-    const description = child.config.description || child.config.label;
-    options.push({
-      value: child.segment,
-      label: `${child.segment} - ${description}`,
-    });
-  }
-
-  const choose = prompter.autocomplete
-    ? prompter.autocomplete.bind(prompter)
-    : prompter.select.bind(prompter);
-
-  const selected = await choose({
+  const choice = await navigator.choose({
+    appName: ctx.appName,
+    path: node.path,
     message: `Select ${node.segment}:`,
     options,
+    reporter,
   });
+
+  // Cancellation at this direct-submenu level aborts (there is no parent menu
+  // to return to in this execution path).
+  if (choice.type !== 'select') {
+    throw new CancelError('Cancelled', CANCEL_EXIT_CODE);
+  }
+  const selected = choice.value;
 
   if (selected === '__all__') {
     // Close menu group before running all children
@@ -1112,29 +1134,19 @@ type MenuSelectionResult =
     };
 
 /**
- * Format a breadcrumb trail for display.
- * Shows the app name followed by the navigation path, joined by ' > '.
- *
- * @param appName - The CLI application name
- * @param path - The current navigation path segments
- * @returns Formatted breadcrumb string (empty if at root level)
- */
-function formatBreadcrumb(appName: string, path: string[]): string {
-  if (path.length === 0) return '';
-  const parts = [appName, ...path];
-  return parts.join(' > ');
-}
-
-/**
  * Handle interactive menu selection, including any context prompts.
  * Returns the selected node and resolved context, or null if selection fails.
  * This function handles ONLY the selection phase - execution happens afterward.
+ *
+ * Navigation is stack-based: choosing a parent descends a level, and the
+ * Navigator returning 'back' pops back up. Cancelling at the top level unwinds
+ * the whole menu (Ctrl-C at the root exits the CLI).
  */
 async function selectFromMenu(
   tree: CommandTree,
   ctx: RouterContext
 ): Promise<MenuSelectionResult | null> {
-  const { reporter, prompter, appName } = ctx;
+  const { reporter, prompter, navigator, appName } = ctx;
   const topLevel = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
 
   if (topLevel.length === 0) {
@@ -1144,143 +1156,111 @@ async function selectFromMenu(
 
   // Menu selection wrapped in a group - this closes BEFORE execution
   return reporter.group(appName, { layout: 'sequence' }, async () => {
-    // Navigate through the menu tree until we reach a leaf or runAllChildren
-    let currentNode: CommandNode | null = null;
-    let runAll = false;
-    // Track the navigation path for breadcrumb display
-    const navigationPath: string[] = [];
+    // Stack of chosen parent nodes describing the descent from the root.
+    const stack: CommandNode[] = [];
 
-    const choose = prompter.autocomplete
-      ? prompter.autocomplete.bind(prompter)
-      : prompter.select.bind(prompter);
+    while (true) {
+      const currentNode = stack.length > 0 ? stack[stack.length - 1]! : null;
+      const levelNodes = currentNode
+        ? Array.from(currentNode.children.values())
+        : topLevel;
 
-    // Initial selection
-    const selected = await choose({
-      message: 'What would you like to do?',
-      options: topLevel.map((node) => {
-        const description = node.config.description || node.config.label;
-        return {
-          value: node.segment,
-          label: `${node.segment} - ${description}`,
-        };
-      }),
-    });
-
-    currentNode = tree.get(String(selected)) ?? null;
-
-    if (!currentNode) {
-      reporter.error(`Command not found: ${String(selected)}`);
-      return null;
-    }
-
-    // Add the selected node to the navigation path
-    navigationPath.push(currentNode.segment);
-
-    // Navigate through parent nodes until we reach a leaf
-    while (currentNode && !currentNode.config.run && !runAll) {
-      const children = Array.from(currentNode.children.values());
-
-      if (children.length === 0) {
-        reporter.error(`Command "${currentNode.path.join('.')}" has no implementation or children`);
+      if (currentNode && levelNodes.length === 0) {
+        reporter.error(
+          `Command "${currentNode.path.join('.')}" has no implementation or children`
+        );
         return null;
       }
 
-      // Build menu options
-      const options: Array<{ value: string; label: string }> = [];
+      const options = buildMenuOptions(currentNode?.config.enableRunAllChildren, levelNodes);
+      const message = currentNode ? `Select ${currentNode.segment}:` : 'What would you like to do?';
 
-      // Add "all" option if enabled
-      if (currentNode.config.enableRunAllChildren) {
-        options.push({
-          value: '__all__',
-          label: 'all - Run all commands',
-        });
-      }
-
-      // Add child commands
-      for (const child of children.sort((a, b) => a.segment.localeCompare(b.segment))) {
-        const description = child.config.description || child.config.label;
-        options.push({
-          value: child.segment,
-          label: `${child.segment} - ${description}`,
-        });
-      }
-
-      // Show breadcrumb before submenu selection
-      const breadcrumb = formatBreadcrumb(appName, navigationPath);
-      if (breadcrumb) {
-        reporter.info(breadcrumb);
-      }
-
-      const childSelected = await choose({
-        message: `Select ${currentNode.segment}:`,
+      const choice = await navigator.choose({
+        appName,
+        path: stack.map((n) => n.segment),
+        message,
         options,
+        reporter,
       });
 
-      if (childSelected === '__all__') {
-        runAll = true;
-      } else {
-        const nextNode = currentNode.children.get(String(childSelected));
-        if (!nextNode) {
-          reporter.error(`Child command not found: ${String(childSelected)}`);
-          return null;
+      // Up-navigation: pop a level, or unwind entirely at the root.
+      if (choice.type === 'back' || choice.type === 'exit') {
+        if (choice.type === 'exit' || stack.length === 0) {
+          throw new CancelError('Cancelled', CANCEL_EXIT_CODE);
         }
-        currentNode = nextNode;
-        // Update navigation path with the new selection
-        navigationPath.push(nextNode.segment);
+        stack.pop();
+        continue;
       }
-    }
 
-    // Now resolve context for the selected command
-    if (runAll) {
-      // Context for children is resolved in executeAllChildren per leaf command
+      const selected = choice.value;
+
+      // "Run all children" selection
+      if (selected === '__all__' && currentNode) {
+        reporter.success('Selected');
+        return {
+          node: currentNode,
+          extraArgs: [],
+          runAll: true,
+        };
+      }
+
+      const nextNode = currentNode
+        ? currentNode.children.get(selected)
+        : tree.get(selected);
+
+      if (!nextNode) {
+        reporter.error(`Command not found: ${selected}`);
+        return null;
+      }
+
+      // Parent node - descend a level and keep navigating.
+      if (!nextNode.config.run) {
+        stack.push(nextNode);
+        continue;
+      }
+
+      // Leaf command - resolve its context and return.
+      const config = nextNode.config;
+      const contextDef = config.context || {};
+      const errorContext: ErrorContext = {
+        appName,
+        commandPath: nextNode.path,
+      };
+
+      // Parse context from args (empty since we're in menu mode)
+      const parsed = parseContext([], contextDef, {
+        errorContext,
+        ignoreUnknownFlags: config.ignoreUnknownFlags,
+      });
+
+      // Extract choices for interactive prompts
+      const choices = extractChoices(contextDef);
+
+      const allowPrompt = !ctx.config.noTty;
+
+      // Resolve interactive context (prompts appear inside menu box)
+      const resolvedContext = await resolveInteractiveContext(
+        parsed.context,
+        contextDef,
+        choices,
+        prompter,
+        allowPrompt,
+        allowPrompt
+      );
+
+      // Validate required context fields
+      validateRequiredContext(resolvedContext, contextDef, { errorContext });
+
+      // Mark selection as complete
       reporter.success('Selected');
+
       return {
-        node: currentNode,
-        extraArgs: [],
-        runAll: true,
+        node: nextNode,
+        context: resolvedContext,
+        extraArgs: parsed.rest,
+        runAll: false,
       };
     }
-
-    const config = currentNode.config;
-    const contextDef = config.context || {};
-    const errorContext: ErrorContext = {
-      appName,
-      commandPath: currentNode.path,
-    };
-
-    // Parse context from args (empty since we're in menu mode)
-    const parsed = parseContext([], contextDef, {
-      errorContext,
-      ignoreUnknownFlags: config.ignoreUnknownFlags,
-    });
-
-    // Extract choices for interactive prompts
-    const choices = extractChoices(contextDef);
-
-    const allowPrompt = !ctx.config.noTty;
-
-    // Resolve interactive context (prompts appear inside menu box)
-    const resolvedContext = await resolveInteractiveContext(
-      parsed.context,
-      contextDef,
-      choices,
-      prompter,
-      allowPrompt,
-      allowPrompt
-    );
-
-    // Validate required context fields
-    validateRequiredContext(resolvedContext, contextDef, { errorContext });
-
-    // Mark selection as complete
-    reporter.success('Selected');
-
-    return {
-      node: currentNode,
-      context: resolvedContext,
-      extraArgs: parsed.rest,
-      runAll: false,
-    };
   });
 }
 
@@ -1501,6 +1481,7 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
     appName: resolvedAppName,
     projectRoot,
     prompter: config.prompter,
+    navigator: config.navigator ?? createMenuNavigator(config.prompter),
     globalContext: {},
   };
 

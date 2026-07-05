@@ -10,7 +10,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
-import type { Prompter } from '../prompter';
+import type { Prompter, Navigator } from '../prompter';
 import type { MountableLike } from '../lib/command';
 
 export * from './prompter';
@@ -63,11 +63,23 @@ export type PokConfig = {
   /** App name for CLI display */
   appName?: string;
 
-  /** Reporter adapter instance */
-  reporter: ReporterAdapter;
+  /**
+   * Reporter adapter instance.
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  reporter?: ReporterAdapter;
 
-  /** Prompter instance */
-  prompter: Prompter;
+  /**
+   * Prompter instance.
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  prompter?: Prompter;
+
+  /**
+   * Navigator instance (menu presentation policy).
+   * Optional — when omitted, the launcher wires in @pokit/terminal's default.
+   */
+  navigator?: Navigator;
 
   /** Version string for --version flag */
   version?: string;
@@ -102,8 +114,9 @@ export const PokConfigSchema = z.object({
   cwd: z.string().optional(),
   commandsDir: z.string().optional(),
   appName: z.string().optional(),
-  reporter: z.any(),
-  prompter: z.any(),
+  reporter: z.any().optional(),
+  prompter: z.any().optional(),
+  navigator: z.any().optional(),
   version: z.string().optional(),
   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
@@ -120,8 +133,9 @@ export interface ResolvedPokConfig extends LauncherSkeleton {
   commandsDir: string;
   appName?: string;
   version?: string;
-  reporter: ReporterAdapter;
-  prompter: Prompter;
+  reporter?: ReporterAdapter;
+  prompter?: Prompter;
+  navigator?: Navigator;
   pmScripts?: boolean | string[];
   pmCommands?: boolean | string[];
   plugins?: MountableLike[];
@@ -194,11 +208,9 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
  * Points to @pokit/core now.
  */
 export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
-import { createReporterAdapter } from '@pokit/reporter-clack'
-import { createPrompter } from '@pokit/prompter-clack'
+import { createTerminalUI } from '@pokit/terminal'
 
 export default defineConfig({
-  reporter: createReporterAdapter(),
-  prompter: createPrompter(),
+  ...createTerminalUI(),
 })
 `;

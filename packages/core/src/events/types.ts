@@ -78,12 +78,7 @@ export type CLIEvent =
       activityId?: ActivityId;
       level: LogLevel;
       message: string;
-    }
-
-  // --- Reporter Control ---
-  // Suspend/resume reporter output (for fullscreen takeover by TUI apps)
-  | { type: 'reporter:suspend' }
-  | { type: 'reporter:resume' };
+    };
 
 /**
  * Type guards for event types
