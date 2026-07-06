@@ -92,6 +92,57 @@ export type RunCliConfig = {
   throwOnError?: boolean;
 };
 
+/** Marks stdin so the teardown error listener is only attached once. */
+const TEARDOWN_GUARD = Symbol.for('pokit.stdin.teardownGuard');
+
+/**
+ * Restore the terminal after the CLI finishes.
+ *
+ * Interactive prompts/menus (clack) create a readline interface on
+ * `process.stdin` with `terminal: true`, which puts stdin into raw mode and
+ * resumes it. clack's own teardown clears raw mode and the keypress listener
+ * but never pauses the stream, so stdin is left as an active handle. That keeps
+ * the Node event loop alive after the command completes — the process hangs and
+ * control is never handed back to the shell until the user hits Ctrl+C again.
+ *
+ * A lingering, resumed stdin is also prone to surfacing a stray `read EIO` (or
+ * `EBADF`) from the TTY during teardown — for example after a long-running child
+ * that manipulated the terminal. With a readline interface still attached and no
+ * `error` listener, Node re-throws that as a fatal "Unhandled 'error' event",
+ * crashing the process after it should have exited cleanly.
+ *
+ * Pausing stdin and swallowing those specific teardown read errors makes exit
+ * deterministic and quiet.
+ */
+function restoreTerminal(): void {
+  const stdin = process.stdin as NodeJS.ReadStream & { [TEARDOWN_GUARD]?: true };
+  if (!stdin) return;
+
+  // Swallow only the benign TTY read errors that can fire while the stream is
+  // being torn down; anything else is left to propagate normally. Attach once
+  // so repeated runCli() calls (e.g. in tests) don't leak listeners.
+  if (!stdin[TEARDOWN_GUARD]) {
+    stdin[TEARDOWN_GUARD] = true;
+    stdin.on('error', (err: NodeJS.ErrnoException) => {
+      if (err && (err.code === 'EIO' || err.code === 'EBADF')) {
+        return;
+      }
+      throw err;
+    });
+  }
+
+  try {
+    if (stdin.isTTY && typeof stdin.setRawMode === 'function') {
+      stdin.setRawMode(false);
+    }
+  } catch {
+    // setRawMode can throw if the fd is already gone; nothing to restore.
+  }
+
+  // Release the handle so the event loop can drain and the process exits.
+  stdin.pause();
+}
+
 /**
  * Extract detailed error information from process execution errors
  */
@@ -211,5 +262,9 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
 
     process.exitCode = 1;
     return 1;
+  } finally {
+    // Release stdin so the event loop can drain and hand control back to the
+    // shell, and neutralize any stray TTY read error during teardown.
+    restoreTerminal();
   }
 }

@@ -706,11 +706,15 @@ async function executeLeaf(
       eventBus,
       prompter,
     });
-    const result = await config.run(runner, runCtx);
+    try {
+      const result = await config.run(runner, runCtx);
 
-    // Handle structured output if command defines an output schema
-    if (config.output && result !== undefined) {
-      handleCommandOutput(result, config, ctx);
+      // Handle structured output if command defines an output schema
+      if (config.output && result !== undefined) {
+        handleCommandOutput(result, config, ctx);
+      }
+    } finally {
+      runner.dispose?.();
     }
   }
 }
@@ -1017,7 +1021,11 @@ async function executeLeafWithContext(
       eventBus,
       prompter,
     });
-    await config.run(runner, runCtx);
+    try {
+      await config.run(runner, runCtx);
+    } finally {
+      runner.dispose?.();
+    }
   }
 }
 
