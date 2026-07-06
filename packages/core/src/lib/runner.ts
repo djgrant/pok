@@ -270,6 +270,16 @@ export interface Runner<_TContext extends Record<string, unknown> = Record<strin
     options: GroupOptions,
     fn: (reporter: Reporter) => Promise<T> | T
   ): Promise<T>;
+
+  /**
+   * Release resources held by this runner.
+   *
+   * Unregisters the runner's process set from the global {@link ProcessRegistry}
+   * so its WeakRef doesn't linger in the registry after the command finishes.
+   * Safe to call multiple times. Optional so existing Runner implementations
+   * remain compatible.
+   */
+  dispose?(): void;
 }
 
 /** Abstracted process type compatible with both Bun and Node.js */
@@ -284,7 +294,8 @@ type RunnerProcessSet = Set<RuntimeProcess>;
 class ProcessRegistry {
   private static instance: ProcessRegistry;
   private runners = new Set<WeakRef<RunnerProcessSet>>();
-  private signalHandlersRegistered = false;
+  /** The process-level signal handler, installed while any runner is active. */
+  private signalHandler: (() => void) | null = null;
 
   private constructor() {}
 
@@ -302,10 +313,14 @@ class ProcessRegistry {
   register(processes: RunnerProcessSet): () => void {
     const ref = new WeakRef(processes);
     this.runners.add(ref);
-    this.registerSignalHandlers();
+    this.updateSignalHandlers();
 
+    let unregistered = false;
     return () => {
+      if (unregistered) return;
+      unregistered = true;
       this.runners.delete(ref);
+      this.updateSignalHandlers();
     };
   }
 
@@ -341,16 +356,27 @@ class ProcessRegistry {
     }
   }
 
-  private registerSignalHandlers(): void {
-    if (this.signalHandlersRegistered) return;
-    this.signalHandlersRegistered = true;
+  /**
+   * Install or remove the process-level signal handlers based on whether any
+   * runners are currently registered. Installs on the 0→1 transition and
+   * removes on the 1→0 transition, keeping `process` free of stale listeners
+   * between runs.
+   */
+  private updateSignalHandlers(): void {
+    const hasRunners = this.runners.size > 0;
 
-    const cleanup = () => {
-      this.killAll();
-    };
-
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    if (hasRunners && !this.signalHandler) {
+      const cleanup = () => {
+        this.killAll();
+      };
+      this.signalHandler = cleanup;
+      process.on('SIGINT', cleanup);
+      process.on('SIGTERM', cleanup);
+    } else if (!hasRunners && this.signalHandler) {
+      process.removeListener('SIGINT', this.signalHandler);
+      process.removeListener('SIGTERM', this.signalHandler);
+      this.signalHandler = null;
+    }
   }
 }
 
@@ -1217,6 +1243,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     parallel,
     run,
     group,
+    dispose: unregisterFromRegistry,
   };
   return runner;
 }
