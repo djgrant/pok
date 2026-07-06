@@ -15,12 +15,9 @@ importers:
       '@pokit/core':
         specifier: npm:@pokit/core@0.3.0
         version: 0.3.0(zod@4.3.6)
-      '@pokit/prompter-clack':
-        specifier: npm:@pokit/prompter-clack@0.1.0
-        version: 0.1.0(@pokit/core@0.3.0(zod@4.3.6))
-      '@pokit/reporter-clack':
-        specifier: npm:@pokit/reporter-clack@0.1.0
-        version: 0.1.0(@pokit/core@0.3.0(zod@4.3.6))
+      '@pokit/terminal':
+        specifier: npm:@pokit/terminal@0.3.0
+        version: 0.3.0(@pokit/core@0.3.0(zod@4.3.6))
       '@types/bun':
         specifier: latest
         version: 1.3.14
@@ -42,6 +39,19 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
+
+  .test-projects/workspace-test:
+    dependencies:
+      '@pokit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@pokit/terminal':
+        specifier: workspace:*
+        version: link:../../packages/terminal
+    devDependencies:
+      '@types/bun':
+        specifier: latest
+        version: 1.3.14
 
   demo:
     dependencies:
@@ -214,17 +224,11 @@ packages:
     peerDependencies:
       zod: ^4.3.6
 
-  '@pokit/prompter-clack@0.1.0':
-    resolution: {integrity: sha512-8Kk5LTnj7BlSJ7DzhlZznvacv7CgIKo5XW8r2lO3TUNWGcHj5EqQ24v1AiHaVQewBsnYMga0VbX94pdI6ihw4A==}
+  '@pokit/terminal@0.3.0':
+    resolution: {integrity: sha512-Rdr6UBlITBfntwJwFHWoOOVVLt7QAeX63ZIw7V6wCUM0+q+Nb4BGRBaMlg4tjYYOTtNmZBsiDfG8rC8HAYTT2w==}
     engines: {bun: '>=1.0.0'}
     peerDependencies:
-      '@pokit/core': 0.1.0
-
-  '@pokit/reporter-clack@0.1.0':
-    resolution: {integrity: sha512-QCvo1gifKTDSgVTbjYUi9AKNNb9ZxkMuajBr6oJx/Nrk3KTYIBuZAdq+azj/bnK+BSJDtztm8WDASC0M3YLXfA==}
-    engines: {bun: '>=1.0.0'}
-    peerDependencies:
-      '@pokit/core': 0.1.0
+      '@pokit/core': 0.3.0
 
   '@types/bun@1.3.14':
     resolution: {integrity: sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw==}
@@ -612,15 +616,9 @@ snapshots:
       picomatch: 4.0.3
       zod: 4.3.6
 
-  '@pokit/prompter-clack@0.1.0(@pokit/core@0.3.0(zod@4.3.6))':
+  '@pokit/terminal@0.3.0(@pokit/core@0.3.0(zod@4.3.6))':
     dependencies:
       '@clack/core': 1.0.0
-      '@clack/prompts': 1.0.0
-      '@pokit/core': 0.3.0(zod@4.3.6)
-      picocolors: 1.1.1
-
-  '@pokit/reporter-clack@0.1.0(@pokit/core@0.3.0(zod@4.3.6))':
-    dependencies:
       '@clack/prompts': 1.0.0
       '@pokit/core': 0.3.0(zod@4.3.6)
       picocolors: 1.1.1
