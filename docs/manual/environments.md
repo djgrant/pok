@@ -305,7 +305,7 @@ run: async (r) => {
 
 ## Loading Indicator
 
-When using `r.tabs()`, env resolution shows a loading indicator:
+While secrets resolve, the reporter shows a loading indicator:
 
 ```
 ◆  Loading Secrets

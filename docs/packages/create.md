@@ -1,6 +1,6 @@
 # create-pokit
 
-`create-pokit` scaffolds a new pok CLI project with a commands directory, entry point, package manifest, and default adapter dependencies.
+`create-pokit` scaffolds a new pok CLI project with a commands directory, package manifest, TypeScript config, and the default UI dependency.
 
 ## Usage
 
@@ -8,11 +8,7 @@
 bun create pokit my-project
 ```
 
-Or with a specific directory:
-
-```bash
-bun create pokit ./path/to/project
-```
+An interactive prompt asks for a project name and a template.
 
 ## What It Creates
 
@@ -21,25 +17,30 @@ my-project/
 ├── commands/
 │   ├── hello.ts       # Example command
 │   └── build.ts       # Build command
-├── pok                # CLI entry point
 ├── package.json       # With pok dependencies
 ├── tsconfig.json      # TypeScript config
 └── .gitignore
 ```
+
+Commands are discovered from the `commands/` directory. The project runs through
+the global `pok` launcher, which serves a repo with a `package.json` but no
+`pok.config.ts` in **fallback mode** — so no config file or entry script is
+scaffolded. Run `pok init` later to add a `pok.config.ts` when you want to
+customize `appName`, `commandsDir`, or the UI surfaces.
 
 ### package.json
 
 ```json
 {
   "name": "my-project",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "pok": "bun pok"
   },
   "dependencies": {
     "@pokit/core": "latest",
-    "@pokit/prompter-clack": "latest",
-    "@pokit/reporter-clack": "latest"
+    "@pokit/terminal": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -61,25 +62,22 @@ export const command = defineCommand({
 });
 ```
 
-## Interactive Setup
+## Templates
 
-The create CLI prompts for:
+The interactive setup offers:
 
-1. **Project name** - Used in package.json
-2. **Plugins** - Which adapters to include:
-   - `@pokit/prompter-clack` (recommended)
-   - `@pokit/reporter-clack` (recommended)
-   - `@pokit/opentui` (optional)
+- **Starter** (recommended) — `@pokit/core` + `@pokit/terminal`.
+- **Minimal** — core only; add the UI later.
+- **Full** — all plugins.
+- **Custom** — pick plugins individually (currently `@pokit/terminal`).
 
 ## Post-Installation
-
-After creation:
 
 ```bash
 cd my-project
 bun install
-bun pok        # Shows interactive menu
-bun pok hello  # Runs hello command
+pok            # Shows the interactive menu
+pok hello      # Runs the hello command
 ```
 
 ## Programmatic Usage
@@ -89,6 +87,6 @@ import { generatePackageJson, generateTsConfig, generateExampleCommand } from 'c
 
 const pkg = generatePackageJson({
   name: 'my-cli',
-  plugins: ['@pokit/prompter-clack', '@pokit/reporter-clack'],
+  plugins: ['@pokit/terminal'],
 });
 ```

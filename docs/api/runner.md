@@ -1,6 +1,6 @@
 # Runner
 
-The `Runner` is the execution surface passed into command `run()` functions. It exposes shell execution, task execution, grouping, parallel execution, tabs, apps, and the command reporter.
+The `Runner` is the execution surface passed into command `run()` functions. It exposes shell execution, task execution, grouping, parallel execution, the command reporter, and the prompter.
 
 ## Availability
 
@@ -25,11 +25,6 @@ interface Runner<TContext> {
   exec(cmd: ExecInput, opts?: ExecOptions): Command;
   run<TReturn>(task: AnyTaskConfig, params?: Record<string, unknown>): DeferredTask<TReturn>;
   parallel(items: RunnerItem[], options?: ParallelOptions): Promise<void>;
-  tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>;
-  app<TProps>(
-    component: AnyComponent<TProps>,
-    props: TProps
-  ): Promise<void>;
   group<T>(
     label: string,
     options: GroupOptions,
@@ -179,7 +174,7 @@ run: async (r) => {
 
 Tasks with retry configuration will exhaust all retries before the parallel mode rules apply:
 
-````typescript
+```typescript
 const flakyTask = defineTask({
   label: 'Flaky API call',
   retry: { maxAttempts: 3, delay: 1000, backoff: 'exponential' },
@@ -189,64 +184,27 @@ const flakyTask = defineTask({
 // In fail-fast mode: flakyTask retries up to 3 times before
 // being considered a failure that triggers cancellation
 await r.parallel([r.run(flakyTask), r.run(stableTask)], { mode: 'fail-fast' });
+```
 
-### tabs
+### prompter
 
-Run multiple commands/tasks in a tabbed terminal interface.
+Interactive input inside a command. See the [Prompter API](./prompter.md).
 
 ```typescript
-tabs(items: RunnerItem[], options?: TabsRunnerOptions): Promise<void>
-
-type TabsRunnerOptions = {
-  name?: string;  // Console name (e.g., "Development")
-};
-````
-
-Requires a tabs adapter (e.g., `@pokit/opentui`):
+prompter: Prompter;
+```
 
 ```typescript
 run: async (r) => {
-  await r.tabs([r.exec('npm run dev'), r.exec('stripe listen'), r.run(watchTask)], {
-    name: 'Development',
+  const env = await r.prompter.select({
+    message: 'Environment',
+    options: [
+      { value: 'staging', label: 'Staging' },
+      { value: 'prod', label: 'Production' },
+    ],
   });
 };
 ```
-
-Features:
-
-- Each tab shows buffered output
-- Keyboard navigation between tabs
-- Scrollable output history
-- Process lifecycle management
-
-### app
-
-Run a fullscreen interactive app component.
-
-```typescript
-app<TProps>(
-  component: AnyComponent<TProps>,
-  props: TProps
-): Promise<void>
-```
-
-Requires an app adapter (e.g., `@pokit/opentui`):
-
-```typescript
-run: async (r) => {
-  await r.app(MyExplorer, {
-    data: await loadData(r.cwd),
-    onSave: async (id, fields) => { /* persist */ },
-  });
-},
-```
-
-The component is a standard React function component that:
-- Owns its own state via hooks
-- Handles keyboard input via `useKeyboard`
-- Can use optional `onExit()` to close and return control
-
-See [App Adapter](./app.md) for full details.
 
 ### group
 
@@ -260,7 +218,7 @@ group<T>(
 ): Promise<T>
 
 type GroupOptions = {
-  layout: 'sequence' | 'parallel' | 'tabs' | 'grid';
+  layout: 'sequence' | 'parallel';
 };
 ```
 
@@ -283,20 +241,18 @@ run: async (r) => {
 The `reporter` property provides logging:
 
 ```typescript
-interface CommandReporter {
+type CommandReporter = {
   info(message: string): void;
   warn(message: string): void;
-  error(message: string): void;
+  error(message: string | Error): void;
   success(message: string): void;
   step(message: string): void;
-
-  group<T>(label: string, options: GroupOptions, fn: (r: Reporter) => T): Promise<T>;
-  activity<T>(label: string, fn: () => T): Promise<T>;
-
-  suspend(): void; // Suspend output (for TUI takeover)
-  resume(): void; // Resume output
-}
+};
 ```
+
+`r.reporter` is the restricted command reporter (logging + `step`). Grouping and
+activities are created through `r.group(...)`, which yields the full `Reporter`.
+See the [Events API](./events.md) for the full reporter surface.
 
 ## Error Handling
 
@@ -387,14 +343,12 @@ export const command = defineCommand({
 export const command = defineCommand({
   label: 'Start development',
   run: async (r) => {
-    await r.tabs(
-      [
-        r.exec('npm run dev'),
-        r.exec('npm run watch:css'),
-        r.exec('stripe listen --forward-to localhost:3000/webhooks'),
-      ],
-      { name: 'Dev' }
-    );
+    // race mode: the first process to exit tears down the rest
+    await r.parallel([
+      r.exec('npm run dev'),
+      r.exec('npm run watch:css'),
+      r.exec('stripe listen --forward-to localhost:3000/webhooks'),
+    ]);
   },
 });
 ```

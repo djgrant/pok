@@ -54,19 +54,27 @@ type CLIEvent =
       meta?: Record<string, unknown>;
     }
   | { type: 'activity:success'; id: ActivityId; result?: unknown }
-  | { type: 'activity:failure'; id: ActivityId; error: Error | string }
+  | {
+      type: 'activity:failure';
+      id: ActivityId;
+      error: Error | string;
+      /** Remediation steps when the failure has fix instructions. */
+      remediation?: string[];
+      /** Documentation URL for more information about the failure. */
+      documentationUrl?: string;
+    }
   | { type: 'activity:update'; id: ActivityId; payload: ActivityUpdatePayload }
 
   // Logging
-  | { type: 'log'; activityId?: ActivityId; level: LogLevel; message: string }
+  | { type: 'log'; activityId?: ActivityId; level: LogLevel; message: string };
 
-  // TUI Control
-  | { type: 'reporter:suspend' }
-  | { type: 'reporter:resume' };
-
-type GroupLayout = 'sequence' | 'parallel' | 'tabs' | 'grid';
+type GroupLayout = 'sequence' | 'parallel';
 type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'step';
 ```
+
+Failures carrying `remediation` / `documentationUrl` (for example, from a
+`CheckError`) let adapters render clean, actionable errors without dumping a
+stack trace.
 
 ## EventBus
 
@@ -103,52 +111,79 @@ unsubscribe();
 
 ## Reporter
 
-The Reporter provides a high-level API for emitting events.
+The Reporter provides a high-level API for emitting events. It is **scoped**: an
+instance is always tied to a root, group, or activity context, and its methods
+emit events for that scope.
 
-### Reporter Interface
+### Reporter (full API)
 
 ```typescript
-interface Reporter {
+type Reporter = {
   // Logging
   info(message: string): void;
   warn(message: string): void;
-  error(message: string): void;
+  error(message: string | Error): void;
   success(message: string): void;
   step(message: string): void;
 
-  // Grouping
+  // Activity updates (progress / status for the current activity scope)
+  update(payload: UpdatePayload): void;
+
+  // Nesting
+  activity<T>(label: string, fn: (reporter: Reporter) => Promise<T> | T): Promise<T>;
+  activityWithMeta<T>(
+    label: string,
+    meta: Record<string, unknown>,
+    fn: (reporter: Reporter) => Promise<T> | T
+  ): Promise<T>;
   group<T>(
     label: string,
     options: GroupOptions,
     fn: (reporter: Reporter) => Promise<T> | T
   ): Promise<T>;
+};
 
-  // Activities
-  activity<T>(label: string, fn: () => Promise<T> | T): Promise<T>;
-}
+type UpdatePayload = string | { progress?: number; message?: string; [key: string]: unknown };
+type GroupOptions = { layout: GroupLayout };
 ```
 
-### CommandReporter
+### Scoped variants
 
-Extended reporter available in commands:
+The runner and tasks receive restricted views of the reporter:
 
 ```typescript
-interface CommandReporter extends Reporter {
-  suspend(): void; // Suspend output for TUI takeover
-  resume(): void; // Resume output
-}
+// Available on the command runner (r.reporter) — logging and step sectioning.
+type CommandReporter = {
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string | Error): void;
+  success(message: string): void;
+  step(message: string): void;
+};
+
+// Available inside a task — logging plus activity updates.
+type TaskReporter = {
+  info(message: string): void;
+  warn(message: string): void;
+  error(message: string | Error): void;
+  success(message: string): void;
+  update(payload: UpdatePayload): void;
+};
 ```
+
+The full `Reporter` (with `group`/`activity`) is the callback argument passed to
+`r.group(...)`.
 
 ### Usage in Commands
 
 ```typescript
 run: async (r) => {
-  // Simple logging
+  // Simple logging on the command reporter
   r.reporter.info('Starting process...');
   r.reporter.warn('This may take a while');
 
-  // Grouped activities
-  await r.reporter.group('Build', { layout: 'sequence' }, async (g) => {
+  // Grouped activities — group() lives on the runner and yields a full Reporter
+  await r.group('Build', { layout: 'sequence' }, async (g) => {
     await g.activity('Compile', async () => {
       await r.exec('tsc');
     });
@@ -180,14 +215,14 @@ interface ReporterAdapterController {
 
 ### Using an Adapter
 
-```typescript
-import { run } from '@pokit/core';
-import { createReporterAdapter } from '@pokit/reporter-clack';
+The default reporter adapter ships in [@pokit/terminal](../packages/terminal.md)
+and is wired in automatically by the launcher. To get one directly:
 
-await run(args, {
-  // ...
-  reporterAdapter: createReporterAdapter(),
-});
+```typescript
+import { createTerminalUI } from '@pokit/terminal';
+
+const { reporter } = createTerminalUI();
+// reporter is a ReporterAdapter — pass it as `reporter` in pok.config.ts
 ```
 
 ## Activity Updates
@@ -233,22 +268,25 @@ For testing, use the raw adapter that collects events:
 ```typescript
 import { createRawReporterAdapter } from '@pokit/core';
 
-const { adapter, getEvents } = createRawReporterAdapter();
+// Capture events via the onEvent callback...
+const events: CLIEvent[] = [];
+const reporterAdapter = createRawReporterAdapter({ onEvent: (e) => events.push(e) });
 
-// Use adapter in tests
 await run(args, {
-  reporterAdapter: adapter,
+  reporterAdapter,
   // ...
 });
 
-// Assert on collected events
-const events = getEvents();
 expect(events).toContainEqual({
   type: 'log',
+  activityId: undefined,
   level: 'success',
   message: 'Build complete!',
 });
 ```
+
+`start(bus)` also returns a controller exposing `getEvents()` if you prefer to
+pull the captured events instead of pushing them.
 
 ## Event Flow Example
 
@@ -263,20 +301,3 @@ Command starts
   → group:end { id: 'g1' }
   → log { level: 'success', message: 'Build complete!' }
 ```
-
-## Suspend/Resume
-
-For full-screen TUI takeover (like `r.tabs()`):
-
-```typescript
-// Reporter output is suspended
-r.reporter.suspend();
-
-// Full-screen TUI runs
-await tabsAdapter.run([...]);
-
-// Reporter output resumes
-r.reporter.resume();
-```
-
-The adapter handles these events to pause/resume rendering.

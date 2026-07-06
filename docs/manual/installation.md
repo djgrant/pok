@@ -5,6 +5,18 @@
 - **Bun** >= 1.0.0 (https://bun.sh)
 - **Node.js** >= 20 (for compatibility with some dependencies)
 
+## Install the launcher
+
+The `pok` command is a global launcher. Install it once:
+
+```bash
+bun add -g pokit
+```
+
+`pok` works in any repo with a `package.json` (fallback mode) or a `pok.config.ts`.
+When a project ships its own local `pokit`, the global launcher delegates to it so
+the project is served by the version it pinned.
+
 ## Create a new project
 
 ```bash
@@ -13,23 +25,37 @@ cd my-cli
 bun install
 ```
 
-This creates a project with:
+This scaffolds a `commands/` directory, a `package.json` pinning `@pokit/core`
+and `@pokit/terminal`, and a `tsconfig.json`.
 
-- `commands/` directory with example commands
-- Pre-configured `package.json` with dependencies
-- TypeScript configuration
-
-## Add to existing project
+## Add to an existing project
 
 ```bash
 # Core framework (required)
 bun add @pokit/core zod
 
-# TTY adapters (choose what you need)
-bun add @pokit/prompter-clack   # Interactive prompts
-bun add @pokit/reporter-clack   # Terminal output rendering
-bun add @pokit/opentui         # Tabbed terminal UI (optional)
+# Default terminal UI (interactive prompts, reporter output, menu navigation)
+bun add @pokit/terminal
 ```
+
+Then create a config:
+
+```bash
+pok init
+```
+
+which writes a zero-config `pok.config.ts`:
+
+```typescript
+import { defineConfig } from '@pokit/core';
+
+export default defineConfig({});
+```
+
+When `reporter`, `prompter`, and `navigator` are omitted, the launcher wires in
+`@pokit/terminal`'s defaults automatically. You can even skip `pok init`
+entirely: in any repo with a `package.json`, running `pok` starts in fallback
+mode and surfaces your `commands/` directory plus package scripts.
 
 ## Project structure
 
@@ -39,35 +65,21 @@ my-cli/
 │   ├── dev.ts         # mycli dev
 │   ├── build.ts       # mycli build
 │   └── db.migrate.ts  # mycli db migrate
-├── pok                # CLI entry point
+├── pok.config.ts       # Optional — omit for fallback mode
 ├── package.json
 └── tsconfig.json
 ```
 
-## CLI entry point
+## Passing UI options
 
-Create a `pok` file (or any name) as your CLI entry point:
+Only construct the UI yourself when you need options (e.g. `verbose`):
 
 ```typescript
-#!/usr/bin/env bun
-import { run } from "@pokit/core";
-import { createPrompter } from "@pokit/prompter-clack";
-import { createReporterAdapter } from "@pokit/reporter-clack";
-import { createTabsAdapter } from "@pokit/opentui";
-import * as path from "path";
+import { defineConfig } from '@pokit/core';
+import { createTerminalUI } from '@pokit/terminal';
 
-await run(process.argv.slice(2), {
-  commandsDir: path.resolve(import.meta.dir, "commands"),
-  projectRoot: path.resolve(import.meta.dir),
-  appName: "mycli",
-  prompter: createPrompter(),
-  reporterAdapter: createReporterAdapter(),
-  tabs: createTabsAdapter(),
+export default defineConfig({
+  appName: 'mycli',
+  ...createTerminalUI({ verbose: true }),
 });
-```
-
-Make it executable:
-
-```bash
-chmod +x pok
 ```

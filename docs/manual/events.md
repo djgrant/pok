@@ -1,6 +1,6 @@
 # Event System
 
-pok routes command output through an event bus. Commands and tasks emit semantic events, and adapters render those events as terminal output, tab UIs, or custom views.
+pok routes command output through an event bus. Commands and tasks emit semantic events, and adapters render those events as terminal output or custom views.
 
 ## Event flow
 
@@ -44,7 +44,7 @@ Groups organize related activities:
   id: 'g1',
   parentId: undefined,
   label: 'Build',
-  layout: 'sequence'  // or 'parallel', 'tabs', 'grid'
+  layout: 'sequence'  // or 'parallel'
 }
 
 // Group end
@@ -75,8 +75,14 @@ Activities are units of work:
 // Activity success
 { type: 'activity:success', id: 'a1', result: undefined }
 
-// Activity failure
-{ type: 'activity:failure', id: 'a1', error: Error('Compilation failed') }
+// Activity failure (remediation / documentationUrl are optional, e.g. from a CheckError)
+{
+  type: 'activity:failure',
+  id: 'a1',
+  error: Error('Compilation failed'),
+  remediation: ['Run `bun install`'],
+  documentationUrl: 'https://example.com/errors/compile',
+}
 ```
 
 ### Log Events
@@ -87,20 +93,6 @@ Activities are units of work:
   activityId: 'a1',  // Optional: associate with activity
   level: 'info',     // 'info' | 'warn' | 'error' | 'success' | 'step'
   message: 'Processing...'
-}
-```
-
-### Reporter Control Events
-
-```typescript
-// Suspend output (for fullscreen TUI)
-{
-  type: 'reporter:suspend';
-}
-
-// Resume output
-{
-  type: 'reporter:resume';
 }
 ```
 
@@ -117,8 +109,8 @@ run: async (r) => {
   r.reporter.error('Something failed');
   r.reporter.step('Step 1 of 3');
 
-  // Grouped activities
-  await r.reporter.group('Build', { layout: 'sequence' }, async (g) => {
+  // Grouped activities — group() is on the runner, not r.reporter
+  await r.group('Build', { layout: 'sequence' }, async (g) => {
     await g.activity('Compile', async () => {
       await r.exec('tsc');
     });
@@ -253,20 +245,20 @@ const spinnerAdapter: ReporterAdapter = {
 ### Raw Reporter Adapter
 
 ```typescript
-import { createRawReporterAdapter } from '@pokit/core';
+import { createRawReporterAdapter, type CLIEvent } from '@pokit/core';
 
 test('command emits correct events', async () => {
-  const { adapter, getEvents } = createRawReporterAdapter();
+  const events: CLIEvent[] = [];
+  const reporterAdapter = createRawReporterAdapter({ onEvent: (e) => events.push(e) });
 
   await run(['build'], {
-    reporterAdapter: adapter,
+    reporterAdapter,
     // ...
   });
 
-  const events = getEvents();
-
   expect(events).toContainEqual({
     type: 'log',
+    activityId: undefined,
     level: 'success',
     message: 'Build complete!',
   });
@@ -278,8 +270,6 @@ test('command emits correct events', async () => {
 ### Event Assertions
 
 ```typescript
-const events = getEvents();
-
 // Check sequence
 const groupStart = events.find((e) => e.type === 'group:start');
 const groupEnd = events.find((e) => e.type === 'group:end');
@@ -288,40 +278,6 @@ expect(events.indexOf(groupStart)).toBeLessThan(events.indexOf(groupEnd));
 // Check all activities succeeded
 const failures = events.filter((e) => e.type === 'activity:failure');
 expect(failures).toHaveLength(0);
-```
-
-## Suspend/Resume
-
-For fullscreen TUI takeover:
-
-```typescript
-run: async (r) => {
-  r.reporter.info('Opening console...');
-
-  // Suspend normal output
-  r.reporter.suspend();
-
-  // Fullscreen TUI runs
-  await tabsAdapter.run([...]);
-
-  // Resume normal output
-  r.reporter.resume();
-
-  r.reporter.success('Console closed');
-}
-```
-
-The adapter handles these events:
-
-```typescript
- eventBus.on((event) => {
-  if (event.type === 'reporter:suspend') {
-    // Stop rendering, clear screen
-  }
-  if (event.type === 'reporter:resume') {
-    // Resume rendering
-  }
-});
 ```
 
 ## Layout Hints
@@ -338,8 +294,6 @@ await r.group('Tasks', { layout: 'parallel' }, async (g) => {
 | ---------- | -------------------------------- |
 | `sequence` | Activities run one after another |
 | `parallel` | Activities run concurrently      |
-| `tabs`     | Each activity is a tab           |
-| `grid`     | Arrange in grid layout           |
 
 Adapters can use or ignore these hints.
 
