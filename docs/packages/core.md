@@ -1,6 +1,6 @@
 # @pokit/core
 
-`@pokit/core` contains the file-based router, command and task definitions, environment resolvers, event system, test adapters, SDK runtime, and interfaces for adapators.
+`@pokit/core` contains the file-based router, command and task definitions, environment resolvers, event system, the prompter/reporter/navigator interfaces, the default menu navigator, and test adapters. It has zero TTY dependencies — terminal rendering lives in [@pokit/terminal](./terminal.md).
 
 ## Installation
 
@@ -45,10 +45,8 @@ Validate preconditions before command execution.
 ### Router
 
 ```typescript
-import { run, buildCommandTree, fromDirectory, fromConfig, fromObject } from '@pokit/core';
+import { run, runCli, buildCommandTree, fromDirectory, fromConfig, fromStatic } from '@pokit/core';
 ```
-
-File-based command discovery and routing.
 
 File-based command discovery and routing.
 
@@ -58,7 +56,16 @@ File-based command discovery and routing.
 import { createRunner } from '@pokit/core';
 ```
 
-Command execution engine with shell, parallel, and tabs support.
+Command execution engine with shell exec, task, and parallel support.
+
+### Prompter & Navigator
+
+```typescript
+import { createRawPrompter, createMenuNavigator, isDynamicOptions } from '@pokit/core';
+```
+
+The interactive-input and menu-presentation contracts, plus the default menu
+navigator. The terminal implementations live in [@pokit/terminal](./terminal.md).
 
 ### Events
 
@@ -91,14 +98,6 @@ import { createRawPrompter, createRawReporterAdapter } from '@pokit/core';
 ```
 
 Test-friendly implementations with no TTY dependencies.
-
-### SDK Runtime (In-Process)
-
-```typescript
-import { createSdkRuntime } from '@pokit/core';
-```
-
-Invoke commands in-process with no subprocess boundary. This is the execution surface used by generated clients and other programmatic callers.
 
 ## Types
 
@@ -137,38 +136,38 @@ import type {
   Reporter,
   ReporterAdapter,
 
-  // Prompter
+  // Prompter & Navigator
   Prompter,
   SelectOptions,
+  OptionsProvider,
   ConfirmOptions,
   TextOptions,
-
-  // Tabs
-  TabsAdapter,
-  TabSpec,
+  Navigator,
+  NavContext,
+  NavResult,
 } from '@pokit/core';
 ```
 
 ## Usage with Adapters
 
-The core package requires adapters for terminal features:
+The core package is UI-agnostic. Terminal rendering and input come from
+[@pokit/terminal](./terminal.md), which the `pok` launcher wires in automatically
+for zero-config apps. To assemble it yourself:
 
 ```typescript
 import { run } from '@pokit/core';
-import { createPrompter } from '@pokit/prompter-clack';
-import { createReporterAdapter } from '@pokit/reporter-clack';
-import { createTabsAdapter } from '@pokit/opentui';
+import { createTerminalUI } from '@pokit/terminal';
+
+const { reporter, prompter, navigator } = createTerminalUI();
 
 await run(process.argv.slice(2), {
   commandsDir: './commands',
   projectRoot: process.cwd(),
-  prompter: createPrompter(),
-  reporterAdapter: createReporterAdapter(),
-  tabs: createTabsAdapter(),
+  prompter,
+  reporterAdapter: reporter,
+  navigator,
 });
 ```
-
-| `create-pokit`          | Project scaffolding |
 
 ## API Reference
 
@@ -179,4 +178,5 @@ await run(process.argv.slice(2), {
 - [Runner](../api/runner.md)
 - [Router](../api/router.md)
 - [Events](../api/events.md)
-- [SDK Runtime](../api/sdk-runtime.md)
+- [Prompter](../api/prompter.md)
+- [Navigator](../api/navigator.md)

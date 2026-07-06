@@ -223,13 +223,14 @@ const deployTask = defineTask({
 });
 ```
 
-## Tabs with Tasks
+## Parallel Tasks
 
-Tasks also work with `r.tabs()`:
+Tasks compose with `r.parallel()` for concurrent execution:
 
 ```typescript
 run: async (r) => {
-  await r.tabs([
+  // race mode (default): first to exit tears down the rest
+  await r.parallel([
     r.run(devServerTask),
     r.run(watcherTask),
     r.exec('stripe listen'),
@@ -237,12 +238,12 @@ run: async (r) => {
 },
 ```
 
-The `shortLabel` property controls tab names:
+The `shortLabel` property provides a compact display name for a task:
 
 ```typescript
 const devServerTask = defineTask({
   label: 'Development Server',
-  shortLabel: 'dev', // Tab shows "dev"
+  shortLabel: 'dev',
   exec: 'npm run dev',
 });
 ```

@@ -265,8 +265,8 @@ run: async (r) => {
   // With parameters
   await r.run(migrateTask, { dryRun: true });
 
-  // In tabs
-  await r.tabs([r.run(devServerTask), r.run(watcherTask)]);
+  // In parallel
+  await r.parallel([r.run(devServerTask), r.run(watcherTask)]);
 };
 ```
 

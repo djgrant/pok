@@ -1,15 +1,16 @@
 # Prompter
 
-The `Prompter` interface defines how pok requests interactive input for selects, multiselects, confirms, and text fields.
+The `Prompter` interface defines how pok requests interactive input for selects, multiselects, confirms, text fields, and type-ahead autocomplete.
 
 ## Prompt surfaces
 
 pok uses a prompter for:
 
-- Select menus (single choice)
+- Select menus (single choice, static or dynamic)
 - Multiselect (multiple choices)
 - Confirm (yes/no)
 - Text input
+- Autocomplete (single choice with type-ahead filtering, optional)
 
 ## Interface
 
@@ -19,6 +20,11 @@ interface Prompter {
   multiselect<T>(options: MultiselectOptions<T>): Promise<T[]>;
   confirm(options: ConfirmOptions): Promise<boolean>;
   text(options: TextOptions): Promise<string>;
+  /**
+   * Single-select with type-ahead filtering. Optional — implementations that
+   * don't support it can omit it, and callers should fall back to `select`.
+   */
+  autocomplete?<T>(options: AutocompleteOptions<T>): Promise<T>;
 }
 ```
 
@@ -26,17 +32,75 @@ interface Prompter {
 
 ### SelectOptions
 
+`select` accepts either a static list of options or a dynamic `provider`.
+
 ```typescript
 type SelectOption<T> = {
   value: T;
   label: string;
   hint?: string;
+  /** Optional group name for visual grouping (like HTML <optgroup>). */
+  group?: string;
 };
 
-type SelectOptions<T> = {
+type StaticSelectOptions<T> = {
   message: string;
   options: SelectOption<T>[];
   initialValue?: T;
+};
+
+type DynamicSelectOptions<T> = {
+  message: string;
+  provider: OptionsProvider<T>;
+  initialValue?: T;
+  /** Shown while loading initial options. @default "Loading..." */
+  loadingMessage?: string;
+  /** Shown when the provider fails. @default "Failed to load options" */
+  errorMessage?: string;
+};
+
+type SelectOptions<T> = StaticSelectOptions<T> | DynamicSelectOptions<T>;
+```
+
+### OptionsProvider (dynamic options)
+
+A dynamic provider is a single function that, given the current type-ahead
+`filter` and an `AbortSignal`, resolves to the full option set to display. The UI
+adapter owns how loading and filtering are presented (debounce, pagination,
+server-vs-client filtering are implementation details of the UI, not the
+contract).
+
+```typescript
+type OptionsProvider<T> = (
+  filter: string | undefined,
+  signal: AbortSignal
+) => Promise<SelectOption<T>[]>;
+```
+
+```typescript
+const selected = await prompter.select({
+  message: 'Select a post',
+  provider: async (filter, signal) => {
+    const posts = await fetchPosts(filter, { signal });
+    return posts.map((p) => ({ value: p.slug, label: p.title, group: p.year }));
+  },
+});
+```
+
+A type guard is exported for narrowing:
+
+```typescript
+import { isDynamicOptions } from '@pokit/core';
+```
+
+### AutocompleteOptions
+
+```typescript
+type AutocompleteOptions<T> = {
+  message: string;
+  options: SelectOption<T>[];
+  placeholder?: string;
+  maxItems?: number;
 };
 ```
 
@@ -47,6 +111,7 @@ type MultiselectOption<T> = {
   value: T;
   label: string;
   hint?: string;
+  group?: string;
 };
 
 type MultiselectOptions<T> = {
@@ -77,20 +142,14 @@ type TextOptions = {
 };
 ```
 
-## Using @pokit/prompter-clack
+## Using @pokit/terminal
 
-The recommended implementation uses [@clack/prompts](https://github.com/natemoo-re/clack):
+The default implementation ships in [@pokit/terminal](../packages/terminal.md), built on clack. It is wired in automatically by the `pok` launcher when your config omits `prompter`. To get an instance directly:
 
 ```typescript
-import { createPrompter } from '@pokit/prompter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 
-const prompter = createPrompter();
-
-// Use in router config
-await run(args, {
-  prompter,
-  // ...
-});
+const { prompter } = createTerminalUI();
 ```
 
 ## Context Resolution
@@ -193,11 +252,14 @@ error that can be handled by the caller:
 ```typescript
 import { CancelError } from '@pokit/core';
 
-// @pokit/prompter-clack does this internally:
+// @pokit/terminal does this internally:
 if (p.isCancel(result)) {
   throw new CancelError(); // exitCode: 130
 }
 ```
+
+In interactive menus, the [Navigator](./navigator.md) catches this `CancelError` and
+turns it into up-navigation (`back`) rather than aborting the CLI.
 
 ## Custom Prompter
 

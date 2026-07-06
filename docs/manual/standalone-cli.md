@@ -11,10 +11,10 @@ mkdir my-tool && cd my-tool
 bun init -y
 ```
 
-Install the core framework and adapters:
+Install the core framework and the default terminal UI:
 
 ```bash
-bun add @pokit/core zod @pokit/prompter-clack @pokit/reporter-clack
+bun add @pokit/core zod @pokit/terminal
 ```
 
 ## 2. Create the Entry Point
@@ -24,13 +24,14 @@ Create a `bin/cli.ts` file. This will be the main script your users run.
 ```typescript
 #!/usr/bin/env bun
 import { runCli } from '@pokit/core';
-import { createPrompter } from '@pokit/prompter-clack';
-import { createReporterAdapter } from '@pokit/reporter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 import * as path from 'path';
 
 // Get the directory where this script is located
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const projectRoot = path.resolve(__dirname, '..');
+
+const { reporter, prompter, navigator } = createTerminalUI();
 
 await runCli(process.argv.slice(2), {
   appName: 'my-tool',
@@ -38,9 +39,10 @@ await runCli(process.argv.slice(2), {
   // Point to your commands directory
   commandsDir: path.join(projectRoot, 'commands'),
   projectRoot: projectRoot,
-  // Attach adapters
-  prompter: createPrompter(),
-  reporterAdapter: createReporterAdapter(),
+  // Attach the default terminal UI surfaces
+  prompter,
+  reporterAdapter: reporter,
+  navigator,
 });
 ```
 
@@ -80,8 +82,7 @@ Add a `bin` field to your `package.json` so users can install it globally or run
   },
   "dependencies": {
     "@pokit/core": "latest",
-    "@pokit/prompter-clack": "latest",
-    "@pokit/reporter-clack": "latest"
+    "@pokit/terminal": "latest"
   }
 }
 ```

@@ -5,14 +5,29 @@ This guide creates a pok CLI, defines one command, and runs it with both explici
 ## Create a new project
 
 ```sh
-pnpm create pokit my-cli
+bun create pokit my-cli
+cd my-cli
+bun install
 ```
 
 ## Or add pok to an existing project
 
 ```sh
-pnpm add @pokit/core
+bun add @pokit/core @pokit/terminal zod
+pok init            # writes a zero-config pok.config.ts
 ```
+
+`pok init` scaffolds:
+
+```ts [pok.config.ts]
+import { defineConfig } from '@pokit/core';
+
+export default defineConfig({});
+```
+
+The launcher wires in `@pokit/terminal`'s reporter, prompter, and navigator
+whenever they are omitted. In a plain `package.json` repo you can even skip the
+config and let `pok` run in fallback mode.
 
 ## Define a command
 
@@ -41,12 +56,18 @@ export const command = defineCommand({
 ## Run with a flag
 
 ```sh
-$ mycli deploy --env staging
+$ pok deploy --env staging
 ```
 
 ## Run with interactive prompt
 
 ```sh
-$ mycli deploy
+$ pok deploy
 ? Select environment > staging / prod
 ```
+
+## Browse interactively
+
+Run `pok` with no arguments to open the menu. Selecting a parent descends into
+its submenu; pressing **Esc** in a submenu goes back up one level, and **Esc at
+the root** exits.

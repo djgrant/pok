@@ -289,18 +289,6 @@ run: async (r) => {
 },
 ```
 
-### Tabbed Console
-
-```typescript
-run: async (r) => {
-  await r.tabs([
-    r.exec('npm run dev'),
-    r.exec('stripe listen'),
-    r.run(watchTask),
-  ], { name: 'Development' });
-},
-```
-
 ## Parent Command Patterns
 
 ### Simple Menu

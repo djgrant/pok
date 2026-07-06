@@ -22,7 +22,6 @@ export const categories: DocCategory[] = [
           { label: "Checks", slug: "manual/checks" },
           { label: "Structured Output", slug: "manual/output" },
           { label: "Dry Run", slug: "manual/dry-run" },
-          { label: "Interactive Apps", slug: "manual/apps" },
         ],
       },
       {
@@ -48,7 +47,6 @@ export const categories: DocCategory[] = [
         icon: "book-open",
         links: [
           { label: "Standalone CLI", slug: "manual/standalone-cli" },
-          { label: "Building Interactive Apps", slug: "manual/building-interactive-apps" },
           { label: "Dynamic Menus with piq", slug: "manual/dynamic-menus-piq" },
         ],
       },
@@ -82,10 +80,8 @@ export const categories: DocCategory[] = [
         icon: "layers",
         links: [
           { label: "Prompter", slug: "api/prompter" },
-          { label: "App", slug: "api/app" },
-          { label: "Tabs", slug: "api/tabs" },
+          { label: "Navigator", slug: "api/navigator" },
           { label: "Completion", slug: "api/completion" },
-          { label: "SDK Runtime", slug: "api/sdk-runtime" },
         ],
       },
       {
@@ -93,11 +89,7 @@ export const categories: DocCategory[] = [
         icon: "file-text",
         links: [
           { label: "@pokit/core", slug: "packages/core" },
-          { label: "@pokit/prompter-clack", slug: "packages/prompter-clack" },
-          { label: "@pokit/reporter-clack", slug: "packages/reporter-clack" },
-          { label: "@pokit/opentui", slug: "packages/opentui" },
-          { label: "@pokit/tabs-core", slug: "packages/tabs-core" },
-          { label: "@pokit/sdk-gen", slug: "packages/sdk-gen" },
+          { label: "@pokit/terminal", slug: "packages/terminal" },
           { label: "create-pokit", slug: "packages/create" },
         ],
       },

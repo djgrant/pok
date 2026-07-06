@@ -33,7 +33,7 @@ function runCli(args: string[], config: RunCliConfig): Promise<void>;
 | `version`         | `string`                        | Version string for --version flag                  |
 | `reporterAdapter` | `ReporterAdapter`               | Adapter for rendering output                       |
 | `prompter`        | `Prompter`                      | Adapter for interactive input                      |
-| `tabs`            | `TabsAdapter`                   | Optional adapter for tabbed UI                     |
+| `navigator`       | `Navigator`                     | Optional menu presentation policy (defaults to the built-in menu navigator) |
 | `pmScripts`       | `boolean \| string[]`           | Include package manager scripts (e.g., npm scripts) |
 | `pmCommands`      | `boolean \| string[]`           | Include package manager commands                   |
 | `extraCommands`   | `Record<string, CommandConfig>` | Manual command overrides                           |
@@ -43,9 +43,9 @@ function runCli(args: string[], config: RunCliConfig): Promise<void>;
 
 A `MountableLike` is any object that can be resolved into a command tree. The following helper functions return mountables:
 
-- **`fromDirectory(baseUrl: string, relativePath: string)`**: Mounts all `.ts` and `.tsx` files from a directory.
-- **`fromConfig(baseUrl: string, relativePath: string)`**: Mounts an entire pok application from its `pok.config.ts` file or directory.
-- **`fromObject(tree: CommandTree)`**: Mounts a pre-built command tree.
+- **`fromDirectory(...pathSegments: string[])`**: Mounts all `.ts` and `.tsx` files from a directory (segments are joined and resolved, e.g. `fromDirectory(import.meta.url, './tools')`).
+- **`fromConfig(...pathSegments: string[])`**: Mounts an entire pok application from its `pok.config.ts` file or directory.
+- **`fromStatic(commands: Record<string, CommandConfig>)`**: Mounts a static map of pre-built commands.
 
 ## Plugins
 
@@ -68,17 +68,19 @@ await runCli(process.argv.slice(2), {
 ```typescript
 #!/usr/bin/env bun
 import { runCli } from '@pokit/core';
-import { createPrompter } from '@pokit/prompter-clack';
-import { createReporterAdapter } from '@pokit/reporter-clack';
+import { createTerminalUI } from '@pokit/terminal';
 import * as path from 'path';
+
+const { reporter, prompter, navigator } = createTerminalUI();
 
 await runCli(process.argv.slice(2), {
   commandsDir: path.resolve(import.meta.dir, 'commands'),
   projectRoot: path.resolve(import.meta.dir),
   appName: 'my-cli',
   version: '1.0.0',
-  prompter: createPrompter(),
-  reporterAdapter: createReporterAdapter(),
+  prompter,
+  reporterAdapter: reporter,
+  navigator,
 });
 ```
 
@@ -102,7 +104,7 @@ type RouterConfig = {
   version?: string;
   reporterAdapter: ReporterAdapter;
   prompter: Prompter;
-  tabs?: TabsAdapter;
+  navigator?: Navigator; // Defaults to the built-in menu navigator
   noTty?: boolean; // Disable interactivity
   // ... other internal flags
 };
