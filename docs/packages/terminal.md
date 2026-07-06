@@ -2,8 +2,6 @@
 
 `@pokit/terminal` is the default terminal UI for pok CLIs, built on [clack](https://github.com/bombshell-dev/clack). It bundles the three UI surfaces — **reporter** (event rendering), **prompter** (interactive input), and **navigator** (menu presentation policy) — behind a single factory, so an app wires them in with one call.
 
-This package replaces the old `@pokit/reporter-clack` + `@pokit/prompter-clack` split.
-
 ## Installation
 
 ```bash
