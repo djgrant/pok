@@ -47,7 +47,7 @@ export const categories: DocCategory[] = [
         icon: "book-open",
         links: [
           { label: "Standalone CLI", slug: "manual/standalone-cli" },
-          { label: "Dynamic Menus with piq", slug: "manual/dynamic-menus-piq" },
+          { label: "Dynamic Menus", slug: "manual/dynamic-menus" },
         ],
       },
     ],
