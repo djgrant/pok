@@ -22,11 +22,11 @@
     "quick-check": "echo 'quick check'"
   },
   "devDependencies": {
-    "@pokit/core": "npm:@pokit/core@0.3.0",
-    "@pokit/terminal": "npm:@pokit/terminal@0.3.0",
+    "@pokit/core": "npm:@pokit/core@0.3.1",
+    "@pokit/terminal": "npm:@pokit/terminal@0.3.1",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
-    "pokit": "0.3.0",
+    "pokit": "0.3.1",
     "semver": "^7.7.0",
     "@types/semver": "^7.7.0",
     "typescript": "^5.8.3",
