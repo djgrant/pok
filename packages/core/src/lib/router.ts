@@ -705,6 +705,7 @@ async function executeLeaf(
       signal,
       eventBus,
       prompter,
+      commandPath: node.path.join(' '),
     });
     try {
       const result = await config.run(runner, runCtx);
@@ -1020,6 +1021,7 @@ async function executeLeafWithContext(
       signal,
       eventBus,
       prompter,
+      commandPath: node.path.join(' '),
     });
     try {
       await config.run(runner, runCtx);

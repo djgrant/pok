@@ -129,6 +129,27 @@ export type {
 } from './lib/runner';
 
 // =============================================================================
+// Trust broker (pok broker wire protocol v1)
+// =============================================================================
+
+export {
+  isBrokerEngaged,
+  requestApproval,
+  getBrokerSocketPath,
+  detectInitiator,
+  toApprovalContext,
+  BrokerDeniedError,
+  BROKER_PROTOCOL_VERSION,
+  BROKER_APPROVAL_TIMEOUT_MS,
+} from './lib/broker';
+export type {
+  ApprovalRequest,
+  ApprovalResponse,
+  ApprovalDecision,
+  ApprovalInitiator,
+} from './lib/broker';
+
+// =============================================================================
 // Router
 // =============================================================================
 
