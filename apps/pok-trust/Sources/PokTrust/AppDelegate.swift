@@ -62,8 +62,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, BrokerClientDelegate, 
 
     // MARK: - ApprovalControllerDelegate
 
-    func approvalController(_ controller: ApprovalController, didDecide decision: String, id: String, reason: String) {
-        broker.send(decision: decision, id: id, reason: reason)
+    func approvalController(_ controller: ApprovalController, didDecide decision: String, id: String, reason: String,
+                            grantTTLSeconds: Double?) {
+        broker.send(decision: decision, id: id, reason: reason, grantTTLSeconds: grantTTLSeconds)
     }
 
     func approvalControllerPendingCountDidChange(_ controller: ApprovalController) {

@@ -49,7 +49,8 @@ private final class ApprovalPanel: NSPanel {
 }
 
 protocol ApprovalControllerDelegate: AnyObject {
-    func approvalController(_ controller: ApprovalController, didDecide decision: String, id: String, reason: String)
+    func approvalController(_ controller: ApprovalController, didDecide decision: String, id: String, reason: String,
+                            grantTTLSeconds: Double?)
     func approvalControllerPendingCountDidChange(_ controller: ApprovalController)
 }
 
@@ -82,6 +83,10 @@ final class ApprovalController {
     private var statusLabel: NSTextField?
     private var primaryButton: NSButton?
     private var denyButton: NSButton?
+    private var grantCheckbox: NSButton?
+
+    /// Standing-grant TTL issued when the "Remember" checkbox is on: 8 hours.
+    private static let grantTTLSeconds: Double = 28800
 
     var pendingCount: Int { queue.count + (current == nil ? 0 : 1) }
 
@@ -113,10 +118,17 @@ final class ApprovalController {
 
     private func finish(decision: String, reason: String) {
         guard let forward = current else { return }
+        // Standing grant: only on allow, and only if the user opted in via the
+        // checkbox for this specific request (state is read before the panel —
+        // and the checkbox with it — is torn down).
+        let grantTTL: Double? = (decision == "allow" && grantCheckbox?.state == .on)
+            ? Self.grantTTLSeconds : nil
         current = nil
         closePanel()
-        TrustLog.log("decision sent id=\(forward.id) decision=\(decision) reason=\(reason)")
-        delegate?.approvalController(self, didDecide: decision, id: forward.id, reason: reason)
+        TrustLog.log("decision sent id=\(forward.id) decision=\(decision) reason=\(reason)"
+            + (grantTTL != nil ? " grant=8h" : ""))
+        delegate?.approvalController(self, didDecide: decision, id: forward.id, reason: reason,
+                                     grantTTLSeconds: grantTTL)
         delegate?.approvalControllerPendingCountDidChange(self)
         showNextIfIdle()
     }
@@ -137,6 +149,7 @@ final class ApprovalController {
         statusLabel = nil
         primaryButton = nil
         denyButton = nil
+        grantCheckbox = nil
     }
 
     // MARK: - Authentication state machine
@@ -430,7 +443,26 @@ final class ApprovalController {
         ])
         stack.addArrangedSubview(cardBox)
         cardBox.widthAnchor.constraint(equalToConstant: contentWidth - 48).isActive = true
-        stack.setCustomSpacing(14, after: cardBox)
+        stack.setCustomSpacing(10, after: cardBox)
+
+        // Standing-grant opt-in: unobtrusive, defaults OFF, rebuilt fresh for
+        // every forward (never sticky). Prod-flavored envs get a caution in
+        // the label but stay selectable.
+        let isProd = request.env == "prod" || request.env == "production"
+        let grantTitle = isProd ? "Remember for 8 hours (prod!)" : "Remember for 8 hours"
+        let grant = NSButton(checkboxWithTitle: grantTitle, target: nil, action: nil)
+        grant.state = .off
+        grant.attributedTitle = NSAttributedString(string: grantTitle, attributes: [
+            .font: NSFont.systemFont(ofSize: 13),
+            .foregroundColor: NSColor.secondaryLabelColor,
+        ])
+        grantCheckbox = grant
+
+        let grantRow = NSStackView(views: [grant, NSView()])
+        grantRow.orientation = .horizontal
+        stack.addArrangedSubview(grantRow)
+        grantRow.widthAnchor.constraint(equalToConstant: contentWidth - 48).isActive = true
+        stack.setCustomSpacing(10, after: grantRow)
 
         let deny = NSButton(title: "Deny", target: self, action: #selector(denyTapped))
         deny.bezelStyle = .rounded

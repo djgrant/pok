@@ -48,10 +48,11 @@ final class BrokerClient {
         }
     }
 
-    func send(decision: String, id: String, reason: String) {
+    func send(decision: String, id: String, reason: String, grantTTLSeconds: Double? = nil) {
         queue.async {
             guard let connection = self.connection, self.status == .connected else { return }
-            let message = ResultMessage(id: id, decision: decision, reason: reason)
+            let grant = grantTTLSeconds.map { GrantPayload(ttlSeconds: $0) }
+            let message = ResultMessage(id: id, decision: decision, reason: reason, grant: grant)
             guard var data = try? JSONEncoder().encode(message) else { return }
             data.append(0x0A)
             connection.send(content: data, completion: .contentProcessed { _ in })

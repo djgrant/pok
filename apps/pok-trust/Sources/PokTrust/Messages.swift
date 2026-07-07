@@ -74,10 +74,17 @@ struct RegisterMessage: Encodable {
     let name = "pok-trust"
 }
 
+/// Standing-grant payload attached to an allow decision (protocol v1.2):
+/// the daemon auto-allows equivalent requests until the TTL expires.
+struct GrantPayload: Encodable {
+    let ttlSeconds: Double
+}
+
 struct ResultMessage: Encodable {
     let v = 1
     let type = "approval.result"
     let id: String
     let decision: String // "allow" | "deny"
     let reason: String
+    let grant: GrantPayload? // omitted from the wire when nil
 }
