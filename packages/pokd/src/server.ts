@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { createAuditLog, type AuditLog } from './audit';
 import { formatReason } from './approve';
 import { createFrontendRegistry } from './frontend';
+import { createGrantStore } from './grants';
 import type { ApprovalRequest, ApprovalRequestBody, ApprovalResponse, Approver, ApproverResult } from './types';
 
 export function defaultSocketPath(): string {
@@ -42,6 +43,9 @@ function validateRequest(value: unknown): ApprovalRequest | string {
   }
   if (typeof req.context !== 'object' || req.context === null) return 'request.context must be an object';
   if (req.initiator !== 'human' && req.initiator !== 'agent') return 'request.initiator must be "human" or "agent"';
+  if (req.access !== undefined && req.access !== 'read' && req.access !== 'write') {
+    return 'request.access must be "read" or "write"';
+  }
   return msg as unknown as ApprovalRequest;
 }
 
@@ -53,7 +57,8 @@ function isFrontendRegister(value: unknown): value is { name: string } {
 
 function summarize(request: ApprovalRequestBody): string {
   const label = request.command || request.task || '(unnamed)';
-  return `"${label}" keys=[${request.keys.join(',')}] initiator=${request.initiator} repo=${path.basename(request.repo || '') || '?'}`;
+  const access = request.access === 'write' ? ' access=write' : '';
+  return `"${label}" keys=[${request.keys.join(',')}]${access} initiator=${request.initiator} repo=${path.basename(request.repo || '') || '?'}`;
 }
 
 export async function startServer(options: ServerOptions): Promise<PokdServer> {
@@ -66,11 +71,30 @@ export async function startServer(options: ServerOptions): Promise<PokdServer> {
   // Remove stale socket on boot.
   if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
 
-  /** Decide via the registered frontend when there is one, else via the local approver chain. */
+  const grants = createGrantStore();
+
+  /**
+   * Decide a request (protocol v1.2 order): a standing grant auto-allows
+   * without any forward; otherwise the registered frontend when there is one
+   * (storing any grant it attaches to an allow), else the local approver chain.
+   */
   async function decide(id: string, request: ApprovalRequestBody): Promise<ApproverResult> {
+    const covering = grants.check(request);
+    if (covering) {
+      const until = new Date(covering.expiresAt).toISOString();
+      return { decision: 'allow', reason: `covered by standing grant until ${until}`, approver: 'standing-grant' };
+    }
     if (frontends.hasFrontend()) {
       const outcome = await frontends.forward(id, request, formatReason(request));
-      if (outcome !== 'fallback') return outcome;
+      if (outcome !== 'fallback') {
+        if (outcome.decision === 'allow' && outcome.grant) {
+          const grant = grants.add(request, outcome.grant.ttlSeconds);
+          log(
+            `pokd: standing grant stored: ${path.basename(request.repo || '') || '?'} env=${String(grant.contextEnv ?? '-')} keys=[${grant.keys.join(',')}] ttl=${outcome.grant.ttlSeconds}s`,
+          );
+        }
+        return { decision: outcome.decision, reason: outcome.reason, approver: outcome.approver };
+      }
       // Frontend disconnected before answering → fall back to the chain.
     }
     return options.approver(request);

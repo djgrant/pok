@@ -38,6 +38,13 @@ export type ApprovalDecision = 'allow' | 'deny';
 /** Who triggered the task run, as detected from the process environment. */
 export type ApprovalInitiator = 'human' | 'agent';
 
+/**
+ * The access level an approval request asks for. Omitted means `'read'`
+ * (backwards compatible — the daemon treats a missing field as read), so
+ * callers requesting read access should leave the field out entirely.
+ */
+export type ApprovalAccess = 'read' | 'write';
+
 /** Payload describing the task run that wants to resolve secrets. */
 export interface ApprovalRequest {
   /** Absolute path to the project the task runs in. */
@@ -48,6 +55,13 @@ export interface ApprovalRequest {
   task: string;
   /** Union of env var names the run will resolve (deduped, sorted). */
   keys: string[];
+  /**
+   * Access level requested (protocol v1.2). Omit for read access — do not
+   * send `'read'` explicitly, so requests stay byte-compatible with v1
+   * daemons. Set to `'write'` when a task writes secrets back through a
+   * resolver.
+   */
+  access?: ApprovalAccess;
   /** JSON-safe subset of the resolver context (values coerced to primitives). */
   context: Record<string, string | number | boolean | null>;
   /** Whether the run was initiated by a human or an agent. */

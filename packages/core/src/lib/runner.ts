@@ -1180,6 +1180,27 @@ export function createRunner<TContext extends Record<string, unknown>>(
           throw new Error('Resolver for envWriter does not implement write method.');
         }
 
+        // Trust-broker choke point (write path): each writeEnvs call requests
+        // its own approval covering exactly the keys being written. Writes are
+        // rarer and more dangerous than reads, so they are never batched with
+        // the read approval. Fail closed on deny/timeout.
+        if (isBrokerEngaged()) {
+          const writeKeys = [...new Set(Object.keys(definedValues))].sort();
+          const { decision, reason } = await requestApproval({
+            repo: cwd,
+            command: commandPath ?? '',
+            task: task.label ?? '',
+            keys: writeKeys,
+            access: 'write',
+            context: toApprovalContext(context),
+            initiator: detectInitiator(),
+            pid: process.pid,
+          });
+          if (decision !== 'allow') {
+            throw new BrokerDeniedError(writeKeys, reason ?? 'denied');
+          }
+        }
+
         await envWriter.resolver.write(definedValues, context);
       };
     }

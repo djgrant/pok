@@ -10,6 +10,27 @@ import { normalizeEvents } from '@pokit/test-utils';
 import { COMMANDS_DIR, PROJECT_ROOT } from './paths';
 
 /**
+ * Run `fn` with the pok trust broker disabled (`POK_BROKER=0`), restoring the
+ * previous value afterwards.
+ *
+ * Tests that invoke the CLI/runner in-process must never engage a real pokd
+ * daemon that happens to be listening on the developer's machine (e.g. on
+ * ~/.pok/pokd.sock) — env-resolving case commands would otherwise pop real
+ * approval prompts or hang awaiting one. Broker tests that want an engaged
+ * broker opt back in explicitly via POK_BROKER_SOCKET pointed at a mock.
+ */
+export async function withBrokerDisabled<T>(fn: () => Promise<T>): Promise<T> {
+  const previous = process.env.POK_BROKER;
+  process.env.POK_BROKER = '0';
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env.POK_BROKER;
+    else process.env.POK_BROKER = previous;
+  }
+}
+
+/**
  * Result of capturing CLI events.
  */
 export type CaptureResult = {
@@ -84,14 +105,16 @@ export async function captureEvents(
   };
 
   try {
-    await run(args, {
-      commandsDir: COMMANDS_DIR,
-      projectRoot: PROJECT_ROOT,
-      appName: 'cli-test',
-      reporterAdapter,
-      prompter,
-      outputFormat: options.outputFormat,
-    });
+    await withBrokerDisabled(() =>
+      run(args, {
+        commandsDir: COMMANDS_DIR,
+        projectRoot: PROJECT_ROOT,
+        appName: 'cli-test',
+        reporterAdapter,
+        prompter,
+        outputFormat: options.outputFormat,
+      })
+    );
   } catch (e) {
     error = e instanceof Error ? e : new Error(String(e));
   } finally {

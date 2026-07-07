@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { captureEvents } from './utils';
+import { captureEvents, withBrokerDisabled } from './utils';
 import { run, createRawReporterAdapter, createRawPrompter } from '../src';
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
 import { generateHelp } from '../src/lib/help';
@@ -68,13 +68,15 @@ async function runWithArgs(args: string[]): Promise<{ output: string; error?: Er
   let error: Error | undefined;
   const output = await captureConsoleOutput(async () => {
     try {
-      await run(args, {
-        commandsDir: COMMANDS_DIR,
-        projectRoot: PROJECT_ROOT,
-        appName: 'cli-test',
-        reporterAdapter,
-        prompter,
-      });
+      await withBrokerDisabled(() =>
+        run(args, {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'cli-test',
+          reporterAdapter,
+          prompter,
+        })
+      );
     } catch (e) {
       error = e instanceof Error ? e : new Error(String(e));
     }

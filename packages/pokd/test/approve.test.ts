@@ -42,6 +42,17 @@ describe('formatReason', () => {
     expect(reason).toContain('SOME_LONG_SECRET_KEY_NAME_0');
   });
 
+  test('says "requests WRITE access to" for write requests', () => {
+    expect(formatReason(request({ access: 'write' }))).toBe(
+      'pok: "db migrate" (env: prod) requests WRITE access to POSTGRES_URL, API_KEY — initiated by agent [repo: pok]',
+    );
+  });
+
+  test('read access (explicit or absent) keeps the plain "requests" phrasing', () => {
+    expect(formatReason(request({ access: 'read' }))).toContain('requests POSTGRES_URL');
+    expect(formatReason(request())).not.toContain('WRITE access');
+  });
+
   test('keeps at least one key even if it overflows', () => {
     const reason = formatReason(request({ keys: ['X'.repeat(300)] }));
     expect(reason).toContain('X'.repeat(300));

@@ -147,6 +147,7 @@ export type {
   ApprovalResponse,
   ApprovalDecision,
   ApprovalInitiator,
+  ApprovalAccess,
 } from './lib/broker';
 
 // =============================================================================

@@ -19,7 +19,8 @@ export function formatReason(request: ApprovalRequestBody): string {
   const env = request.context && typeof request.context['env'] === 'string' ? ` (env: ${request.context['env']})` : '';
   const repo = request.repo ? ` [repo: ${path.basename(request.repo)}]` : '';
   const suffix = ` — initiated by ${request.initiator}${repo}`;
-  const prefix = `pok: "${label}"${env} requests `;
+  const verb = request.access === 'write' ? 'requests WRITE access to ' : 'requests ';
+  const prefix = `pok: "${label}"${env} ${verb}`;
 
   const keys = request.keys;
   let shown = keys.length;

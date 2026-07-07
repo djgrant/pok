@@ -1,5 +1,5 @@
 import type * as net from 'node:net';
-import type { ApprovalRequestBody, ApprovalResult, ApproverResult } from './types';
+import type { ApprovalRequestBody, ApprovalResult, ApprovalResultGrant, ApproverResult } from './types';
 
 /**
  * Forward timeout for approval.forward messages: inside the CLI client's
@@ -8,11 +8,17 @@ import type { ApprovalRequestBody, ApprovalResult, ApproverResult } from './type
 export const FORWARD_TIMEOUT_MS = 110_000;
 
 /**
+ * A frontend decision: the approver result plus an optional standing grant
+ * the frontend attached to an allow (protocol v1.2).
+ */
+export type FrontendDecision = ApproverResult & { grant?: ApprovalResultGrant };
+
+/**
  * Outcome of forwarding a request to the frontend. `'fallback'` means the
  * frontend went away before answering; the caller should use the local
  * approver chain instead.
  */
-export type ForwardOutcome = ApproverResult | 'fallback';
+export type ForwardOutcome = FrontendDecision | 'fallback';
 
 interface PendingForward {
   resolve: (outcome: ForwardOutcome) => void;
@@ -117,11 +123,26 @@ export function createFrontendRegistry(options: FrontendRegistryOptions): Fronte
       if (!pending) return; // unknown or already-settled id (e.g. answered after timeout)
       frontend.pending.delete(validated.id);
       clearTimeout(pending.timer);
+
+      // Standing grant (protocol v1.2): honored on allow only; an invalid
+      // grant is dropped (the allow still stands) with one log line.
+      let grant: ApprovalResultGrant | undefined;
+      const rawGrant: unknown = validated.grant; // wire data: shape not yet validated
+      if (rawGrant !== undefined && validated.decision === 'allow') {
+        const ttl = typeof rawGrant === 'object' && rawGrant !== null ? (rawGrant as Record<string, unknown>).ttlSeconds : undefined;
+        if (typeof ttl === 'number' && Number.isFinite(ttl) && ttl > 0 && ttl <= 86_400) {
+          grant = { ttlSeconds: ttl };
+        } else {
+          options.log(`pokd: ignoring invalid grant on approval.result ${validated.id} (ttlSeconds must be a positive number <= 86400)`);
+        }
+      }
+
       const fallbackReason = validated.decision === 'allow' ? 'approved via frontend' : 'denied via frontend';
       pending.resolve({
         decision: validated.decision,
         reason: typeof validated.reason === 'string' ? validated.reason : fallbackReason,
         approver: `frontend:${frontend.name}`,
+        ...(grant ? { grant } : {}),
       });
     },
 

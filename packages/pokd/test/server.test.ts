@@ -134,6 +134,8 @@ describe('pokd server', () => {
       { v: 1, type: 'approval.request', id: 'x' },
       makeRequest({ initiator: 'robot' as any }),
       makeRequest({ keys: 'API_KEY' as any }),
+      makeRequest({ access: 'admin' as any }),
+      makeRequest({ access: 42 as any }),
     ]) {
       const response = JSON.parse(await sendLine(socketPath, JSON.stringify(bad)));
       expect(response.decision).toBe('deny');
@@ -168,6 +170,24 @@ describe('pokd server', () => {
     await server!.close();
     expect(fs.existsSync(socketPath)).toBe(false);
     server = null;
+  });
+
+  test('accepts access "write" and logs access=write; absent access means read', async () => {
+    const seen: ApprovalRequestBody[] = [];
+    await boot(async (req) => {
+      seen.push(req);
+      return { decision: 'allow', reason: 'ok', approver: 'stub' };
+    });
+
+    const writeResponse = JSON.parse(await sendLine(socketPath, JSON.stringify(makeRequest({ access: 'write' }))));
+    expect(writeResponse.decision).toBe('allow');
+    expect(seen[0]!.access).toBe('write');
+    expect(logs.some((l) => l.includes('request') && l.includes('access=write'))).toBe(true);
+
+    logs.length = 0;
+    const readResponse = JSON.parse(await sendLine(socketPath, JSON.stringify(makeRequest({ access: 'read' }))));
+    expect(readResponse.decision).toBe('allow');
+    expect(logs.some((l) => l.includes('access=write'))).toBe(false);
   });
 
   test('logs one line per request and per decision', async () => {

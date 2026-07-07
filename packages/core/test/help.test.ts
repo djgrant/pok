@@ -393,6 +393,7 @@ describe('Help Generation Integration', () => {
 
 import { run, createRawReporterAdapter, createRawPrompter } from '../src';
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
+import { withBrokerDisabled } from './utils';
 
 /**
  * Capture console.log output during test execution
@@ -423,13 +424,15 @@ async function runWithHelp(args: string[]): Promise<{ output: string; error?: Er
   let error: Error | undefined;
   const output = await captureConsoleOutput(async () => {
     try {
-      await run(args, {
-        commandsDir: COMMANDS_DIR,
-        projectRoot: PROJECT_ROOT,
-        appName: 'cli-test',
-        reporterAdapter,
-        prompter,
-      });
+      await withBrokerDisabled(() =>
+        run(args, {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'cli-test',
+          reporterAdapter,
+          prompter,
+        })
+      );
     } catch (e) {
       error = e instanceof Error ? e : new Error(String(e));
     }

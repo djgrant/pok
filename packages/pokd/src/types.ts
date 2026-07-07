@@ -6,6 +6,8 @@ export interface ApprovalRequestBody {
   context: Record<string, unknown>;
   initiator: 'human' | 'agent';
   pid?: number;
+  /** Access level requested (protocol v1.2). Absent means "read". */
+  access?: 'read' | 'write';
 }
 
 export interface ApprovalRequest {
@@ -51,6 +53,11 @@ export interface ApprovalForward {
   reason: string;
 }
 
+/** Standing grant attached to an allow result (protocol v1.2). */
+export interface ApprovalResultGrant {
+  ttlSeconds: number;
+}
+
 /** Frontend → daemon: the human's decision on a forwarded request. */
 export interface ApprovalResult {
   v: 1;
@@ -58,6 +65,8 @@ export interface ApprovalResult {
   id: string;
   decision: 'allow' | 'deny';
   reason?: string;
+  /** Optional standing grant: "allow this and equivalent requests for a while". */
+  grant?: ApprovalResultGrant;
 }
 
 export interface ApproverResult {

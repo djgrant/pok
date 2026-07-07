@@ -5,6 +5,10 @@ let package = Package(
     name: "pok-trust",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "pok-trust", path: "Sources/PokTrust")
+        .executableTarget(
+            name: "pok-trust",
+            path: "Sources/PokTrust",
+            linkerSettings: [.linkedFramework("LocalAuthenticationEmbeddedUI")]
+        )
     ]
 )
