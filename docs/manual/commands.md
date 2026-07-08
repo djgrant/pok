@@ -215,6 +215,76 @@ If the schema is an array (`z.array(...)`), the prompt becomes multi-select.
 Otherwise, it is single-select. Resolver output provides values only.
 Single-select resolve prompts use typeahead with incremental `filter` and `cursor` requests.
 
+### Positional Arguments
+
+A context field's `from` decides where its value comes from:
+
+- `from: 'flag'` — `--name value` (the default)
+- `from: 'arg'` — a single positional, consumed in declaration order
+- `from: 'args'` — a variadic positional that soaks up all remaining positionals
+  (pair it with a `z.array(...)` schema; it must be the last positional field)
+
+```typescript
+context: {
+  // `emails show 3`  ->  query = '3'
+  query: {
+    from: 'arg',
+    schema: z.string(),
+    description: 'Search query',
+  },
+  // `tag release v1 v2`  ->  name = 'release', extra = ['v1', 'v2']
+  extra: {
+    from: 'args',
+    schema: z.array(z.string()).default([]),
+    description: 'Additional values',
+  },
+}
+```
+
+Positionals and flags can be interleaved freely (`tag release --upper v1`). Any
+positionals beyond the declared fields fall through to `extraArgs`.
+
+### Passthrough (`--`)
+
+A lone `--` stops flag parsing; every token after it is forwarded verbatim to
+`extraArgs` and never interpreted as a flag. This is the escape hatch for
+wrapping subprocesses whose own flags you don't want to model in Zod:
+
+```
+mycli medical build -- --verbose --foo   # --verbose --foo land in extraArgs
+```
+
+### Wrapping a Subprocess (`wrapScript`)
+
+Most script-wrapper commands are the same shape: parse a few args, then shell
+out. `wrapScript` collapses that to one declaration. It builds the command as an
+**argument array** (spawned directly, no shell — safe from word-splitting),
+enables `--` passthrough, and appends `extraArgs` automatically.
+
+```typescript
+import { z } from 'zod';
+import { wrapScript } from '@pokit/core';
+
+export const command = wrapScript({
+  label: 'Show emails',
+  context: {
+    query: { from: 'arg', schema: z.string(), description: 'Search query' },
+  },
+  argv: ({ query }) => ['python3', script('read_emails.py'), 'show', query],
+});
+
+// emails show 3            ->  python3 read_emails.py show 3
+// emails show 3 -- --json  ->  python3 read_emails.py show 3 --json
+```
+
+Set `passthrough: false` to disable both `ignoreUnknownFlags` and the automatic
+`extraArgs` append.
+
+> **Note:** `r.exec()` streams stdout/stderr live to the terminal as the child
+> runs (output is also captured so a failure can show the tail). Use the array
+> form — `r.exec(['python3', script, arg])` — for dynamic args so values are
+> spawned directly without a shell.
+
 ## Pre-flight Check Patterns
 
 ### Static Checks

@@ -10,6 +10,8 @@
 // =============================================================================
 
 export { defineCommand } from './lib/command';
+export { wrapScript } from './lib/wrap-script';
+export type { WrapScriptConfig } from './lib/wrap-script';
 export { defineTask } from './lib/task';
 export { defineEnv, getEnvKeys } from './lib/env';
 export { defineEnvResolver, validateResolverKeys, createStaticEnvResolver } from './lib/resolver';

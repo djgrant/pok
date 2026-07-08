@@ -27,6 +27,8 @@ Both discover `demo/pok.config.ts` and load the workspace packages.
 - `commands/hello.ts` - simplest command, no inputs
 - `commands/greet.ts` - typed context/flags (`--name`, `--times`, `--loud`)
 - `commands/deploy.ts` - dynamic, paged, async options select
+- `commands/tag.ts` - positional args: `tag <name> [<extra>...]` + `--upper`
+- `commands/echo.ts` - `wrapScript` wrapping a subprocess with `--` passthrough
 - `commands/build.ts` - grouped tasks via `r.group` / `r.exec`
 - `commands/env.ts` + `env.status.ts` + `env.reset.ts` - nested parent/child
   menu (exercises back-navigation)

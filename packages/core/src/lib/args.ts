@@ -358,6 +358,10 @@ export function parseContext<C extends ContextDef>(
     );
   };
 
+  // Positional fields (from: 'arg' | 'args'), captured in declaration order so
+  // they can be filled from the positional token stream after flag parsing.
+  const positionalFields: { name: string; variadic: boolean }[] = [];
+
   for (const [name, fieldDef] of Object.entries(contextDef)) {
     // Skip static values
     if (!isContextFieldDef(fieldDef)) {
@@ -367,10 +371,25 @@ export function parseContext<C extends ContextDef>(
 
     const info = getSchemaInfo(fieldDef.schema);
     schemaInfoCache.set(name, info);
-    registerFlagName(name, name);
-    registerFlagName(name, camelToKebab(name));
-    for (const alias of fieldDef.aliases ?? []) {
-      registerFlagName(name, alias);
+
+    if (fieldDef.from === 'flag') {
+      registerFlagName(name, name);
+      registerFlagName(name, camelToKebab(name));
+      for (const alias of fieldDef.aliases ?? []) {
+        registerFlagName(name, alias);
+      }
+    } else {
+      const variadic = fieldDef.from === 'args';
+      // A variadic positional consumes the tail, so nothing can follow it.
+      const alreadyVariadic = positionalFields.find((p) => p.variadic);
+      if (alreadyVariadic) {
+        throw createError(
+          `Positional field "${name}" cannot follow variadic positional "${alreadyVariadic.name}" (from: 'args' must be the last positional)`,
+          contextDef,
+          errorContext
+        );
+      }
+      positionalFields.push({ name, variadic });
     }
 
     // Initialize with defaults
@@ -381,6 +400,13 @@ export function parseContext<C extends ContextDef>(
     }
   }
 
+  // Positional tokens (non-flags). We record each one's index within `rest` so
+  // that, after the scan, positionals consumed by declared positional fields
+  // can be removed *in place* — preserving the original ordering of anything
+  // left in `rest` (which also holds passed-through unknown flags). Reordering
+  // here would corrupt `ignoreUnknownFlags` passthrough.
+  const positionals: { value: string; restIndex: number }[] = [];
+
   // Parse arguments
   let i = 0;
   while (i < args.length) {
@@ -389,6 +415,16 @@ export function parseContext<C extends ContextDef>(
     if (!arg) {
       i++;
       continue;
+    }
+
+    // POSIX end-of-options separator: a lone `--` stops flag parsing and
+    // forwards every remaining token verbatim to `rest` (extraArgs). This is
+    // the passthrough escape hatch for wrapped subprocesses.
+    if (arg === '--') {
+      for (let j = i + 1; j < args.length; j++) {
+        rest.push(args[j]!);
+      }
+      break;
     }
 
     // Check for --flag or --no-flag
@@ -491,13 +527,63 @@ export function parseContext<C extends ContextDef>(
         i += advance;
       }
     } else {
-      // Positional argument
+      // Positional argument — keep it in `rest` (preserving order) and record
+      // its slot so it can be pulled out if a positional field claims it.
+      positionals.push({ value: arg, restIndex: rest.length });
       rest.push(arg);
       i++;
     }
   }
 
-  return { context: context as InferContext<C>, rest };
+  // Assign collected positionals to positional fields (from: 'arg' | 'args')
+  // in declaration order. A variadic field consumes all remaining positionals.
+  // Consumed slots are removed from `rest`; anything left over stays in `rest`
+  // (extraArgs) in its original order, matching the no-positional-field case.
+  const consumed = new Set<number>();
+  let cursor = 0;
+  for (const { name, variadic } of positionalFields) {
+    const fieldDef = contextDef[name] as ContextFieldDef;
+    if (variadic) {
+      const claimed = positionals.slice(cursor);
+      cursor = positionals.length;
+      // Only override the default when positionals were actually provided, so an
+      // empty invocation keeps a schema default / stays undefined for prompting.
+      if (claimed.length > 0 || context[name] === undefined) {
+        const values = claimed.map((p) => p.value);
+        const result = fieldDef.schema.safeParse(values);
+        if (!result.success) {
+          throw createError(
+            `Invalid value for <${camelToKebab(name)}...>: ${values.join(' ')}`,
+            contextDef,
+            errorContext
+          );
+        }
+        context[name] = result.data;
+      }
+      for (const p of claimed) consumed.add(p.restIndex);
+    } else {
+      const entry = positionals[cursor];
+      if (entry !== undefined) {
+        cursor++;
+        const result = fieldDef.schema.safeParse(entry.value);
+        if (!result.success) {
+          const info = schemaInfoCache.get(name)!;
+          const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
+          throw createError(
+            `Invalid value for <${camelToKebab(name)}>: ${entry.value}.${choicesMsg}`,
+            contextDef,
+            errorContext
+          );
+        }
+        context[name] = result.data;
+        consumed.add(entry.restIndex);
+      }
+    }
+  }
+
+  const finalRest = consumed.size > 0 ? rest.filter((_, idx) => !consumed.has(idx)) : rest;
+
+  return { context: context as InferContext<C>, rest: finalRest };
 }
 
 function isOptionsPage(value: unknown): value is ResolveOptionsPage {
@@ -892,6 +978,17 @@ export async function resolveInteractiveContext<C extends ContextDef>(
           initialValue,
         });
         (resolved as Record<string, unknown>)[name] = confirmed;
+      } else if (isArraySchema(fieldDef.schema)) {
+        // Variadic positional (or array flag) with no resolver: accept a
+        // whitespace-separated list via a single text prompt.
+        const initialValue = Array.isArray(currentValue) ? currentValue.join(' ') : undefined;
+        const text = await prompter.text({
+          message: fieldDef.description || `Enter ${name} (space-separated):`,
+          initialValue,
+        });
+        const values = text.trim() === '' ? [] : text.trim().split(/\s+/);
+        const parsed = fieldDef.schema.safeParse(values);
+        (resolved as Record<string, unknown>)[name] = parsed.success ? parsed.data : values;
       } else {
         // Text input with current/default as initial value
         const initialValue =

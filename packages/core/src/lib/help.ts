@@ -123,6 +123,25 @@ export function formatFlagLine(
 }
 
 /**
+ * Build the positional-argument portion of a usage line.
+ *
+ * @example `<query> [<extra>...]` for an `arg` + optional `args` pair.
+ */
+export function getPositionalUsage(contextDef: ContextDef | undefined): string {
+  if (!contextDef) return '';
+  const parts: string[] = [];
+  for (const [name, fieldDef] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(fieldDef)) continue;
+    if (fieldDef.from !== 'arg' && fieldDef.from !== 'args') continue;
+    const info = getSchemaInfo(fieldDef.schema);
+    const kebab = name.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+    const token = fieldDef.from === 'args' ? `<${kebab}...>` : `<${kebab}>`;
+    parts.push(info.isOptional ? `[${token}]` : token);
+  }
+  return parts.join(' ');
+}
+
+/**
  * Format a subcommand line for help output
  */
 function formatCommandLine(node: CommandNode, maxNameWidth: number): string {
@@ -137,8 +156,8 @@ function getMaxFlagWidth(contextDef: ContextDef): number {
   let max = 0;
 
   for (const [name, fieldDef] of Object.entries(contextDef)) {
-    // Skip static values
-    if (!isContextFieldDef(fieldDef)) {
+    // Skip static values and positional fields (only flags appear here)
+    if (!isContextFieldDef(fieldDef) || fieldDef.from !== 'flag') {
       continue;
     }
 
@@ -217,12 +236,21 @@ export function generateHelp(options: HelpOptions): string {
 
   // Usage line
   const fullPath = [appName, ...commandPath].join(' ');
+  const positionalUsage = getPositionalUsage(command.context);
+  const hasFlagFields = command.context
+    ? Object.entries(command.context).some(
+        ([, f]) => isContextFieldDef(f) && f.from === 'flag'
+      )
+    : false;
   if (children && children.length > 0) {
     lines.push('Usage:');
     lines.push(`${INDENT}${fullPath} <command>`);
   } else if (command.context && Object.keys(command.context).length > 0) {
+    const parts = [fullPath, positionalUsage, hasFlagFields ? '[flags]' : '']
+      .filter(Boolean)
+      .join(' ');
     lines.push('Usage:');
-    lines.push(`${INDENT}${fullPath} [flags]`);
+    lines.push(`${INDENT}${parts}`);
   } else {
     lines.push('Usage:');
     lines.push(`${INDENT}${fullPath}`);
@@ -241,24 +269,58 @@ export function generateHelp(options: HelpOptions): string {
     }
   }
 
-  // Flags section
+  // Arguments section (positional fields, in declaration order)
   const contextDef = command.context;
-  if (contextDef && Object.keys(contextDef).length > 0) {
+  if (contextDef) {
+    const positionals = Object.entries(contextDef).filter(
+      ([, f]) => isContextFieldDef(f) && (f.from === 'arg' || f.from === 'args')
+    );
+    if (positionals.length > 0) {
+      lines.push('');
+      lines.push('Arguments:');
+      const maxTokenWidth = Math.max(
+        ...positionals.map(([name, f]) => {
+          const kebab = name.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+          return (f as ContextFieldDef).from === 'args'
+            ? `<${kebab}...>`.length
+            : `<${kebab}>`.length;
+        })
+      );
+      for (const [name, fieldDef] of positionals) {
+        const fd = fieldDef as ContextFieldDef;
+        const info = getSchemaInfo(fd.schema);
+        const kebab = name.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+        const token = fd.from === 'args' ? `<${kebab}...>` : `<${kebab}>`;
+        let desc = fd.description || '';
+        const hasShowableDefault =
+          info.default !== undefined && !(Array.isArray(info.default) && info.default.length === 0);
+        const meta = !info.isOptional
+          ? 'required'
+          : hasShowableDefault
+            ? `default: ${String(info.default)}`
+            : '';
+        if (meta) desc += desc ? ` (${meta})` : `(${meta})`;
+        const padding = Math.max(MIN_PADDING, maxTokenWidth - token.length + MIN_PADDING);
+        lines.push(`${INDENT}${token}${' '.repeat(padding)}${desc}`);
+      }
+    }
+  }
+
+  // Flags section (only true flag fields)
+  const flagEntries = contextDef
+    ? Object.entries(contextDef).filter(([, f]) => isContextFieldDef(f) && f.from === 'flag')
+    : [];
+  if (flagEntries.length > 0) {
     lines.push('');
     lines.push('Flags:');
 
-    const maxWidth = getMaxFlagWidth(contextDef);
+    const maxWidth = getMaxFlagWidth(contextDef!);
 
     // Sort flags alphabetically
-    const sortedFlags = Object.entries(contextDef).sort(([a], [b]) => a.localeCompare(b));
+    const sortedFlags = [...flagEntries].sort(([a], [b]) => a.localeCompare(b));
     for (const [name, fieldDef] of sortedFlags) {
-      // Skip static values
-      if (!isContextFieldDef(fieldDef)) {
-        continue;
-      }
-
-      const info = getSchemaInfo(fieldDef.schema);
-      lines.push(formatFlagLine(name, fieldDef, info, maxWidth));
+      const info = getSchemaInfo((fieldDef as ContextFieldDef).schema);
+      lines.push(formatFlagLine(name, fieldDef as ContextFieldDef, info, maxWidth));
     }
 
     // Add help flag
