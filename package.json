@@ -18,8 +18,12 @@
   "bugs": {
     "url": "https://github.com/djgrant/pok/issues"
   },
+  "packageManager": "pnpm@11.6.0",
   "scripts": {
-    "quick-check": "echo 'quick check'"
+    "quick-check": "echo 'quick check'",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "bun test",
+    "build": "pnpm -r --if-present run build"
   },
   "devDependencies": {
     "@pokit/core": "npm:@pokit/core@0.3.1",
