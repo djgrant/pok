@@ -27,8 +27,31 @@ Both discover `demo/pok.config.ts` and load the workspace packages.
 - `commands/hello.ts` - simplest command, no inputs
 - `commands/greet.ts` - typed context/flags (`--name`, `--times`, `--loud`)
 - `commands/deploy.ts` - dynamic, paged, async options select
+- `commands/tag.ts` - positional args: `tag <name> [<extra>...]` + `--upper`
+- `commands/echo.ts` - wrapping a subprocess (argv array) with `--` passthrough
 - `commands/build.ts` - grouped tasks via `r.group` / `r.exec`
 - `commands/env.ts` + `env.status.ts` + `env.reset.ts` - nested parent/child
   menu (exercises back-navigation)
+- `commands/secrets.ts` - env/resolver system: a fake resolver + env resolve
+  `POSTGRES_URL` and `API_KEY` for `--env dev|prod` and print a redacted
+  preview
 - `package.json` scripts (`lint`, `typecheck`, `greet:all`) show up via
   `pmScripts: true`
+
+## Trust broker demo
+
+`commands/secrets.ts` exercises the env/resolver system with a fake resolver.
+To also see the trust broker in the loop, run the daemon alongside it:
+
+```sh
+# Terminal 1 - start the trust broker daemon (from packages/pokd)
+cd packages/pokd && pokd
+
+# Terminal 2 - run the secrets command
+cd demo && pok secrets --env prod
+```
+
+With `pokd` running, resolving `POSTGRES_URL` / `API_KEY` is routed through
+the daemon and triggers a Touch ID prompt before the values are released.
+Without the daemon running, `pok secrets --env prod` just resolves normally
+and prints the redacted values straight away.

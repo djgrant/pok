@@ -15,6 +15,7 @@
 export {
   captureEvents,
   captureNormalizedEvents,
+  withBrokerDisabled,
   type CaptureResult,
   type CaptureOptions,
 } from './capture';

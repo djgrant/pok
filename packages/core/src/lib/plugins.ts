@@ -238,6 +238,13 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
       // Sort files to ensure deterministic mount order
       files.sort();
 
+      // A commands dir that exists but has no command files is almost always a
+      // mistake (wrong path, empty scaffold). Warn rather than silently mount
+      // an empty tree — "0 commands, no error" is the worst failure mode.
+      if (files.length === 0) {
+        context.reporter.warn(`No command files found in commands directory: ${dir}`);
+      }
+
       for (const file of files) {
         const filePath = path.join(dir, file);
         try {
@@ -255,6 +262,10 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
           );
         }
       }
+    } else {
+      // The directory doesn't exist at all — surface it instead of returning an
+      // empty tree. This is the classic percent-encoded-path footgun.
+      context.reporter.warn(`Commands directory does not exist: ${dir}`);
     }
 
     return {
