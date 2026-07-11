@@ -47,12 +47,15 @@
   "dependencies": {
     "@clack/core": "^1.0.0",
     "@clack/prompts": "^1.0.0",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@types/bun": "latest",
     "@pokit/core": "workspace:*",
-    "@pokit/test-utils": "workspace:*"
+    "@pokit/test-utils": "workspace:*",
+    "@types/bun": "latest",
+    "@types/marked-terminal": "^6.1.1"
   },
   "peerDependencies": {
     "@pokit/core": "workspace:*"

@@ -49,6 +49,13 @@ type LogReporter = {
    * Emit a log entry at success level
    */
   success(message: string): void;
+
+  /**
+   * Emit a markdown document for the adapter to render for its medium.
+   * The raw markdown is passed through the event bus unrendered; the terminal
+   * adapter renders it to ANSI, the web adapter to HTML, and so on.
+   */
+  markdown(content: string): void;
 };
 
 /**
@@ -195,6 +202,14 @@ export class ScopedReporter implements Reporter {
 
   step(message: string): void {
     this.log('step', message);
+  }
+
+  markdown(content: string): void {
+    this.bus.emit({
+      type: 'markdown',
+      activityId: this.scopeType === 'activity' ? (this.scopeId as ActivityId) : undefined,
+      content,
+    });
   }
 
   async activity<T>(label: string, fn: (reporter: Reporter) => Promise<T> | T): Promise<T> {
