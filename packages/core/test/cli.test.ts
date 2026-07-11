@@ -1,8 +1,16 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, afterEach } from 'bun:test';
 import { runCli, RouterError, CancelError, createRawReporterAdapter, createRawPrompter } from '../src';
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
 
 describe('runCli() - embeddability', () => {
+  // runCli sets `process.exitCode` on operational errors (its normal
+  // entrypoint behavior). Several tests here exercise that failure path, which
+  // would otherwise leave the test runner's own process.exitCode non-zero and
+  // fail the whole `bun test` run despite every assertion passing.
+  afterEach(() => {
+    process.exitCode = 0;
+  });
+
   it('returns RouterError exit code by default', async () => {
     const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
     const prompter = createRawPrompter({});
