@@ -1,18 +1,19 @@
 import { z } from 'zod';
-import { wrapScript } from '@pokit/core';
+import { defineCommand } from '@pokit/core';
 
-// wrapScript: collapse the "parse args, then shell out" boilerplate to one
-// declaration. Here we wrap `echo`, but in real use this is
+// Wrapping a subprocess is just defineCommand + r.exec with an argv array.
+// Here we wrap `echo`, but in real use this is
 // `['python3', script('read_emails.py'), 'show', query]`.
 //
 // - `words` is a variadic positional (from: 'args')
-// - everything after `--` is passed straight through to the wrapped command
+// - everything after `--` arrives in `extraArgs`; spread it into the argv array
+//   to forward it straight to the wrapped command
 //
 //   demo echo hello world        ->  echo hello world
-//   demo echo hi -- -n           ->  echo hi -n     (passthrough flag)
-export const command = wrapScript({
+//   demo echo hi -- -n           ->  echo hi -n     (passthrough)
+export const command = defineCommand({
   label: 'Echo (wrapped subprocess)',
-  description: 'wrapScript demo: positional args + `--` passthrough',
+  description: 'Wrapping a subprocess: positional args + `--` passthrough',
   context: {
     words: {
       from: 'args',
@@ -20,5 +21,8 @@ export const command = wrapScript({
       description: 'Words to echo',
     },
   },
-  argv: ({ words }) => ['echo', ...words],
+  // Array form: spawned directly, no shell, so dynamic values are not re-split.
+  run: async (r, { context, extraArgs }) => {
+    await r.exec(['echo', ...context.words, ...extraArgs]);
+  },
 });

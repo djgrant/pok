@@ -254,36 +254,37 @@ wrapping subprocesses whose own flags you don't want to model in Zod:
 mycli medical build -- --verbose --foo   # --verbose --foo land in extraArgs
 ```
 
-### Wrapping a Subprocess (`wrapScript`)
+### Wrapping a Subprocess
 
-Most script-wrapper commands are the same shape: parse a few args, then shell
-out. `wrapScript` collapses that to one declaration. It builds the command as an
-**argument array** (spawned directly, no shell — safe from word-splitting),
-enables `--` passthrough, and appends `extraArgs` automatically.
+Wrapping a script is just `defineCommand` + `r.exec` with an **argument array**.
+Declare the inputs as positional/flag context, then spread `extraArgs` (extra
+positionals and everything after `--`) into the argv so the wrapped script's own
+flags are reachable without modeling them:
 
 ```typescript
 import { z } from 'zod';
-import { wrapScript } from '@pokit/core';
+import { defineCommand } from '@pokit/core';
 
-export const command = wrapScript({
+export const command = defineCommand({
   label: 'Show emails',
   context: {
     query: { from: 'arg', schema: z.string(), description: 'Search query' },
   },
-  argv: ({ query }) => ['python3', script('read_emails.py'), 'show', query],
+  run: (r, { context, extraArgs }) =>
+    r.exec(['python3', script('read_emails.py'), 'show', context.query, ...extraArgs]),
 });
 
 // emails show 3            ->  python3 read_emails.py show 3
 // emails show 3 -- --json  ->  python3 read_emails.py show 3 --json
 ```
 
-Set `passthrough: false` to disable both `ignoreUnknownFlags` and the automatic
-`extraArgs` append.
+Prefer the **array form** of `r.exec` for wrapped scripts: it spawns the process
+directly (no shell), so dynamic values are never re-split or word-expanded. Reach
+for the string form (`r.exec("...")`) only when you genuinely need shell features
+like pipes or globs.
 
 > **Note:** `r.exec()` streams stdout/stderr live to the terminal as the child
-> runs (output is also captured so a failure can show the tail). Use the array
-> form — `r.exec(['python3', script, arg])` — for dynamic args so values are
-> spawned directly without a shell.
+> runs (output is also captured so a failure can show the tail).
 
 ## Pre-flight Check Patterns
 
