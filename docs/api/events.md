@@ -66,7 +66,10 @@ type CLIEvent =
   | { type: 'activity:update'; id: ActivityId; payload: ActivityUpdatePayload }
 
   // Logging
-  | { type: 'log'; activityId?: ActivityId; level: LogLevel; message: string };
+  | { type: 'log'; activityId?: ActivityId; level: LogLevel; message: string }
+
+  // Markdown — raw markdown rendered by the adapter for its medium
+  | { type: 'markdown'; activityId?: ActivityId; content: string };
 
 type GroupLayout = 'sequence' | 'parallel';
 type LogLevel = 'info' | 'warn' | 'error' | 'success' | 'step';
@@ -126,6 +129,9 @@ type Reporter = {
   success(message: string): void;
   step(message: string): void;
 
+  // Markdown (rendered by the adapter for its medium; raw passthrough off-TTY)
+  markdown(content: string): void;
+
   // Activity updates (progress / status for the current activity scope)
   update(payload: UpdatePayload): void;
 
@@ -159,6 +165,7 @@ type CommandReporter = {
   error(message: string | Error): void;
   success(message: string): void;
   step(message: string): void;
+  markdown(content: string): void;
 };
 
 // Available inside a task — logging plus activity updates.
@@ -167,6 +174,7 @@ type TaskReporter = {
   warn(message: string): void;
   error(message: string | Error): void;
   success(message: string): void;
+  markdown(content: string): void;
   update(payload: UpdatePayload): void;
 };
 ```

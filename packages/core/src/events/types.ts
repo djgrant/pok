@@ -78,6 +78,16 @@ export type CLIEvent =
       activityId?: ActivityId;
       level: LogLevel;
       message: string;
+    }
+
+  // --- Markdown ---
+  // A markdown document to be rendered by the adapter for its medium.
+  // The raw markdown crosses the bus unrendered; terminal adapters render
+  // to ANSI, web adapters render to HTML, etc.
+  | {
+      type: 'markdown';
+      activityId?: ActivityId;
+      content: string;
     };
 
 /**
@@ -111,6 +121,12 @@ export function isActivityEvent(event: CLIEvent): event is Extract<
 
 export function isLogEvent(event: CLIEvent): event is Extract<CLIEvent, { type: 'log' }> {
   return event.type === 'log';
+}
+
+export function isMarkdownEvent(
+  event: CLIEvent
+): event is Extract<CLIEvent, { type: 'markdown' }> {
+  return event.type === 'markdown';
 }
 
 import type { EventBus } from './bus.js';

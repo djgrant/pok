@@ -41,7 +41,30 @@ import type {
   OutputConfig,
 } from '@pokit/core';
 import { detectOutputConfig, CommandError, markPresented } from '@pokit/core';
+import { Marked } from 'marked';
+import { markedTerminal } from 'marked-terminal';
 import { getSymbols, type SymbolSet } from './symbols';
+
+/**
+ * Render a markdown document for terminal output.
+ *
+ * When color is enabled (a styled TTY), the markdown is rendered to ANSI via
+ * marked + marked-terminal. Otherwise the raw markdown is passed through
+ * unchanged so it composes with pipes (`pok docs README.md | glow`), files,
+ * and `--no-color` consumers.
+ */
+function renderMarkdown(content: string, outputConfig: OutputConfig): string {
+  if (!outputConfig.color) {
+    // Raw passthrough: not a styled TTY (piped, --no-color, NO_COLOR, dumb term).
+    return content.replace(/\n+$/, '');
+  }
+
+  const width = process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : 80;
+
+  // Dedicated Marked instance to avoid mutating any shared/global renderer.
+  const marked = new Marked(markedTerminal({ width, reflowText: true }) as never);
+  return String(marked.parse(content)).replace(/\n+$/, '');
+}
 
 /**
  * Extract error message and optional output from an error.
@@ -711,6 +734,12 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
             // No active spinners - display immediately
             displayLog(event.level, event.message, state, false);
+            break;
+          }
+
+          // Markdown documents - rendered to ANSI (or passed through raw)
+          case 'markdown': {
+            writeLine(renderMarkdown(event.content, state.outputConfig));
             break;
           }
         }

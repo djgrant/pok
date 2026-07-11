@@ -66,6 +66,25 @@ run: async (r) => {
 };
 ```
 
+Render a markdown document with `markdown()`. The raw markdown is emitted onto
+the event bus and rendered by the active adapter for its medium — `@pokit/terminal`
+renders it to ANSI (headings, emphasis, syntax-highlighted code fences, lists),
+while a web adapter can render it to HTML. When the output is not a styled TTY
+(piped, `--no-color`, `NO_COLOR`), the raw markdown is passed through unchanged so
+it composes with pipes:
+
+```typescript
+run: async (r) => {
+  const readme = await readFile('README.md', 'utf8');
+  r.reporter.markdown(readme);
+};
+```
+
+```console
+$ mycli docs                 # styled ANSI in a terminal
+$ mycli docs | glow          # raw markdown passed through to another renderer
+```
+
 ## Methods
 
 ### exec
