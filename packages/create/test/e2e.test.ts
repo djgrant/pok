@@ -72,7 +72,11 @@ function patchPackageJsonForWorkspace(projectPath: string): void {
  */
 async function pnpmInstall(projectPath: string): Promise<{ success: boolean; output: string }> {
   try {
-    const result = await $`pnpm install`.cwd(projectPath).nothrow();
+    // Explicitly opt out of frozen-lockfile: pnpm auto-enables it when CI=true,
+    // but this test scaffolds a fresh project whose lockfile must be (re)built,
+    // so a frozen install would (correctly) refuse. --no-frozen-lockfile makes
+    // the test behave identically in CI and locally.
+    const result = await $`pnpm install --no-frozen-lockfile`.cwd(projectPath).nothrow();
     const output = result.stdout.toString() + '\n' + result.stderr.toString();
     return {
       success: result.exitCode === 0,
