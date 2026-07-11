@@ -295,6 +295,7 @@ describe('generateCompletions', () => {
 
 import { run, createRawReporterAdapter, createRawPrompter } from '../src';
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
+import { withBrokerDisabled } from './utils';
 
 /**
  * Capture console output during test execution
@@ -335,13 +336,15 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
   let error: Error | undefined;
   const { stdout, stderr } = await captureOutput(async () => {
     try {
-      await run(args, {
-        commandsDir: COMMANDS_DIR,
-        projectRoot: PROJECT_ROOT,
-        appName: 'cli-test',
-        reporterAdapter,
-        prompter,
-      });
+      await withBrokerDisabled(() =>
+        run(args, {
+          commandsDir: COMMANDS_DIR,
+          projectRoot: PROJECT_ROOT,
+          appName: 'cli-test',
+          reporterAdapter,
+          prompter,
+        })
+      );
     } catch (e) {
       error = e instanceof Error ? e : new Error(String(e));
     }

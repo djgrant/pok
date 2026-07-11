@@ -1,0 +1,53 @@
+{
+  "name": "@pokit/pokd",
+  "version": "0.3.2-dev.0",
+  "description": "Trust-broker daemon for pok - approves secret access via Touch ID / dialog / prompt",
+  "keywords": [
+    "cli",
+    "command-line",
+    "typescript",
+    "bun",
+    "pok",
+    "pokjs",
+    "secrets",
+    "daemon",
+    "broker",
+    "touch-id"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djgrant/pok.git",
+    "directory": "packages/pokd"
+  },
+  "homepage": "https://github.com/djgrant/pok#readme",
+  "bugs": {
+    "url": "https://github.com/djgrant/pok/issues"
+  },
+  "bin": {
+    "pokd": "./bin/pokd.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "bin",
+    "src",
+    "swift",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

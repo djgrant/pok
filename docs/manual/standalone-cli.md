@@ -26,9 +26,12 @@ Create a `bin/cli.ts` file. This will be the main script your users run.
 import { runCli } from '@pokit/core';
 import { createTerminalUI } from '@pokit/terminal';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-// Get the directory where this script is located
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+// Get the directory where this script is located.
+// Use fileURLToPath — `new URL(import.meta.url).pathname` leaves the path
+// percent-encoded, so it breaks under directories containing spaces.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
 const { reporter, prompter, navigator } = createTerminalUI();

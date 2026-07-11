@@ -94,8 +94,13 @@ export type MountableLike = Mountable | ((context: MountContext) => Mountable | 
 
 /**
  * Source of a context field value
+ *
+ * - `flag`: parsed from `--name value` (or `--name` for booleans)
+ * - `arg`: a single positional argument, consumed in declaration order
+ * - `args`: a variadic positional that consumes all remaining positionals
+ *   (must be the last positional field; pair with a `z.array(...)` schema)
  */
-export type ContextSource = 'flag';
+export type ContextSource = 'flag' | 'arg' | 'args';
 
 /**
 
@@ -112,7 +117,7 @@ export type ContextSource = 'flag';
 export type ContextFieldDef = {
   /** Where the value comes from */
 
-  from: 'flag';
+  from: ContextSource;
 
   /** Zod schema for validation and type inference */
 
@@ -252,9 +257,21 @@ export function isContextFieldDef(value: unknown): value is ContextFieldDef {
     typeof value === 'object' &&
     value !== null &&
     'from' in value &&
-    (value as any).from === 'flag' &&
+    ((value as any).from === 'flag' ||
+      (value as any).from === 'arg' ||
+      (value as any).from === 'args') &&
     'schema' in value
   );
+}
+
+/** True for a single positional field (`from: 'arg'`). */
+export function isPositionalField(value: unknown): value is ContextFieldDef {
+  return isContextFieldDef(value) && value.from === 'arg';
+}
+
+/** True for a variadic positional field (`from: 'args'`). */
+export function isVariadicField(value: unknown): value is ContextFieldDef {
+  return isContextFieldDef(value) && value.from === 'args';
 }
 
 /**

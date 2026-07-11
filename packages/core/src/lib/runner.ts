@@ -10,6 +10,13 @@ import {
 } from './task';
 import { type Env, getEnvKeys } from './env';
 import { markOperational } from './errors';
+import {
+  BrokerDeniedError,
+  detectInitiator,
+  isBrokerEngaged,
+  requestApproval,
+  toApprovalContext,
+} from './broker';
 import { getRuntime, type SpawnResult } from '../runtime';
 import type { EventBus, Reporter, CommandReporter, GroupOptions } from '../events';
 import { ScopedReporter } from '../events';
@@ -484,6 +491,8 @@ export type RunnerOptions<TContext extends Record<string, unknown>> = {
   eventBus: EventBus;
   /** Prompter for interactive input */
   prompter: Prompter;
+  /** Space-joined command route path, for broker approval requests */
+  commandPath?: string;
 };
 
 /**
@@ -512,6 +521,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     signal,
     eventBus,
     prompter,
+    commandPath,
   } = options;
 
   const reporter: Reporter = new ScopedReporter(eventBus, 'root', 'root');
@@ -1109,6 +1119,25 @@ export function createRunner<TContext extends Record<string, unknown>>(
       const envs: AnyEnv[] = Array.isArray(task.env) ? task.env : [task.env];
       const mergedRawEnv: Record<string, string> = {};
 
+      // Trust-broker choke point: when a pok broker daemon is engaged, one
+      // approval request covers the union of keys across all of the task's
+      // envs, sent before any resolver runs. Fail closed on deny/timeout.
+      if (isBrokerEngaged()) {
+        const allKeys = [...new Set(envs.flatMap((env) => getEnvKeys(env)))].sort();
+        const { decision, reason } = await requestApproval({
+          repo: cwd,
+          command: commandPath ?? '',
+          task: task.label ?? '',
+          keys: allKeys,
+          context: toApprovalContext(context),
+          initiator: detectInitiator(),
+          pid: process.pid,
+        });
+        if (decision !== 'allow') {
+          throw new BrokerDeniedError(allKeys, reason ?? 'denied');
+        }
+      }
+
       for (const env of envs) {
         const keys = getEnvKeys(env);
         const resolver = env.resolver;
@@ -1149,6 +1178,27 @@ export function createRunner<TContext extends Record<string, unknown>>(
 
         if (!envWriter.resolver.write) {
           throw new Error('Resolver for envWriter does not implement write method.');
+        }
+
+        // Trust-broker choke point (write path): each writeEnvs call requests
+        // its own approval covering exactly the keys being written. Writes are
+        // rarer and more dangerous than reads, so they are never batched with
+        // the read approval. Fail closed on deny/timeout.
+        if (isBrokerEngaged()) {
+          const writeKeys = [...new Set(Object.keys(definedValues))].sort();
+          const { decision, reason } = await requestApproval({
+            repo: cwd,
+            command: commandPath ?? '',
+            task: task.label ?? '',
+            keys: writeKeys,
+            access: 'write',
+            context: toApprovalContext(context),
+            initiator: detectInitiator(),
+            pid: process.pid,
+          });
+          if (decision !== 'allow') {
+            throw new BrokerDeniedError(writeKeys, reason ?? 'denied');
+          }
         }
 
         await envWriter.resolver.write(definedValues, context);

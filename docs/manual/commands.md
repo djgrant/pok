@@ -215,6 +215,77 @@ If the schema is an array (`z.array(...)`), the prompt becomes multi-select.
 Otherwise, it is single-select. Resolver output provides values only.
 Single-select resolve prompts use typeahead with incremental `filter` and `cursor` requests.
 
+### Positional Arguments
+
+A context field's `from` decides where its value comes from:
+
+- `from: 'flag'` — `--name value` (the default)
+- `from: 'arg'` — a single positional, consumed in declaration order
+- `from: 'args'` — a variadic positional that soaks up all remaining positionals
+  (pair it with a `z.array(...)` schema; it must be the last positional field)
+
+```typescript
+context: {
+  // `emails show 3`  ->  query = '3'
+  query: {
+    from: 'arg',
+    schema: z.string(),
+    description: 'Search query',
+  },
+  // `tag release v1 v2`  ->  name = 'release', extra = ['v1', 'v2']
+  extra: {
+    from: 'args',
+    schema: z.array(z.string()).default([]),
+    description: 'Additional values',
+  },
+}
+```
+
+Positionals and flags can be interleaved freely (`tag release --upper v1`). Any
+positionals beyond the declared fields fall through to `extraArgs`.
+
+### Passthrough (`--`)
+
+A lone `--` stops flag parsing; every token after it is forwarded verbatim to
+`extraArgs` and never interpreted as a flag. This is the escape hatch for
+wrapping subprocesses whose own flags you don't want to model in Zod:
+
+```
+mycli medical build -- --verbose --foo   # --verbose --foo land in extraArgs
+```
+
+### Wrapping a Subprocess
+
+Wrapping a script is just `defineCommand` + `r.exec` with an **argument array**.
+Declare the inputs as positional/flag context, then spread `extraArgs` (extra
+positionals and everything after `--`) into the argv so the wrapped script's own
+flags are reachable without modeling them:
+
+```typescript
+import { z } from 'zod';
+import { defineCommand } from '@pokit/core';
+
+export const command = defineCommand({
+  label: 'Show emails',
+  context: {
+    query: { from: 'arg', schema: z.string(), description: 'Search query' },
+  },
+  run: (r, { context, extraArgs }) =>
+    r.exec(['python3', script('read_emails.py'), 'show', context.query, ...extraArgs]),
+});
+
+// emails show 3            ->  python3 read_emails.py show 3
+// emails show 3 -- --json  ->  python3 read_emails.py show 3 --json
+```
+
+Prefer the **array form** of `r.exec` for wrapped scripts: it spawns the process
+directly (no shell), so dynamic values are never re-split or word-expanded. Reach
+for the string form (`r.exec("...")`) only when you genuinely need shell features
+like pipes or globs.
+
+> **Note:** `r.exec()` streams stdout/stderr live to the terminal as the child
+> runs (output is also captured so a failure can show the tail).
+
 ## Pre-flight Check Patterns
 
 ### Static Checks

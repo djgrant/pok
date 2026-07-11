@@ -1585,3 +1585,91 @@ describe('unwrapSchema', () => {
     expect(choices).toEqual(['a', 'b']);
   });
 });
+
+// =============================================================================
+// Positional args (from: 'arg' | 'args') and `--` passthrough
+// =============================================================================
+
+describe('parseContext - positional args', () => {
+  const positionalDef = {
+    name: { from: 'arg' as const, schema: z.string().min(1), description: 'Primary' },
+    extra: { from: 'args' as const, schema: z.array(z.string()).default([]), description: 'Rest' },
+    upper: { from: 'flag' as const, schema: z.boolean().default(false) },
+  } satisfies ContextDef;
+
+  it('fills a single positional (from: arg)', () => {
+    const { context, rest } = parseContext(['release'], positionalDef);
+    expect(context.name).toBe('release');
+    expect(context.extra).toEqual([]);
+    expect(rest).toEqual([]);
+  });
+
+  it('variadic (from: args) soaks up remaining positionals', () => {
+    const { context } = parseContext(['release', 'v1', 'v2'], positionalDef);
+    expect(context.name).toBe('release');
+    expect(context.extra).toEqual(['v1', 'v2']);
+  });
+
+  it('flags interleave freely with positionals', () => {
+    const { context } = parseContext(['release', '--upper', 'v1'], positionalDef);
+    expect(context.name).toBe('release');
+    expect(context.extra).toEqual(['v1']);
+    expect(context.upper).toBe(true);
+  });
+
+  it('validates positional values against the schema', () => {
+    const def = {
+      count: { from: 'arg' as const, schema: z.coerce.number().int() },
+    } satisfies ContextDef;
+    const { context } = parseContext(['3'], def);
+    expect(context.count).toBe(3);
+    expect(() => parseContext(['x'], def)).toThrow();
+  });
+
+  it('missing required positional is caught by validateRequiredContext', () => {
+    const def = {
+      name: { from: 'arg' as const, schema: z.string().min(1) },
+    } satisfies ContextDef;
+    const { context } = parseContext([], def);
+    expect(() => validateRequiredContext(context, def)).toThrow(/name/);
+  });
+
+  it('rejects a positional field declared after a variadic', () => {
+    const bad = {
+      a: { from: 'args' as const, schema: z.array(z.string()) },
+      b: { from: 'arg' as const, schema: z.string() },
+    } satisfies ContextDef;
+    expect(() => parseContext(['x'], bad)).toThrow(/must be the last positional/);
+  });
+
+  it('leftover positionals (no variadic) fall through to rest', () => {
+    const def = {
+      name: { from: 'arg' as const, schema: z.string() },
+    } satisfies ContextDef;
+    const { context, rest } = parseContext(['a', 'b', 'c'], def);
+    expect(context.name).toBe('a');
+    expect(rest).toEqual(['b', 'c']);
+  });
+});
+
+describe('parseContext - `--` passthrough', () => {
+  const def = {
+    words: { from: 'args' as const, schema: z.array(z.string()).default([]) },
+  } satisfies ContextDef;
+
+  it('forwards everything after `--` to rest verbatim', () => {
+    const { context, rest } = parseContext(['hi', '--', '-n', '--json'], def);
+    expect(context.words).toEqual(['hi']);
+    expect(rest).toEqual(['-n', '--json']);
+  });
+
+  it('does not parse flags after `--`', () => {
+    const flagDef = {
+      loud: { from: 'flag' as const, schema: z.boolean().default(false) },
+    } satisfies ContextDef;
+    // --loud after `--` must not be interpreted as the boolean flag
+    const { context, rest } = parseContext(['--', '--loud'], flagDef);
+    expect(context.loud).toBe(false);
+    expect(rest).toEqual(['--loud']);
+  });
+});
