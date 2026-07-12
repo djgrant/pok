@@ -1,0 +1,7 @@
+# sequential-group [ascii]
+# A group of sequential activities, all succeeding
+
+[Build]
+  [OK] Compile
+  [OK] Bundle
+[Done]

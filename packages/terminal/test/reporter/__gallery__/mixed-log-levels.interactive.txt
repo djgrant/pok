@@ -1,0 +1,16 @@
+# mixed-log-levels [interactive]
+# Every log level rendered outside any activity
+
+┌  Levels
+│
+●  An info message
+│
+▲  A warning message
+│
+■  An error message
+│
+◆  A success message
+│
+◇  A step message
+│
+└  ✔ Done

@@ -1,0 +1,16 @@
+# parallel-group-failure [interactive]
+# A parallel group with one failure; error deferred past the outro
+
+┌  Checks
+│
+◇  Lint
+│
+■  Typecheck
+│
+└  ✘ Failed
+
+│
+■  Found 3 type errors
+
+  To fix:
+    - Run pnpm tsc -b to see details

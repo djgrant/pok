@@ -1,0 +1,11 @@
+# log-after-group [interactive]
+# A log emitted after the group has closed (currently renders detached)
+
+┌  Deploy
+│
+◇  Push
+│
+└  ✔ Done
+
+│
+◆  Deployment reconciled.

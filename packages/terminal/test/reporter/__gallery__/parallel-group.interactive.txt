@@ -1,0 +1,12 @@
+# parallel-group [interactive]
+# A parallel group where all activities succeed
+
+┌  Checks
+│
+◇  Lint
+│
+◆  Typecheck
+│
+◆  Test
+│
+└  ✔ Done

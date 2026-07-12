@@ -1,0 +1,10 @@
+# mixed-log-levels [ascii]
+# Every log level rendered outside any activity
+
+[Levels]
+[INFO] An info message
+[WARN] A warning message
+[ERR] An error message
+[OK] A success message
+- A step message
+[Done]

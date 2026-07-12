@@ -1,0 +1,7 @@
+# log-after-group [ascii]
+# A log emitted after the group has closed (currently renders detached)
+
+[Deploy]
+  [OK] Push
+[Done]
+[OK] Deployment reconciled.

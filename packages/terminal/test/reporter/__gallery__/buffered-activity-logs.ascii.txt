@@ -1,0 +1,9 @@
+# buffered-activity-logs [ascii]
+# Info logs emitted during activities, flushed after each completes
+
+[Reconcile post-publish bookkeeping]
+  [OK] Repin root deps
+|  [INFO] Root deps already pinned to latest published.
+  [OK] Advance workspace versions
+|  [INFO] All workspace versions already ahead of published.
+[Done]

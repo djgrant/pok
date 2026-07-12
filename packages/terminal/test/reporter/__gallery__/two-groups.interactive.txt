@@ -1,0 +1,14 @@
+# two-groups [interactive]
+# Two groups back to back, as pre/post lifecycle commands produce
+
+┌  Publish
+│
+◇  npm publish
+│
+└  ✔ Done
+
+┌  Post-publish
+│
+◇  Repin deps
+│
+└  ✔ Done

@@ -1,0 +1,9 @@
+# two-groups [ascii]
+# Two groups back to back, as pre/post lifecycle commands produce
+
+[Publish]
+  [OK] npm publish
+[Done]
+[Post-publish]
+  [OK] Repin deps
+[Done]

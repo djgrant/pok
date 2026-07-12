@@ -1,0 +1,9 @@
+# parallel-group [plain-unicode]
+# A parallel group where all activities succeed
+
+┌Checks└
+  Running 1 task...
+  ◇ Lint
+  ◇ Typecheck
+  ◇ Test
+┌✔└

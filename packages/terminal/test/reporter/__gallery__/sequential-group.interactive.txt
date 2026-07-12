@@ -1,0 +1,10 @@
+# sequential-group [interactive]
+# A group of sequential activities, all succeeding
+
+┌  Build
+│
+◇  Compile
+│
+◇  Bundle
+│
+└  ✔ Done

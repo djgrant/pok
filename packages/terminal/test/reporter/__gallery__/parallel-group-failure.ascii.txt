@@ -1,0 +1,12 @@
+# parallel-group-failure [ascii]
+# A parallel group with one failure; error deferred past the outro
+
+[Checks]
+  Running 1 task...
+  [OK] Lint
+  [ERR] Typecheck
+[Failed]
+[ERR] Found 3 type errors
+
+  To fix:
+    - Run pnpm tsc -b to see details
