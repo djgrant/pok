@@ -24,6 +24,8 @@ export interface LauncherSkeleton {
   prompter?: any;
   /** Navigator instance (optional — launcher supplies @pokit/terminal default) */
   navigator?: any;
+  /** Theme spec for the default terminal UI (opaque to the launcher) */
+  theme?: unknown;
   /**
    * Package manager scripts to include as commands.
    * - true: Include all scripts from root package.json

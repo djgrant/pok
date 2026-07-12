@@ -1,0 +1,12 @@
+# activity-failure-remediation [minimal]
+# A failing activity with remediation steps and a docs link
+
+▶ Pre-flight checks
+  ✗ Docker daemon is not running
+
+    To fix:
+      - Start Docker Desktop, or
+      - Run 'sudo systemctl start docker' (Linux)
+
+    More info: https://docs.docker.com/get-started/
+✗ failed

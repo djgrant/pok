@@ -27,7 +27,7 @@ const UPDATE = process.env.UPDATE_GALLERY === '1';
 
 async function render(scenario: Scenario, mode: OutputMode, vt: VirtualTerminal): Promise<string> {
   const bus = createEventBus();
-  const adapter = createReporterAdapter({ output: { ...mode.output } });
+  const adapter = createReporterAdapter({ output: { ...mode.output }, theme: mode.theme });
   const controller = adapter.start(bus);
   for (const event of scenario.events) {
     bus.emit(event);

@@ -13,9 +13,11 @@ import type {
   ReporterAdapter,
   Prompter,
   Navigator,
+  ThemeSpec,
 } from '@pokit/core';
 import { createReporterAdapter } from './reporter/adapter.js';
 import { createPrompter } from './prompter/prompter.js';
+import { createPromptTheme } from './prompter/engine/index.js';
 import { createScreen } from './screen.js';
 
 export type { OutputConfig, ReporterAdapter, Prompter, Navigator } from '@pokit/core';
@@ -28,6 +30,8 @@ export type TerminalUIOptions = {
   verbose?: boolean;
   /** Output configuration (color, unicode, interactive). Detected from args/env when omitted. */
   output?: OutputConfig;
+  /** Theme (preset, glyph and colour overrides) for the reporter and prompts */
+  theme?: ThemeSpec;
 };
 
 /**
@@ -54,9 +58,9 @@ export function createTerminalUI(options?: TerminalUIOptions): TerminalUI {
     outputConfig.verbose = options.verbose;
   }
 
-  const screen = createScreen(outputConfig);
-  const reporter = createReporterAdapter({ output: outputConfig });
-  const prompter = createPrompter(screen);
+  const screen = createScreen(outputConfig, options?.theme);
+  const reporter = createReporterAdapter({ output: outputConfig, theme: options?.theme });
+  const prompter = createPrompter(screen, createPromptTheme(options?.theme));
   const navigator = createMenuNavigator(prompter);
 
   return { reporter, prompter, navigator };

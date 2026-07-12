@@ -7,7 +7,7 @@
  * visual language.
  */
 
-import type { OutputConfig } from '@pokit/core';
+import type { OutputConfig, ThemeSpec } from '@pokit/core';
 import { createTheme } from './reporter/renderer/theme.js';
 import { LiveRegion } from './reporter/renderer/live-region.js';
 
@@ -22,8 +22,8 @@ export interface Screen {
 /**
  * Create the shared screen for a terminal UI instance.
  */
-export function createScreen(outputConfig: OutputConfig): Screen {
-  const theme = createTheme(outputConfig);
+export function createScreen(outputConfig: OutputConfig, spec?: ThemeSpec): Screen {
+  const theme = createTheme(outputConfig, spec);
   const interactive = Boolean(outputConfig.interactive);
 
   return {

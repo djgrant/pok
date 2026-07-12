@@ -10,7 +10,7 @@
  * documents the fix and guards against regression.
  */
 
-import type { CLIEvent, OutputConfig } from '@pokit/core';
+import type { CLIEvent, OutputConfig, ThemeSpec } from '@pokit/core';
 
 export type Scenario = {
   name: string;
@@ -21,6 +21,7 @@ export type Scenario = {
 export type OutputMode = {
   name: string;
   output: OutputConfig;
+  theme?: ThemeSpec;
 };
 
 /** The three rendering modes worth snapshotting (color is stripped by xterm anyway). */
@@ -36,6 +37,11 @@ export const OUTPUT_MODES: OutputMode[] = [
   {
     name: 'ascii',
     output: { color: false, unicode: false, verbose: false, interactive: false },
+  },
+  {
+    name: 'minimal',
+    output: { color: true, unicode: true, verbose: false, interactive: true },
+    theme: { preset: 'minimal' },
   },
 ];
 

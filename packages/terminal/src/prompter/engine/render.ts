@@ -1,53 +1,117 @@
 /**
- * Shared rendering vocabulary for prompt widgets.
+ * Prompt theming.
  *
- * Prompts use the same visual language as the reporter frame: a dim left
- * rail, a state glyph on the message line, and dim hints. Kept separate from
- * the reporter theme because prompts only run interactively; ASCII/no-color
- * output modes never reach a prompt.
+ * Prompts share the reporter's presets: the 'rail' theme draws the same dim
+ * left rail and state glyphs as the boxed reporter output; the 'minimal'
+ * theme is flat and indentation-based. A PromptTheme is injected into each
+ * widget so the whole UI follows one ThemeSpec. Prompts only run on styled
+ * interactive terminals, so colour is always on and glyphs are unicode.
  */
 
 import pc from 'picocolors';
+import type { ThemeSpec } from '@pokit/core';
+import { resolvePalette, type Palette } from '../../reporter/renderer/theme';
 import type { PromptState } from './prompt';
 
-export const BAR = pc.dim('│'); // │
-export const BAR_END = pc.dim('└'); // └
+export type PromptTheme = {
+  /** Message heading lines for the current state. */
+  heading(state: PromptState, message: string): string[];
+  /** A body line (option, input, hint) inside the prompt. */
+  item(content: string): string;
+  /** Closing lines under the body. */
+  end(): string[];
+  /** Closed frame for a submitted prompt. */
+  submitted(message: string, result: string): string;
+  /** Closed frame for a cancelled prompt. */
+  cancelled(message: string): string;
+  /** Radio marker for a (non-)focused option. */
+  radio(active: boolean): string;
+  /** Checkbox marker for a (de)selected option. */
+  checkbox(selected: boolean): string;
+  /** Validation / warning line. */
+  problem(message: string): string;
+  /** Clipped-list ellipsis row. */
+  ellipsis(): string;
+  palette: Palette;
+};
 
-export const RADIO_ACTIVE = pc.green('●'); // ●
-export const RADIO_INACTIVE = pc.dim('○'); // ○
-export const CHECKBOX_SELECTED = pc.green('◼'); // ◼
-export const CHECKBOX_UNSELECTED = pc.dim('◻'); // ◻
-
-/** State glyph for the message line. */
-export function stateSymbol(state: PromptState): string {
-  switch (state) {
-    case 'active':
-      return pc.cyan('◆'); // ◆
-    case 'error':
-      return pc.yellow('▲'); // ▲
-    case 'submit':
-      return pc.green('◇'); // ◇
-    case 'cancel':
-      return pc.red('■'); // ■
-  }
+function railPromptTheme(palette: Palette, glyphs: ThemeSpec['glyphs']): PromptTheme {
+  const bar = palette.frame('│'); // │
+  const stateGlyph = (state: PromptState): string => {
+    switch (state) {
+      case 'active':
+        return palette.info('◆'); // ◆
+      case 'error':
+        return palette.warn(glyphs?.warn ?? '▲'); // ▲
+      case 'submit':
+        return palette.success(glyphs?.activityDone ?? '◇'); // ◇
+      case 'cancel':
+        return palette.error(glyphs?.error ?? '■'); // ■
+    }
+  };
+  const item = (content: string) => `${bar}  ${content}`;
+  return {
+    heading: (state, message) => [bar, `${stateGlyph(state)}  ${message}`],
+    item,
+    end: () => [palette.frame('└')], // └
+    submitted: (message, result) =>
+      [bar, `${stateGlyph('submit')}  ${message}`, item(palette.dim(result))].join('\n'),
+    cancelled: (message) =>
+      [bar, `${stateGlyph('cancel')}  ${message}`, item(pc.strikethrough(palette.dim('cancelled')))].join('\n'),
+    radio: (active) => (active ? palette.success('●') : palette.dim('○')), // ● ○
+    checkbox: (selected) => (selected ? palette.success('◼') : palette.dim('◻')), // ◼ ◻
+    problem: (message) => item(palette.warn(message)),
+    ellipsis: () => item(palette.dim('…')),
+    palette,
+  };
 }
 
-/** Message heading: preceding rail line + glyph + message. */
-export function heading(state: PromptState, message: string): string[] {
-  return [BAR, `${stateSymbol(state)}  ${message}`];
+function minimalPromptTheme(palette: Palette, glyphs: ThemeSpec['glyphs']): PromptTheme {
+  const stateGlyph = (state: PromptState): string => {
+    switch (state) {
+      case 'active':
+        return palette.info('?');
+      case 'error':
+        return palette.warn(glyphs?.warn ?? '!');
+      case 'submit':
+        return palette.success(glyphs?.activityDone ?? '✓'); // ✓
+      case 'cancel':
+        return palette.error(glyphs?.error ?? '✗'); // ✗
+    }
+  };
+  const item = (content: string) => `  ${content}`;
+  return {
+    heading: (state, message) => [`${stateGlyph(state)} ${palette.bold(message)}`],
+    item,
+    end: () => [],
+    submitted: (message, result) =>
+      `${stateGlyph('submit')} ${palette.bold(message)} ${palette.dim(result)}`,
+    cancelled: (message) =>
+      `${stateGlyph('cancel')} ${palette.bold(message)} ${palette.dim('cancelled')}`,
+    radio: (active) => (active ? palette.info('❯') : ' '), // ❯
+    checkbox: (selected) => (selected ? palette.success('[x]') : palette.dim('[ ]')),
+    problem: (message) => item(palette.warn(message)),
+    ellipsis: () => item(palette.dim('…')),
+    palette,
+  };
 }
 
-/** Closed frame for a submitted prompt: dim result under the message. */
-export function submittedFrame(message: string, result: string): string {
-  return [...heading('submit', message), `${BAR}  ${pc.dim(result)}`].join('\n');
-}
-
-/** Closed frame for a cancelled prompt. */
-export function cancelledFrame(message: string): string {
-  return [...heading('cancel', message), `${BAR}  ${pc.strikethrough(pc.dim('cancelled'))}`].join(
-    '\n'
+/**
+ * Build the prompt theme for a spec. Prompts always render with colour and
+ * unicode; output-mode stripping never applies because prompts require an
+ * interactive styled terminal.
+ */
+export function createPromptTheme(spec?: ThemeSpec): PromptTheme {
+  const palette = resolvePalette(
+    { color: true, unicode: true, verbose: false, interactive: true },
+    spec
   );
+  return (spec?.preset ?? 'rail') === 'minimal'
+    ? minimalPromptTheme(palette, spec?.glyphs)
+    : railPromptTheme(palette, spec?.glyphs);
 }
+
+export const defaultPromptTheme: PromptTheme = createPromptTheme();
 
 export type Window = {
   start: number;
@@ -64,7 +128,7 @@ export function windowItems(total: number, cursor: number, maxVisible: number): 
   if (total <= maxVisible) {
     return { start: 0, end: total, moreAbove: false, moreBelow: false };
   }
-  let start = Math.max(0, Math.min(cursor - Math.floor(maxVisible / 2), total - maxVisible));
+  const start = Math.max(0, Math.min(cursor - Math.floor(maxVisible / 2), total - maxVisible));
   const end = start + maxVisible;
   return { start, end, moreAbove: start > 0, moreBelow: end < total };
 }

@@ -37,6 +37,7 @@ export const categories: DocCategory[] = [
         icon: "layers",
         links: [
           { label: "Global Flags", slug: "manual/global-flags" },
+          { label: "Theming", slug: "manual/theming" },
           { label: "Command History", slug: "manual/history" },
           { label: "Shell Completion", slug: "manual/completion" },
           { label: "Testing", slug: "manual/testing" },

@@ -12,6 +12,7 @@ import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
 import type { Prompter, Navigator } from '../prompter';
 import type { MountableLike } from '../lib/command';
+import { ThemeSpecSchema, type ThemeSpec } from '../theme-spec';
 
 export * from './prompter';
 export * from './events';
@@ -104,6 +105,12 @@ export type PokConfig = {
    * Allows injecting dynamic command sources.
    */
   plugins?: MountableLike[];
+
+  /**
+   * Theme for the default terminal UI (preset, glyph and colour overrides).
+   * Ignored when reporter/prompter instances are supplied explicitly.
+   */
+  theme?: ThemeSpec;
 };
 
 /**
@@ -121,6 +128,7 @@ export const PokConfigSchema = z.object({
   pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
   pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
   plugins: z.array(z.any()).optional(),
+  theme: ThemeSpecSchema.optional(),
 });
 
 /**
@@ -139,6 +147,7 @@ export interface ResolvedPokConfig extends LauncherSkeleton {
   pmScripts?: boolean | string[];
   pmCommands?: boolean | string[];
   plugins?: MountableLike[];
+  theme?: ThemeSpec;
 }
 
 /**

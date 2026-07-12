@@ -4,3 +4,4 @@ export { MultiselectPrompt, type MultiselectPromptOptions } from './multiselect'
 export { ConfirmPrompt, type ConfirmPromptOptions } from './confirm';
 export { TextPrompt, type TextPromptOptions } from './text';
 export { AutocompletePrompt, type AutocompletePromptOptions } from './autocomplete';
+export { createPromptTheme, defaultPromptTheme, type PromptTheme } from './render';

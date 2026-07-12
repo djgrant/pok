@@ -7,16 +7,10 @@
  */
 
 import type { Key } from 'node:readline';
-import pc from 'picocolors';
 import { PromptBase, type PromptIO } from './prompt';
 import {
-  BAR,
-  BAR_END,
-  RADIO_ACTIVE,
-  RADIO_INACTIVE,
-  heading,
-  submittedFrame,
-  cancelledFrame,
+  defaultPromptTheme,
+  type PromptTheme,
   windowItems,
   defaultMaxVisible,
   dimHint,
@@ -29,6 +23,7 @@ export type AutocompletePromptOptions<T> = PromptIO & {
   placeholder?: string;
   initialValue?: T;
   maxItems?: number;
+  theme?: PromptTheme;
 };
 
 function matches<T>(term: string, option: SelectItem<T>): boolean {
@@ -41,11 +36,13 @@ function matches<T>(term: string, option: SelectItem<T>): boolean {
 }
 
 export class AutocompletePrompt<T> extends PromptBase<T> {
+  private readonly theme: PromptTheme;
   private filtered: SelectItem<T>[];
   private cursor = 0;
 
   constructor(private readonly opts: AutocompletePromptOptions<T>) {
     super(opts);
+    this.theme = opts.theme ?? defaultPromptTheme;
     this.filtered = [...opts.options];
     if (opts.initialValue !== undefined) {
       const idx = this.filtered.findIndex((o) => o.value === opts.initialValue);
@@ -82,44 +79,44 @@ export class AutocompletePrompt<T> extends PromptBase<T> {
   }
 
   protected render(): string {
+    const t = this.theme;
     if (this.state === 'submit') {
-      return submittedFrame(this.opts.message, this.focused?.label ?? '');
+      return t.submitted(this.opts.message, this.focused?.label ?? '');
     }
-    if (this.state === 'cancel') return cancelledFrame(this.opts.message);
+    if (this.state === 'cancel') return t.cancelled(this.opts.message);
 
     const showPlaceholder = this.userInput === '' && this.opts.placeholder;
-    const searchText = showPlaceholder ? pc.dim(this.opts.placeholder!) : this.renderInput();
+    const searchText = showPlaceholder ? t.palette.dim(this.opts.placeholder!) : this.renderInput();
     const matchCount =
       this.filtered.length !== this.opts.options.length
-        ? pc.dim(` (${this.filtered.length} match${this.filtered.length === 1 ? '' : 'es'})`)
+        ? t.palette.dim(` (${this.filtered.length} match${this.filtered.length === 1 ? '' : 'es'})`)
         : '';
 
     const lines = [
-      ...heading(this.state, this.opts.message),
-      `${BAR}  ${pc.dim('Search:')} ${searchText}${matchCount}`,
+      ...t.heading(this.state, this.opts.message),
+      t.item(`${t.palette.dim('Search:')} ${searchText}${matchCount}`),
     ];
 
     if (this.filtered.length === 0) {
-      lines.push(`${BAR}  ${pc.yellow('No matches found')}`);
+      lines.push(t.problem('No matches found'));
     } else {
       const max = defaultMaxVisible(this.output, 6, this.opts.maxItems);
       const win = windowItems(this.filtered.length, this.cursor, max);
       for (let i = win.start; i < win.end; i++) {
         const edge = (i === win.start && win.moreAbove) || (i === win.end - 1 && win.moreBelow);
         if (edge) {
-          lines.push(`${BAR}  ${pc.dim('…')}`);
+          lines.push(t.ellipsis());
           continue;
         }
         const option = this.filtered[i]!;
         const active = i === this.cursor;
-        const glyph = active ? RADIO_ACTIVE : RADIO_INACTIVE;
-        const label = active ? option.label : pc.dim(option.label);
-        lines.push(`${BAR}  ${glyph} ${label}${active ? dimHint(option.hint) : ''}`);
+        const label = active ? option.label : t.palette.dim(option.label);
+        lines.push(t.item(`${t.radio(active)} ${label}${active ? dimHint(option.hint) : ''}`));
       }
     }
 
-    lines.push(`${BAR}  ${pc.dim('↑/↓ select · enter confirm · type to search')}`);
-    lines.push(BAR_END);
+    lines.push(t.item(t.palette.dim('↑/↓ select · enter confirm · type to search')));
+    lines.push(...t.end());
     return lines.join('\n');
   }
 }

@@ -7,13 +7,8 @@ import type { Key } from 'node:readline';
 import pc from 'picocolors';
 import { PromptBase, type PromptIO } from './prompt';
 import {
-  BAR,
-  BAR_END,
-  CHECKBOX_SELECTED,
-  CHECKBOX_UNSELECTED,
-  heading,
-  submittedFrame,
-  cancelledFrame,
+  defaultPromptTheme,
+  type PromptTheme,
   windowItems,
   defaultMaxVisible,
   dimHint,
@@ -26,16 +21,19 @@ export type MultiselectPromptOptions<T> = PromptIO & {
   initialValues?: T[];
   required?: boolean;
   maxItems?: number;
+  theme?: PromptTheme;
 };
 
 export class MultiselectPrompt<T> extends PromptBase<T[]> {
   private readonly rows: ReturnType<typeof buildRows<T>>;
   private readonly optionIndexes: number[];
   private readonly selected = new Set<number>();
+  private readonly theme: PromptTheme;
   private cursor = 0;
 
   constructor(private readonly opts: MultiselectPromptOptions<T>) {
     super(opts);
+    this.theme = opts.theme ?? defaultPromptTheme;
     this.rows = buildRows(opts.options);
     this.optionIndexes = this.rows
       .map((row, i) => (row.type === 'option' ? i : -1))
@@ -78,15 +76,16 @@ export class MultiselectPrompt<T> extends PromptBase<T[]> {
   }
 
   protected render(): string {
+    const t = this.theme;
     if (this.state === 'submit') {
       const labels = [...this.selected]
         .sort((a, b) => a - b)
         .map((pos) => this.optionAt(pos).label);
-      return submittedFrame(this.opts.message, labels.length > 0 ? labels.join(', ') : 'none');
+      return t.submitted(this.opts.message, labels.length > 0 ? labels.join(', ') : 'none');
     }
-    if (this.state === 'cancel') return cancelledFrame(this.opts.message);
+    if (this.state === 'cancel') return t.cancelled(this.opts.message);
 
-    const lines = heading(this.state, this.opts.message);
+    const lines = t.heading(this.state, this.opts.message);
     const focusedRowIndex = this.optionIndexes[this.cursor]!;
     const max = defaultMaxVisible(this.output, 5, this.opts.maxItems);
     const win = windowItems(this.rows.length, focusedRowIndex, max);
@@ -95,26 +94,25 @@ export class MultiselectPrompt<T> extends PromptBase<T[]> {
       const row = this.rows[i]!;
       const edge = (i === win.start && win.moreAbove) || (i === win.end - 1 && win.moreBelow);
       if (edge) {
-        lines.push(`${BAR}  ${pc.dim('…')}`);
+        lines.push(t.ellipsis());
         continue;
       }
       if (row.type === 'header') {
-        lines.push(`${BAR}  ${pc.dim(pc.bold(row.label))}`);
+        lines.push(t.item(t.palette.dim(pc.bold(row.label))));
         continue;
       }
       const pos = this.optionIndexes.indexOf(i);
       const active = i === focusedRowIndex;
-      const box = this.selected.has(pos) ? CHECKBOX_SELECTED : CHECKBOX_UNSELECTED;
-      const label = active ? row.option.label : pc.dim(row.option.label);
+      const label = active ? row.option.label : t.palette.dim(row.option.label);
       const hint = active ? dimHint(row.option.hint) : '';
-      lines.push(`${BAR}  ${box} ${label}${hint}`);
+      lines.push(t.item(`${t.checkbox(this.selected.has(pos))} ${label}${hint}`));
     }
 
     if (this.state === 'error') {
-      lines.push(`${BAR}  ${pc.yellow(this.errorMessage)}`);
+      lines.push(t.problem(this.errorMessage));
     }
-    lines.push(`${BAR}  ${pc.dim('space toggle · a all · enter confirm')}`);
-    lines.push(BAR_END);
+    lines.push(t.item(t.palette.dim('space toggle · a all · enter confirm')));
+    lines.push(...t.end());
     return lines.join('\n');
   }
 }

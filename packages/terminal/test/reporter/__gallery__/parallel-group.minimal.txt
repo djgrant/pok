@@ -1,0 +1,8 @@
+# parallel-group [minimal]
+# A parallel group where all activities succeed
+
+▶ Checks
+  ✓ Lint
+  ✓ Typecheck
+  ✓ Test
+✓ done

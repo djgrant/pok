@@ -1,0 +1,7 @@
+# sequential-group [minimal]
+# A group of sequential activities, all succeeding
+
+▶ Build
+  ✓ Compile
+  ✓ Bundle
+✓ done

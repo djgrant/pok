@@ -1,0 +1,8 @@
+# log-after-group [minimal]
+# A log emitted after the group has closed (currently renders detached)
+
+▶ Deploy
+  ✓ Push
+✓ done
+
+✓ Deployment reconciled.

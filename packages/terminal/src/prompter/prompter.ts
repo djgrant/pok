@@ -21,6 +21,8 @@ import type {
 import { isDynamicOptions, CancelError } from '@pokit/core';
 import {
   CANCEL,
+  defaultPromptTheme,
+  type PromptTheme,
   SelectPrompt,
   MultiselectPrompt,
   ConfirmPrompt,
@@ -46,8 +48,9 @@ type ErrorAction = 'retry' | 'cancel';
 /**
  * Show error recovery prompt. Returns 'retry' or 'cancel'.
  */
-async function showErrorRecovery(errorMessage: string): Promise<ErrorAction> {
+async function showErrorRecovery(errorMessage: string, theme: PromptTheme): Promise<ErrorAction> {
   const result = await new SelectPrompt<ErrorAction>({
+    theme,
     message: `Error: ${errorMessage}`,
     options: [
       { value: 'retry', label: 'Retry', hint: 'Try loading again' },
@@ -63,7 +66,8 @@ async function showErrorRecovery(errorMessage: string): Promise<ErrorAction> {
  */
 async function handleDynamicSelect<T>(
   dynamicOptions: DynamicSelectOptions<T>,
-  screen: Screen
+  screen: Screen,
+  theme: PromptTheme
 ): Promise<T> {
   const loadingMessage = dynamicOptions.loadingMessage ?? 'Loading...';
 
@@ -77,11 +81,11 @@ async function handleDynamicSelect<T>(
       dynamicOptions.errorMessage ??
       (error instanceof Error ? error.message : 'Failed to load options');
 
-    const action = await showErrorRecovery(errorMessage);
+    const action = await showErrorRecovery(errorMessage, theme);
     if (action === 'cancel') {
       throw new CancelError('Cancelled');
     }
-    return handleDynamicSelect(dynamicOptions, screen);
+    return handleDynamicSelect(dynamicOptions, screen, theme);
   }
 
   if (options.length === 0) {
@@ -90,6 +94,7 @@ async function handleDynamicSelect<T>(
   }
 
   const result = await new AutocompletePrompt<T>({
+    theme,
     message: dynamicOptions.message,
     options,
     initialValue: dynamicOptions.initialValue,
@@ -105,14 +110,15 @@ async function handleDynamicSelect<T>(
 /**
  * Create a Prompter using the owned prompt engine, sharing the terminal Screen.
  */
-export function createPrompter(screen: Screen): Prompter {
+export function createPrompter(screen: Screen, theme: PromptTheme = defaultPromptTheme): Prompter {
   return {
     async select<T>(options: SelectOptions<T>): Promise<T> {
       if (isDynamicOptions(options)) {
-        return handleDynamicSelect(options, screen);
+        return handleDynamicSelect(options, screen, theme);
       }
 
       const result = await new SelectPrompt<T>({
+        theme,
         message: options.message,
         options: options.options,
         initialValue: options.initialValue,
@@ -123,6 +129,7 @@ export function createPrompter(screen: Screen): Prompter {
 
     async multiselect<T>(options: MultiselectOptions<T>): Promise<T[]> {
       const result = await new MultiselectPrompt<T>({
+        theme,
         message: options.message,
         options: options.options,
         initialValues: options.initialValues,
@@ -134,6 +141,7 @@ export function createPrompter(screen: Screen): Prompter {
 
     async confirm(options: ConfirmOptions): Promise<boolean> {
       const result = await new ConfirmPrompt({
+        theme,
         message: options.message,
         initialValue: options.initialValue,
       }).prompt();
@@ -143,6 +151,7 @@ export function createPrompter(screen: Screen): Prompter {
 
     async text(options: TextOptions): Promise<string> {
       const result = await new TextPrompt({
+        theme,
         message: options.message,
         placeholder: options.placeholder,
         initialValue: options.initialValue,
@@ -154,6 +163,7 @@ export function createPrompter(screen: Screen): Prompter {
 
     async autocomplete<T>(options: AutocompleteOptions<T>): Promise<T> {
       const result = await new AutocompletePrompt<T>({
+        theme,
         message: options.message,
         options: options.options,
         placeholder: options.placeholder,

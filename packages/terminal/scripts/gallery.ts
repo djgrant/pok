@@ -8,6 +8,7 @@
  *   bun packages/terminal/scripts/gallery.ts             # all scenarios
  *   bun packages/terminal/scripts/gallery.ts parallel    # scenarios matching "parallel"
  *   DELAY=400 bun packages/terminal/scripts/gallery.ts   # slow down replay
+ *   THEME=minimal bun packages/terminal/scripts/gallery.ts # preview a preset
  */
 
 import pc from 'picocolors';
@@ -17,6 +18,7 @@ import { SCENARIOS } from '../test/reporter/scenarios';
 
 const filter = process.argv[2];
 const delay = Number(process.env.DELAY ?? 150);
+const theme = process.env.THEME ? { preset: process.env.THEME as 'rail' | 'minimal' } : undefined;
 
 const scenarios = filter ? SCENARIOS.filter((s) => s.name.includes(filter)) : SCENARIOS;
 
@@ -31,7 +33,7 @@ for (const scenario of scenarios) {
   console.log();
 
   const bus = createEventBus();
-  const adapter = createReporterAdapter({ output: detectOutputConfig(process.argv.slice(3)) });
+  const adapter = createReporterAdapter({ output: detectOutputConfig(process.argv.slice(3)), theme });
   const controller = adapter.start(bus);
 
   for (const event of scenario.events) {

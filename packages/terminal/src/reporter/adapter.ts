@@ -21,7 +21,6 @@
  * and no-color are theme swaps.
  */
 
-import pc from 'picocolors';
 import type {
   ReporterAdapter,
   ReporterAdapterController,
@@ -31,6 +30,7 @@ import type {
   GroupId,
   LogLevel,
   OutputConfig,
+  ThemeSpec,
 } from '@pokit/core';
 import { detectOutputConfig, CommandError, markPresented } from '@pokit/core';
 import { Marked } from 'marked';
@@ -126,6 +126,8 @@ export type ReporterAdapterOptions = {
   verbose?: boolean;
   /** Output configuration (color, unicode, interactive, verbose settings) */
   output?: OutputConfig;
+  /** Theme spec (preset, glyph and colour overrides) for rendering */
+  theme?: ThemeSpec;
 };
 
 /**
@@ -142,7 +144,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
 
   return {
     start(bus: EventBus): ReporterAdapterController {
-      const theme = createTheme(outputConfig);
+      const theme = createTheme(outputConfig, options?.theme);
       const region = new LiveRegion(Boolean(outputConfig.interactive), theme);
       const frame = new Frame(theme, (line) => region.writeLine(line));
 
@@ -191,7 +193,7 @@ export function createReporterAdapter(options?: ReporterAdapterOptions): Reporte
               hasFailure: false,
               deferredErrors: [],
             });
-            frame.open(outputConfig.color ? pc.bold(event.label) : event.label);
+            frame.open(event.label);
             break;
           }
 

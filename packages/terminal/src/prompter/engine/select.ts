@@ -7,13 +7,8 @@ import type { Key } from 'node:readline';
 import pc from 'picocolors';
 import { PromptBase, type PromptIO } from './prompt';
 import {
-  BAR,
-  BAR_END,
-  RADIO_ACTIVE,
-  RADIO_INACTIVE,
-  heading,
-  submittedFrame,
-  cancelledFrame,
+  defaultPromptTheme,
+  type PromptTheme,
   windowItems,
   defaultMaxVisible,
   dimHint,
@@ -31,6 +26,7 @@ export type SelectPromptOptions<T> = PromptIO & {
   options: SelectItem<T>[];
   initialValue?: T;
   maxItems?: number;
+  theme?: PromptTheme;
 };
 
 type Row<T> = { type: 'header'; label: string } | { type: 'option'; option: SelectItem<T> };
@@ -53,10 +49,12 @@ export function buildRows<T>(options: SelectItem<T>[]): Row<T>[] {
 export class SelectPrompt<T> extends PromptBase<T> {
   private readonly rows: Row<T>[];
   private readonly optionIndexes: number[];
+  private readonly theme: PromptTheme;
   private cursor = 0;
 
   constructor(private readonly opts: SelectPromptOptions<T>) {
     super(opts);
+    this.theme = opts.theme ?? defaultPromptTheme;
     this.rows = buildRows(opts.options);
     this.optionIndexes = this.rows
       .map((row, i) => (row.type === 'option' ? i : -1))
@@ -88,34 +86,33 @@ export class SelectPrompt<T> extends PromptBase<T> {
   }
 
   protected render(): string {
-    if (this.state === 'submit') return submittedFrame(this.opts.message, this.focused.label);
-    if (this.state === 'cancel') return cancelledFrame(this.opts.message);
+    const t = this.theme;
+    if (this.state === 'submit') return t.submitted(this.opts.message, this.focused.label);
+    if (this.state === 'cancel') return t.cancelled(this.opts.message);
 
-    const lines = heading(this.state, this.opts.message);
+    const lines = t.heading(this.state, this.opts.message);
     const focusedRowIndex = this.optionIndexes[this.cursor]!;
     const max = defaultMaxVisible(this.output, 4, this.opts.maxItems);
     const win = windowItems(this.rows.length, focusedRowIndex, max);
 
     for (let i = win.start; i < win.end; i++) {
       const row = this.rows[i]!;
-      const edge =
-        (i === win.start && win.moreAbove) || (i === win.end - 1 && win.moreBelow);
+      const edge = (i === win.start && win.moreAbove) || (i === win.end - 1 && win.moreBelow);
       if (edge) {
-        lines.push(`${BAR}  ${pc.dim('…')}`);
+        lines.push(t.ellipsis());
         continue;
       }
       if (row.type === 'header') {
-        lines.push(`${BAR}  ${pc.dim(pc.bold(row.label))}`);
+        lines.push(t.item(t.palette.dim(pc.bold(row.label))));
         continue;
       }
       const active = i === focusedRowIndex;
-      const glyph = active ? RADIO_ACTIVE : RADIO_INACTIVE;
-      const label = active ? row.option.label : pc.dim(row.option.label);
+      const label = active ? row.option.label : t.palette.dim(row.option.label);
       const hint = active ? dimHint(row.option.hint) : '';
-      lines.push(`${BAR}  ${glyph} ${label}${hint}`);
+      lines.push(t.item(`${t.radio(active)} ${label}${hint}`));
     }
 
-    lines.push(BAR_END);
+    lines.push(...t.end());
     return lines.join('\n');
   }
 }

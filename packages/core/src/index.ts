@@ -340,3 +340,10 @@ export {
 
 export { loadHistory, appendHistory, clearHistory, formatEntryLabel } from './lib/history';
 export type { HistoryEntry } from './lib/history';
+
+// =============================================================================
+// Theme spec (for the default terminal UI)
+// =============================================================================
+
+export { ThemeSpecSchema, THEME_COLORS } from './theme-spec';
+export type { ThemeSpec, ThemeColor, ThemeGlyphs, ThemeColors } from './theme-spec';

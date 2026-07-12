@@ -229,7 +229,7 @@ async function resolveTerminalDefaults(
     process.exit(1);
   }
 
-  return terminal.createTerminalUI();
+  return terminal.createTerminalUI({ theme: config.theme });
 }
 
 /**

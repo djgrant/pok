@@ -3,28 +3,23 @@
  */
 
 import type { Key } from 'node:readline';
-import { PromptBase, type PromptIO } from './prompt';
-import {
-  BAR,
-  BAR_END,
-  RADIO_ACTIVE,
-  RADIO_INACTIVE,
-  heading,
-  submittedFrame,
-  cancelledFrame,
-} from './render';
 import pc from 'picocolors';
+import { PromptBase, type PromptIO } from './prompt';
+import { defaultPromptTheme, type PromptTheme } from './render';
 
 export type ConfirmPromptOptions = PromptIO & {
   message: string;
   initialValue?: boolean;
+  theme?: PromptTheme;
 };
 
 export class ConfirmPrompt extends PromptBase<boolean> {
+  private readonly theme: PromptTheme;
   private choice: boolean;
 
   constructor(private readonly opts: ConfirmPromptOptions) {
     super(opts);
+    this.theme = opts.theme ?? defaultPromptTheme;
     this.choice = opts.initialValue ?? false;
   }
 
@@ -49,17 +44,16 @@ export class ConfirmPrompt extends PromptBase<boolean> {
   }
 
   protected render(): string {
-    if (this.state === 'submit') return submittedFrame(this.opts.message, this.choice ? 'Yes' : 'No');
-    if (this.state === 'cancel') return cancelledFrame(this.opts.message);
+    const t = this.theme;
+    if (this.state === 'submit') return t.submitted(this.opts.message, this.choice ? 'Yes' : 'No');
+    if (this.state === 'cancel') return t.cancelled(this.opts.message);
 
-    const yes = this.choice
-      ? `${RADIO_ACTIVE} Yes`
-      : `${RADIO_INACTIVE} ${pc.dim('Yes')}`;
-    const no = !this.choice ? `${RADIO_ACTIVE} No` : `${RADIO_INACTIVE} ${pc.dim('No')}`;
+    const yes = this.choice ? `${t.radio(true)} Yes` : `${t.radio(false)} ${t.palette.dim('Yes')}`;
+    const no = !this.choice ? `${t.radio(true)} No` : `${t.radio(false)} ${t.palette.dim('No')}`;
     return [
-      ...heading(this.state, this.opts.message),
-      `${BAR}  ${yes} ${pc.dim('/')} ${no}`,
-      BAR_END,
+      ...t.heading(this.state, this.opts.message),
+      t.item(`${yes} ${pc.dim('/')} ${no}`),
+      ...t.end(),
     ].join('\n');
   }
 }

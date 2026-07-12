@@ -6,18 +6,22 @@
 import type { Key } from 'node:readline';
 import pc from 'picocolors';
 import { PromptBase, type PromptIO } from './prompt';
-import { BAR, BAR_END, heading, submittedFrame, cancelledFrame } from './render';
+import { defaultPromptTheme, type PromptTheme } from './render';
 
 export type TextPromptOptions = PromptIO & {
   message: string;
   placeholder?: string;
   initialValue?: string;
   validate?: (value: string) => string | undefined;
+  theme?: PromptTheme;
 };
 
 export class TextPrompt extends PromptBase<string> {
+  private readonly theme: PromptTheme;
+
   constructor(private readonly opts: TextPromptOptions) {
     super(opts);
+    this.theme = opts.theme ?? defaultPromptTheme;
     if (opts.initialValue) {
       this.userInput = opts.initialValue;
       this.textCursor = opts.initialValue.length;
@@ -38,19 +42,20 @@ export class TextPrompt extends PromptBase<string> {
   }
 
   protected render(): string {
-    if (this.state === 'submit') return submittedFrame(this.opts.message, this.userInput);
-    if (this.state === 'cancel') return cancelledFrame(this.opts.message);
+    const t = this.theme;
+    if (this.state === 'submit') return t.submitted(this.opts.message, this.userInput);
+    if (this.state === 'cancel') return t.cancelled(this.opts.message);
 
     const showPlaceholder = this.userInput === '' && this.opts.placeholder;
     const inputLine = showPlaceholder
-      ? `${pc.inverse(this.opts.placeholder![0] ?? ' ')}${pc.dim(this.opts.placeholder!.slice(1))}`
+      ? `${pc.inverse(this.opts.placeholder![0] ?? ' ')}${t.palette.dim(this.opts.placeholder!.slice(1))}`
       : this.renderInput();
 
-    const lines = [...heading(this.state, this.opts.message), `${BAR}  ${inputLine}`];
+    const lines = [...t.heading(this.state, this.opts.message), t.item(inputLine)];
     if (this.state === 'error') {
-      lines.push(`${BAR}  ${pc.yellow(this.errorMessage)}`);
+      lines.push(t.problem(this.errorMessage));
     }
-    lines.push(BAR_END);
+    lines.push(...t.end());
     return lines.join('\n');
   }
 }
