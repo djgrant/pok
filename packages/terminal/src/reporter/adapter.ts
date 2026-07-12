@@ -230,8 +230,9 @@ function displayLog(
   }
 
   // Unicode + interactive mode - use clack's decorative output
-  const prefix = indented ? '\u2502  ' : ''; // │  for indented logs
-  const formattedMessage = prefix + message;
+  // No manual indent prefix: clack already draws the left rail, so a
+  // prepended bar would render doubled ("●  │  message").
+  const formattedMessage = message;
 
   switch (level) {
     case 'info':
