@@ -1,7 +1,7 @@
 import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { defineCommand } from '@pokit/core';
+import { defineCommand, definePostCommand } from '@pokit/core';
 import { $ } from 'bun';
 import {
   computeAheadVersion,
@@ -54,8 +54,25 @@ function readWorkspacePackages(repoRoot: string): Map<string, { dir: string; ver
   return result;
 }
 
+/**
+ * Handoff from `publish` to its post-command. `reconcile: false` marks runs
+ * with nothing to reconcile (dry runs, Verdaccio publishes).
+ */
+const PublishOutput = z.object({
+  reconcile: z.boolean(),
+  registry: z.string(),
+  skipPush: z.boolean(),
+  published: z.record(z.string(), z.string()),
+});
+
 export const command = defineCommand({
   label: 'Publish packages',
+  output: PublishOutput,
+  format(data, r) {
+    if (data.reconcile) {
+      r.success(`Published ${Object.keys(data.published).length} packages to ${data.registry}`);
+    }
+  },
   context: {
     packages: {
       from: 'flag',
@@ -142,10 +159,16 @@ export const command = defineCommand({
     const { repins, warnings } = computeRepins(readRootDeps(rootPackageJsonPath), toPublish);
     for (const warning of warnings) r.reporter.warn(warning);
 
+    const handoff = {
+      registry,
+      skipPush: ctx.context.skipPush ?? false,
+      published: Object.fromEntries(toPublish),
+    };
+
     if (ctx.context.dryRun) {
       r.reporter.info('Dry run complete. No packages were published.');
       reportPlan(r.reporter, repins, toPublish);
-      return;
+      return { ...handoff, reconcile: false };
     }
 
     if (ctx.context.verdaccio) {
@@ -154,20 +177,50 @@ export const command = defineCommand({
         'Verdaccio publish: skipping root repin / workspace bump (registry versions are local-only).',
       );
       reportPlan(r.reporter, repins, toPublish);
-      return;
+      return { ...handoff, reconcile: false };
     }
 
-    // --- Post-publish bookkeeping (keeps the dogfooding invariant) ---------
-    // Shared, idempotent reconcile — same path as `pok post-publish`. We pass
-    // the just-published versions as `waitFor` so it polls npm (eventually
-    // consistent) until they are fetchable before repinning/installing.
+    return { ...handoff, reconcile: true };
+  },
+});
+
+// Post-publish bookkeeping (keeps the dogfooding invariant). Runs after a
+// successful publish with the handoff as typed input, and is directly
+// invokable as `pok post:publish` for recovery — in which case `ctx.input` is
+// undefined and the reconcile derives everything from the registry.
+export const post = definePostCommand({
+  label: 'Reconcile post-publish bookkeeping (idempotent)',
+  input: PublishOutput.optional(),
+  context: {
+    verdaccio: {
+      from: 'flag',
+      schema: z.boolean().default(false),
+      description: 'Reconcile against local Verdaccio instead of npmjs (direct invocation only)',
+    },
+    skipPush: {
+      from: 'flag',
+      schema: z.boolean().optional(),
+      description: 'Skip pushing the bookkeeping commit to remote',
+    },
+  },
+  run: async (r, ctx) => {
+    if (ctx.input && !ctx.input.reconcile) return;
+
+    const registry =
+      ctx.input?.registry ??
+      (ctx.context.verdaccio
+        ? process.env.VERDACCIO_REGISTRY || 'http://localhost:4873/'
+        : 'https://registry.npmjs.org/');
+
+    // `waitFor` (npm eventual-consistency poll) only applies when versions
+    // were published this run; direct invocation reads whatever is latest.
     await reconcilePostPublish(r, {
       registry,
-      skipPush: ctx.context.skipPush ?? false,
-      waitFor: toPublish,
+      skipPush: ctx.input?.skipPush ?? ctx.context.skipPush ?? false,
+      waitFor: ctx.input ? new Map(Object.entries(ctx.input.published)) : undefined,
     });
 
-    r.reporter.success(`Published ${group.packages.length} packages to ${registry}`);
+    r.reporter.success('Post-publish bookkeeping reconciled.');
   },
 });
 
