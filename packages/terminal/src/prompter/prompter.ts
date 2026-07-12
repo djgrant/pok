@@ -1,14 +1,13 @@
 /**
- * Clack Prompter Implementation
+ * Terminal Prompter Implementation
  *
- * Implements the Prompter interface using @clack/prompts.
- *
- * Dynamic selects no longer spawn their own spinners: loading is routed through
- * the shared terminal Screen, keeping a single screen owner. Filtering is
- * handled client-side by the autocomplete prompt once options are loaded.
+ * Implements the Prompter interface using the owned prompt engine
+ * (./engine). Dynamic selects route loading through the shared terminal
+ * Screen, keeping a single screen owner; filtering is handled client-side by
+ * the autocomplete prompt once options are loaded.
  */
 
-import * as p from '@clack/prompts';
+import pc from 'picocolors';
 import type {
   Prompter,
   SelectOptions,
@@ -20,11 +19,26 @@ import type {
   AutocompleteOptions,
 } from '@pokit/core';
 import { isDynamicOptions, CancelError } from '@pokit/core';
-import { patchedAutocomplete } from './autocomplete-prompt.js';
+import {
+  CANCEL,
+  SelectPrompt,
+  MultiselectPrompt,
+  ConfirmPrompt,
+  TextPrompt,
+  AutocompletePrompt,
+} from './engine';
 import type { Screen } from '../screen.js';
 
+/** Unwrap a prompt result, throwing CancelError on cancel. */
+function unwrap<T>(result: T | typeof CANCEL): T {
+  if (result === CANCEL) {
+    throw new CancelError('Cancelled');
+  }
+  return result;
+}
+
 // =============================================================================
-// Error Recovery
+// Dynamic Select Implementation
 // =============================================================================
 
 type ErrorAction = 'retry' | 'cancel';
@@ -33,24 +47,15 @@ type ErrorAction = 'retry' | 'cancel';
  * Show error recovery prompt. Returns 'retry' or 'cancel'.
  */
 async function showErrorRecovery(errorMessage: string): Promise<ErrorAction> {
-  const result = await p.select({
+  const result = await new SelectPrompt<ErrorAction>({
     message: `Error: ${errorMessage}`,
     options: [
-      { value: 'retry' as const, label: 'Retry', hint: 'Try loading again' },
-      { value: 'cancel' as const, label: 'Cancel', hint: 'Abort selection' },
+      { value: 'retry', label: 'Retry', hint: 'Try loading again' },
+      { value: 'cancel', label: 'Cancel', hint: 'Abort selection' },
     ],
-  });
-
-  if (p.isCancel(result)) {
-    return 'cancel';
-  }
-
-  return result as ErrorAction;
+  }).prompt();
+  return result === CANCEL ? 'cancel' : result;
 }
-
-// =============================================================================
-// Dynamic Select Implementation
-// =============================================================================
 
 /**
  * Handle a dynamic select: load the option set via the provider (loading shown
@@ -74,79 +79,23 @@ async function handleDynamicSelect<T>(
 
     const action = await showErrorRecovery(errorMessage);
     if (action === 'cancel') {
-      p.cancel('Cancelled');
       throw new CancelError('Cancelled');
     }
-    // Retry
     return handleDynamicSelect(dynamicOptions, screen);
   }
 
   if (options.length === 0) {
-    p.cancel('No options available');
+    process.stdout.write(`${pc.red('■')}  No options available\n`);
     throw new CancelError('No options available');
   }
 
-  const result = await patchedAutocomplete({
+  const result = await new AutocompletePrompt<T>({
     message: dynamicOptions.message,
-    options: options.map((opt) => ({
-      value: opt.value,
-      label: opt.label,
-      hint: opt.hint,
-    })),
-  });
+    options,
+    initialValue: dynamicOptions.initialValue,
+  }).prompt();
 
-  if (p.isCancel(result)) {
-    throw new CancelError('Cancelled');
-  }
-
-  return result as T;
-}
-
-// =============================================================================
-// Grouped Options Helpers
-// =============================================================================
-
-/**
- * Organize flat options into a group → options record for clack's groupMultiselect.
- * Options without a group are placed under an empty-string key.
- */
-function toGroupedRecord<T>(
-  options: { value: T; label: string; hint?: string; group?: string }[]
-): Record<string, { value: T; label: string; hint?: string }[]> {
-  const groups: Record<string, { value: T; label: string; hint?: string }[]> = {};
-  for (const opt of options) {
-    const key = opt.group ?? '';
-    if (!groups[key]) groups[key] = [];
-    groups[key]!.push({ value: opt.value, label: opt.label, hint: opt.hint });
-  }
-  return groups;
-}
-
-/**
- * Sort options by group order (preserving insertion order of first occurrence)
- * and add group name as label prefix for visual separation in a flat select.
- */
-function flattenGroupedForSelect<T>(
-  options: { value: T; label: string; hint?: string; group?: string }[]
-): { value: T; label: string; hint?: string }[] {
-  const groupOrder: string[] = [];
-  for (const opt of options) {
-    const key = opt.group ?? '';
-    if (!groupOrder.includes(key)) groupOrder.push(key);
-  }
-
-  const result: { value: T; label: string; hint?: string }[] = [];
-  for (const group of groupOrder) {
-    const groupOpts = options.filter((opt) => (opt.group ?? '') === group);
-    for (const opt of groupOpts) {
-      result.push({
-        value: opt.value,
-        label: group ? `${group} › ${opt.label}` : opt.label,
-        hint: opt.hint,
-      });
-    }
-  }
-  return result;
+  return unwrap(result);
 }
 
 // =============================================================================
@@ -154,114 +103,64 @@ function flattenGroupedForSelect<T>(
 // =============================================================================
 
 /**
- * Create a Prompter using @clack/prompts, sharing the terminal Screen.
+ * Create a Prompter using the owned prompt engine, sharing the terminal Screen.
  */
 export function createPrompter(screen: Screen): Prompter {
   return {
     async select<T>(options: SelectOptions<T>): Promise<T> {
-      // Handle dynamic options via the shared screen
       if (isDynamicOptions(options)) {
         return handleDynamicSelect(options, screen);
       }
 
-      // Static options - handle grouped or flat
-      const opts = options.options;
-      const clackOptions = opts.some((o) => o.group)
-        ? flattenGroupedForSelect(opts)
-        : opts.map((opt) => ({ value: opt.value, label: opt.label, hint: opt.hint }));
-
-      const result = await p.select({
+      const result = await new SelectPrompt<T>({
         message: options.message,
-        options: clackOptions as Parameters<typeof p.select<T>>[0]['options'],
+        options: options.options,
         initialValue: options.initialValue,
-      });
+      }).prompt();
 
-      if (p.isCancel(result)) {
-        throw new CancelError('Cancelled');
-      }
-
-      return result as T;
+      return unwrap(result);
     },
 
     async multiselect<T>(options: MultiselectOptions<T>): Promise<T[]> {
-      // Use groupMultiselect when options have groups
-      const msOpts = options.options;
-      if (msOpts.some((o) => o.group)) {
-        const grouped = toGroupedRecord(msOpts);
-        const result = await p.groupMultiselect({
-          message: options.message,
-          options: grouped as any,
-          required: options.required,
-        });
-
-        if (p.isCancel(result)) {
-          throw new CancelError('Cancelled');
-        }
-
-        return result as T[];
-      }
-
-      const result = await p.multiselect({
+      const result = await new MultiselectPrompt<T>({
         message: options.message,
-        options: options.options as Parameters<typeof p.multiselect<T>>[0]['options'],
+        options: options.options,
         initialValues: options.initialValues,
         required: options.required,
-      });
+      }).prompt();
 
-      if (p.isCancel(result)) {
-        throw new CancelError('Cancelled');
-      }
-
-      return result as T[];
+      return unwrap(result);
     },
 
     async confirm(options: ConfirmOptions): Promise<boolean> {
-      const result = await p.confirm({
+      const result = await new ConfirmPrompt({
         message: options.message,
         initialValue: options.initialValue,
-      });
+      }).prompt();
 
-      if (p.isCancel(result)) {
-        throw new CancelError('Cancelled');
-      }
-
-      return result;
+      return unwrap(result);
     },
 
     async text(options: TextOptions): Promise<string> {
-      const result = await p.text({
+      const result = await new TextPrompt({
         message: options.message,
         placeholder: options.placeholder,
         initialValue: options.initialValue,
-        validate: options.validate
-          ? (value: string | undefined) => options.validate!(value ?? '')
-          : undefined,
-      });
+        validate: options.validate,
+      }).prompt();
 
-      if (p.isCancel(result)) {
-        throw new CancelError('Cancelled');
-      }
-
-      return result;
+      return unwrap(result);
     },
 
     async autocomplete<T>(options: AutocompleteOptions<T>): Promise<T> {
-      const result = await patchedAutocomplete({
+      const result = await new AutocompletePrompt<T>({
         message: options.message,
-        options: options.options.map((opt) => ({
-          value: opt.value,
-          label: opt.label,
-          hint: opt.hint,
-        })),
+        options: options.options,
         placeholder: options.placeholder,
         maxItems: options.maxItems,
-      });
+      }).prompt();
 
-      if (p.isCancel(result)) {
-        throw new CancelError('Cancelled');
-      }
-
-      return result as T;
+      return unwrap(result);
     },
   };
 }

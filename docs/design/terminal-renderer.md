@@ -81,3 +81,7 @@ The harness lands before the renderer (already in place):
 4. ~~Delete the plain/interactive branches, the log-buffer machinery, the legacy fixtures, and `symbols.ts`~~ (done).
 
 Remaining: taste review of the gallery diff and the live script (`bun packages/terminal/scripts/gallery.ts`), and a decision on the two open questions above.
+
+## Postscript: prompts
+
+A follow-up took the same approach to the prompter. clack's prompt widgets are replaced by an owned engine (`src/prompter/engine/`): a `PromptBase` class owning raw-mode keypresses, the redraw loop, and cancel semantics, with select, multiselect, confirm, text, and autocomplete widgets on top sharing the reporter's visual vocabulary. `screen.ts` now draws loading through the renderer's LiveRegion. `@clack/prompts` and `@clack/core` are out of the dependency tree entirely, and the previously vendored autocomplete patch (cursor wrapping) is native behaviour in the owned widget.

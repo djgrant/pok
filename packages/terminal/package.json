@@ -1,7 +1,7 @@
 {
   "name": "@pokit/terminal",
   "version": "0.5.1-dev.0",
-  "description": "Terminal UI (reporter + prompter + navigator) for pok CLI applications, built on clack",
+  "description": "Terminal UI (reporter + prompter + navigator) for pok CLI applications",
   "keywords": [
     "cli",
     "command-line",
@@ -10,7 +10,6 @@
     "terminal",
     "pok",
     "pokjs",
-    "clack",
     "reporter",
     "prompter",
     "interactive"
@@ -45,8 +44,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@clack/core": "^1.0.0",
-    "@clack/prompts": "^1.0.0",
     "marked": "^15.0.12",
     "marked-terminal": "^7.3.0",
     "picocolors": "^1.1.1"

@@ -1,7 +1,7 @@
 /**
  * @pokit/terminal
  *
- * The default terminal UI for pok CLI applications, built on clack. Bundles the
+ * The default terminal UI for pok CLI applications. Bundles the
  * three UI surfaces — reporter (event rendering), prompter (interactive input),
  * and navigator (menu presentation policy) — behind a single factory so an app
  * wires them in with one call.
