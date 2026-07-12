@@ -219,8 +219,6 @@ export const post = definePostCommand({
       skipPush: ctx.input?.skipPush ?? ctx.context.skipPush ?? false,
       waitFor: ctx.input ? new Map(Object.entries(ctx.input.published)) : undefined,
     });
-
-    r.reporter.success('Post-publish bookkeeping reconciled.');
   },
 });
 
