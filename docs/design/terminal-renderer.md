@@ -75,9 +75,9 @@ The harness lands before the renderer (already in place):
 
 ## Migration
 
-1. ~~Harness~~ (done – snapshots capture current behaviour, warts included).
-2. Build `renderer/` (theme, frame, live region) beside the existing adapter, with unit tests against the frame directly.
-3. Rewrite `adapter.ts` as the layout policy over the renderer. Gallery diffs show exactly what changed; anything unintended is a bug.
-4. Delete the plain/interactive branches, the log-buffer machinery, and the unused legacy fixtures under `test/reporter/fixtures/`.
+1. ~~Harness~~ (done – snapshots captured the pre-renderer behaviour, warts included).
+2. ~~Build `renderer/` (theme, frame, live region)~~ (done).
+3. ~~Rewrite `adapter.ts` as the layout policy over the renderer~~ (done – the gallery diff in the same commit shows every visual change).
+4. ~~Delete the plain/interactive branches, the log-buffer machinery, the legacy fixtures, and `symbols.ts`~~ (done).
 
-Step 3 is the taste-review checkpoint: regenerate the gallery, read the diff, run the live script.
+Remaining: taste review of the gallery diff and the live script (`bun packages/terminal/scripts/gallery.ts`), and a decision on the two open questions above.

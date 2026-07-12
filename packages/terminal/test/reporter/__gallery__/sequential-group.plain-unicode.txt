@@ -1,7 +1,10 @@
 # sequential-group [plain-unicode]
 # A group of sequential activities, all succeeding
 
-┌Build└
-  ◇ Compile
-  ◇ Bundle
-┌✔└
+┌  Build
+│
+◇  Compile
+│
+◇  Bundle
+│
+└  ✔ Done

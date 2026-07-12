@@ -5,8 +5,8 @@
 │
 ◇  Lint
 │
-◆  Typecheck
+◇  Typecheck
 │
-◆  Test
+◇  Test
 │
 └  ✔ Done

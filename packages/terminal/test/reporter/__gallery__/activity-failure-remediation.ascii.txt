@@ -3,10 +3,10 @@
 
 [Pre-flight checks]
   [ERR] Docker daemon is not running
-|
-|     To fix:
-|       - Start Docker Desktop, or
-|       - Run 'sudo systemctl start docker' (Linux)
-|
-|     More info: https://docs.docker.com/get-started/
+
+    To fix:
+      - Start Docker Desktop, or
+      - Run 'sudo systemctl start docker' (Linux)
+
+    More info: https://docs.docker.com/get-started/
 [Failed]

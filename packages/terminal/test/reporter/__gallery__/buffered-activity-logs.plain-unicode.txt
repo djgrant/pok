@@ -1,9 +1,14 @@
 # buffered-activity-logs [plain-unicode]
 # Info logs emitted during activities, flushed after each completes
 
-┌Reconcile post-publish bookkeeping└
-  ◇ Repin root deps
-│  ● Root deps already pinned to latest published.
-  ◇ Advance workspace versions
-│  ● All workspace versions already ahead of published.
-┌✔└
+┌  Reconcile post-publish bookkeeping
+│
+◇  Repin root deps
+│
+●  Root deps already pinned to latest published.
+│
+◇  Advance workspace versions
+│
+●  All workspace versions already ahead of published.
+│
+└  ✔ Done

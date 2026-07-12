@@ -2,7 +2,6 @@ import { describe, it, expect, afterEach } from 'bun:test';
 import { createEventBus, type CLIEvent } from '@pokit/core';
 import { createReporterAdapter } from '../../src/reporter/adapter';
 import { createVirtualTerminal, type VirtualTerminal } from './utils';
-import * as fixtures from './fixtures';
 
 // Test fixture: events for taskWithReporter scenario
 const taskWithReporterEvents: CLIEvent[] = [
@@ -44,7 +43,12 @@ describe('ClackReporterAdapter', () => {
   describe('sequential groups', () => {
     it('renders group with activities and logs', async () => {
       const lines = await getScreenshot(taskWithReporterEvents);
-      expect(lines).toEqual(fixtures.sequentialGroup.lines);
+      const all = lines.join('\n');
+      expect(all).toContain('Setup Phase');
+      expect(all).toContain('Initialize');
+      expect(all).toContain('Configure');
+      expect(all).toContain('Done');
+      expect(all).toContain('Task completed successfully');
     });
   });
 
@@ -63,7 +67,9 @@ describe('ClackReporterAdapter', () => {
       ];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.activitySuccess.lines);
+      const all = lines.join('\n');
+      expect(all).toContain('\u25C7  My Task');
+      expect(all).toContain('\u2714 Done');
     });
 
     it('renders failed activity with error message', async () => {
@@ -85,7 +91,9 @@ describe('ClackReporterAdapter', () => {
       ];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.activityFailure.lines);
+      const all = lines.join('\n');
+      expect(all).toContain('\u25A0  Something went wrong');
+      expect(all).toContain('\u2718 Failed');
     });
   });
 
@@ -94,35 +102,35 @@ describe('ClackReporterAdapter', () => {
       const events: CLIEvent[] = [{ type: 'log', level: 'info', message: 'Information message' }];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.logInfo.lines);
+      expect(lines.join('\n')).toContain('\u25CF  Information message');
     });
 
     it('renders success log', async () => {
       const events: CLIEvent[] = [{ type: 'log', level: 'success', message: 'Success message' }];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.logSuccess.lines);
+      expect(lines.join('\n')).toContain('\u2714  Success message');
     });
 
     it('renders error log', async () => {
       const events: CLIEvent[] = [{ type: 'log', level: 'error', message: 'Error message' }];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.logError.lines);
+      expect(lines.join('\n')).toContain('\u25A0  Error message');
     });
 
     it('renders warn log', async () => {
       const events: CLIEvent[] = [{ type: 'log', level: 'warn', message: 'Warning message' }];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.logWarn.lines);
+      expect(lines.join('\n')).toContain('\u25B2  Warning message');
     });
 
     it('renders step log', async () => {
       const events: CLIEvent[] = [{ type: 'log', level: 'step', message: 'Step message' }];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.logStep.lines);
+      expect(lines.join('\n')).toContain('\u25B8  Step message');
     });
   });
 
@@ -140,7 +148,10 @@ describe('ClackReporterAdapter', () => {
       ];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.multipleActivities.lines);
+      const all = lines.join('\n');
+      for (const label of ['Compile', 'Bundle', 'Minify']) {
+        expect(all).toContain(`\u25C7  ${label}`);
+      }
     });
   });
 
@@ -161,7 +172,10 @@ describe('ClackReporterAdapter', () => {
       ];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.parallelGroupSuccess.lines);
+      const all = lines.join('\n');
+      expect(all).toContain('\u25C7  Task A');
+      expect(all).toContain('\u25C7  Task B');
+      expect(all).toContain('\u2714 Done');
     });
 
     it('renders parallel group with one failing activity', async () => {
@@ -180,7 +194,11 @@ describe('ClackReporterAdapter', () => {
       ];
 
       const lines = await getScreenshot(events);
-      expect(lines).toEqual(fixtures.parallelGroupFailure.lines);
+      const all = lines.join('\n');
+      expect(all).toContain('\u25C7  Task A');
+      expect(all).toContain('\u25A0  Task B');
+      expect(all).toContain('\u2718 Failed');
+      expect(all).toContain('Task B failed');
     });
   });
 

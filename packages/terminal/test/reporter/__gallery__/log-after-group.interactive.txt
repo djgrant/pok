@@ -7,5 +7,4 @@
 │
 └  ✔ Done
 
-│
-◆  Deployment reconciled.
+✔  Deployment reconciled.
