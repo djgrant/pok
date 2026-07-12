@@ -28,8 +28,8 @@ importers:
         specifier: ^10.3.2
         version: 10.3.2
       pokit:
-        specifier: 0.3.1
-        version: 0.3.1
+        specifier: 0.3.2
+        version: 0.3.2
       semver:
         specifier: ^7.7.0
         version: 7.7.3
@@ -525,8 +525,8 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
-  pokit@0.3.1:
-    resolution: {integrity: sha512-CIgP7jTdCqOc/abpOVQtXIxKyB5V5lVbdOm0IPHF34LB7SGV8DVow4Yl0W41TP/+TxS2Xvp5S0nvJP1vuBEXjw==}
+  pokit@0.3.2:
+    resolution: {integrity: sha512-x5oitfBVlyVPSDLTRTDxU0nU6o2tv0NOGwnq/SkEbLpA0cH2j/2tds/RhnGlQf4V5F7lhF/Aw5ZZY//RfL+7tg==}
     engines: {bun: '>=1.0.0'}
     hasBin: true
 
@@ -977,7 +977,7 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  pokit@0.3.1: {}
+  pokit@0.3.2: {}
 
   queue-microtask@1.2.3: {}
 
