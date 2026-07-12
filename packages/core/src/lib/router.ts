@@ -263,10 +263,45 @@ export async function buildCommandTree(
     // 3. Validate aliases
     validateAliases(tree);
 
+    // 4. Warn on spelling overlap between lifecycle hook nodes and colon-split
+    // pm scripts (a script named "pre:publish" mounts at the path
+    // "pre publish", so both invocations exist but mean different things)
+    warnOnHookSpellingOverlap(tree, reporter);
+
     return tree;
   } catch (error) {
     reporter.error(`Failed to build command tree: ${error}`);
     throw error;
+  }
+}
+
+/**
+ * Warn when a lifecycle hook node's literal name (e.g. `pre:publish`) also
+ * exists as a real command path (`pre` -> `publish`), which happens when a
+ * package.json script with the same colon name is mounted via pmScripts. Both
+ * spellings remain invokable and unambiguous to the parser, but a user who
+ * knows the script as `pre:publish` (its `npm run` name) would reach the hook
+ * instead — so make the split explicit.
+ */
+function warnOnHookSpellingOverlap(tree: CommandTree, reporter: Reporter): void {
+  for (const [name, node] of tree) {
+    if (!node.config.hidden || !/^(pre|post):/.test(name)) continue;
+
+    let level: CommandTree | undefined = tree;
+    let matched: CommandNode | undefined;
+    for (const segment of name.split(/[:.]/)) {
+      matched = level?.get(segment);
+      if (!matched) break;
+      level = matched.children;
+    }
+
+    if (matched) {
+      reporter.warn(
+        `"${name}" is a lifecycle command, but a command also exists at "${name.split(/[:.]/).join(' ')}" ` +
+          `(likely a package.json script named "${name}"). ` +
+          `Use "${name.split(/[:.]/).join(' ')}" for the script and "${name}" for the lifecycle command.`
+      );
+    }
   }
 }
 
@@ -512,7 +547,8 @@ function buildMenuOptions(
     options.push({ value: '__all__', label: 'all - Run all commands' });
   }
 
-  for (const child of [...children].sort((a, b) => a.segment.localeCompare(b.segment))) {
+  const visible = children.filter((child) => !child.config.hidden);
+  for (const child of [...visible].sort((a, b) => a.segment.localeCompare(b.segment))) {
     const description = child.config.description || child.config.label;
     options.push({
       value: child.segment,
@@ -673,6 +709,43 @@ async function executeLeaf(
 
   // Build hook context
   const extraArgs = await ensureArgs(parsed.rest, config, prompter, allowPrompt);
+
+  const hooks = config.hooks;
+  const runnerBase = {
+    cwd: projectRoot,
+    context: resolvedContext,
+    extraArgs,
+    quiet,
+    signal,
+    eventBus,
+    prompter,
+  };
+
+  // Lifecycle: pre.checks -> pre.run (context merge) -> main.checks ->
+  // main.run -> post.checks -> post.run (post only on success).
+  if (hooks?.pre) {
+    await runPreChecks(hooks.pre as CommandConfig, { ...resolvedContext, extraArgs, cwd: projectRoot }, reporter);
+    const preRunner = createRunner({
+      ...runnerBase,
+      timeout: hooks.pre.timeout ?? config.timeout,
+      commandPath: `pre:${node.path.join('.')}`,
+    });
+    try {
+      const merged = await hooks.pre.run(preRunner, {
+        context: resolvedContext,
+        globalContext: ctx.globalContext,
+        extraArgs,
+        cwd: projectRoot,
+      });
+      // Merge into the same object so the main run context and runner see it
+      if (merged && typeof merged === 'object') {
+        Object.assign(resolvedContext, merged);
+      }
+    } finally {
+      preRunner.dispose?.();
+    }
+  }
+
   const hookCtx = {
     ...resolvedContext,
     extraArgs,
@@ -695,20 +768,15 @@ async function executeLeaf(
   appendHistory(appName, node.path, args);
 
   // Run main execution with runner and context
+  let result: unknown;
   if (config.run) {
     const runner = createRunner({
-      cwd: projectRoot,
-      context: resolvedContext,
-      extraArgs,
+      ...runnerBase,
       timeout: config.timeout,
-      quiet,
-      signal,
-      eventBus,
-      prompter,
       commandPath: node.path.join(' '),
     });
     try {
-      const result = await config.run(runner, runCtx);
+      result = await config.run(runner, runCtx);
 
       // Handle structured output if command defines an output schema
       if (config.output && result !== undefined) {
@@ -716,6 +784,22 @@ async function executeLeaf(
       }
     } finally {
       runner.dispose?.();
+    }
+  }
+
+  // Post-command: runs only when the main run succeeded (a throw above skips
+  // this). Receives the main run's return value as `input`.
+  if (hooks?.post) {
+    await runPreChecks(hooks.post as CommandConfig, hookCtx, reporter);
+    const postRunner = createRunner({
+      ...runnerBase,
+      timeout: hooks.post.timeout ?? config.timeout,
+      commandPath: `post:${node.path.join('.')}`,
+    });
+    try {
+      await hooks.post.run(postRunner, { ...runCtx, input: result });
+    } finally {
+      postRunner.dispose?.();
     }
   }
 }
@@ -1163,7 +1247,9 @@ async function selectFromMenu(
   ctx: RouterContext
 ): Promise<MenuSelectionResult | null> {
   const { reporter, prompter, navigator, appName } = ctx;
-  const topLevel = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
+  const topLevel = Array.from(tree.values())
+    .filter((node) => !node.config.hidden)
+    .sort((a, b) => a.segment.localeCompare(b.segment));
 
   if (topLevel.length === 0) {
     reporter.error('No commands available');
@@ -1406,7 +1492,7 @@ function renderRootHelp(
   appName: string,
   globalContext?: ContextDef
 ): void {
-  const topLevelCommands = Array.from(tree.values());
+  const topLevelCommands = Array.from(tree.values()).filter((node) => !node.config.hidden);
   const helpText = generateRootHelp({
     appName,
     commands: topLevelCommands,
@@ -1568,7 +1654,9 @@ export async function run(args: string[], config: RouterConfig): Promise<void> {
 
     if (!match) {
       const unknownCommand = argsWithoutGlobalContext[0];
-      const availableCommands = Array.from(tree.keys());
+      const availableCommands = Array.from(tree.entries())
+        .filter(([, node]) => !node.config.hidden)
+        .map(([name]) => name);
       const suggestion = findClosestMatch(unknownCommand ?? '', availableCommands);
 
       let errorMessage = `Unknown command: ${unknownCommand}`;

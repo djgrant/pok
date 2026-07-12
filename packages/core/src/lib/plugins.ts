@@ -9,6 +9,9 @@ import type {
   MountResult,
   Mountable,
   MountableLike,
+  PreCommandConfig,
+  PostCommandConfig,
+  RunFn,
 } from './command';
 import { getRuntime } from '../runtime';
 import { parsePmCommand, resolveWorkspaceTarget, createPmAction, type ScriptInfo } from './pm';
@@ -100,6 +103,24 @@ export function tagNodes(node: import('./command').CommandNode, sourceId: string
 // =============================================================================
 // Built-in Mountables
 // =============================================================================
+
+/**
+ * Adapt a pre/post lifecycle config into a standalone, always-hidden command
+ * node for direct invocation (`mycli pre:deploy`). When run this way a
+ * post-command receives no `input` — its run context simply lacks the field.
+ */
+function toHookNodeConfig(hook: PreCommandConfig | PostCommandConfig): CommandConfig {
+  const { label, description, context, pre, timeout, run } = hook;
+  return {
+    label,
+    description,
+    context,
+    pre,
+    timeout,
+    run: run as RunFn,
+    hidden: true,
+  };
+}
 
 /**
  * Helper to insert into tree
@@ -249,13 +270,39 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
         const filePath = path.join(dir, file);
         try {
           const module = await import(filePath);
-          if (!module.command) continue;
-
           const commandPath = file.replace(/\.[jt]sx?$/, '');
+
+          if (!module.command) {
+            if (module.pre || module.post) {
+              context.reporter.warn(
+                `Command file "${file}" exports pre/post lifecycle commands but no main command; ignoring it`
+              );
+            }
+            continue;
+          }
+
           const segments = commandPath.split('.');
           const config = module.command as CommandConfig;
+          const pre = module.pre as PreCommandConfig | undefined;
+          const post = module.post as PostCommandConfig | undefined;
+
+          if (pre || post) {
+            config.hooks = { pre, post };
+          }
 
           insertIntoTree(tree, segments, config, filePath);
+
+          // Lifecycle commands mount as hidden top-level nodes with literal
+          // colon names (`pre:deploy`, `post:generate.types`). The colon keeps
+          // them out of the segment namespace: argv matching is literal
+          // per-token, so these can never collide with real command paths or
+          // colon-split pm scripts.
+          if (pre) {
+            insertIntoTree(tree, [`pre:${commandPath}`], toHookNodeConfig(pre), filePath);
+          }
+          if (post) {
+            insertIntoTree(tree, [`post:${commandPath}`], toHookNodeConfig(post), filePath);
+          }
         } catch (e) {
           context.reporter.warn(
             `Failed to load command "${file}": ${e instanceof Error ? e.message : String(e)}`

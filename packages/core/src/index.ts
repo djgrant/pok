@@ -9,7 +9,14 @@
 // Core definitions
 // =============================================================================
 
-export { defineCommand } from './lib/command';
+export { defineCommand, definePreCommand, definePostCommand } from './lib/command';
+export type {
+  PreCommandConfig,
+  PostCommandConfig,
+  PreRunFn,
+  PostRunContext,
+  CommandHooks,
+} from './lib/command';
 export { defineTask } from './lib/task';
 export { defineEnv, getEnvKeys } from './lib/env';
 export { defineEnvResolver, validateResolverKeys, createStaticEnvResolver } from './lib/resolver';

@@ -227,6 +227,7 @@ function getAvailableCommands(currentNode: CommandNode | null, tree: CommandTree
   if (currentNode === null) {
     // At root level - return top-level commands and their aliases
     for (const [name, node] of tree) {
+      if (node.config.hidden) continue;
       commands.push(name);
       if (node.config.aliases) {
         commands.push(...node.config.aliases);

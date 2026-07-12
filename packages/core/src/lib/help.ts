@@ -559,8 +559,10 @@ export function generateRecursiveHelp(options: RecursiveHelpOptions): string {
     lines.push('');
   }
 
-  // All commands
-  const sorted = Array.from(tree.values()).sort((a, b) => a.segment.localeCompare(b.segment));
+  // All commands (lifecycle hook nodes are hidden)
+  const sorted = Array.from(tree.values())
+    .filter((node) => !node.config.hidden)
+    .sort((a, b) => a.segment.localeCompare(b.segment));
   for (const node of sorted) {
     generateNodeHelp(node, appName, lines);
   }

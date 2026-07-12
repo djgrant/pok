@@ -546,6 +546,29 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
    * This is the primary mechanism for plugins and composition.
    */
   mount?: MountableLike;
+
+  /**
+   * @internal
+   * Hidden from menus, help, and completions. Set by the framework for
+   * lifecycle hook nodes (`pre:*` / `post:*`); not part of the public API.
+   */
+  hidden?: boolean;
+
+  /**
+   * @internal
+   * Lifecycle hooks discovered alongside this command (the `pre` / `post`
+   * exports of its route file). Attached by the directory loader.
+   */
+  hooks?: CommandHooks;
+};
+
+/**
+ * Lifecycle hooks attached to a command.
+ * @internal
+ */
+export type CommandHooks = {
+  pre?: PreCommandConfig<any>;
+  post?: PostCommandConfig<any, any>;
 };
 
 /**
@@ -607,6 +630,125 @@ export function defineCommand<C extends ContextDef>(
  * ```
  */
 export function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandConfig<C> {
+  return config;
+}
+
+/**
+ * Fields a lifecycle command shares with a regular command.
+ * Hooks cannot have children, output schemas, aliases, or mounts.
+ */
+type HookCommandBase<C extends ContextDef> = Pick<
+  CommandConfig<C>,
+  'label' | 'description' | 'context' | 'pre' | 'timeout'
+>;
+
+/**
+ * Run function for a pre-command.
+ *
+ * May return an object; its entries are merged into the main command's
+ * resolved context before the main command's checks run.
+ */
+export type PreRunFn<C extends ContextDef = any> = (
+  runner: Runner<InferContext<C>>,
+  ctx: RunContext<C>
+) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
+
+/**
+ * Pre-command configuration. See {@link definePreCommand}.
+ */
+export type PreCommandConfig<C extends ContextDef = ContextDef> = HookCommandBase<C> & {
+  run: PreRunFn<C>;
+};
+
+/**
+ * Run context for a post-command.
+ *
+ * `input` carries the main command's return value (typed by its `output`
+ * schema) when the post-command runs as part of the main command's lifecycle.
+ * It is `undefined` when the post-command is invoked directly
+ * (`mycli post:deploy`), so post-commands must degrade gracefully without it.
+ */
+export type PostRunContext<C extends ContextDef = any, I = unknown> = RunContext<C> & {
+  input?: I;
+};
+
+/**
+ * Post-command configuration. See {@link definePostCommand}.
+ */
+export type PostCommandConfig<
+  C extends ContextDef = ContextDef,
+  I extends z.ZodType = z.ZodType,
+> = HookCommandBase<C> & {
+  /**
+   * Schema for the main command's return value, typically the same schema as
+   * the main command's `output`. Should be `.optional()`-tolerant in spirit:
+   * `ctx.input` is undefined on direct invocation.
+   */
+  input?: I;
+  run: (
+    runner: Runner<InferContext<C>>,
+    ctx: PostRunContext<C, z.infer<I>>
+  ) => Promise<void> | void;
+};
+
+/**
+ * Define a pre-command: a lifecycle command exported as `pre` from the same
+ * route file as its main command.
+ *
+ * Execution order: pre checks -> pre run -> main checks -> main run.
+ * A returned object is merged into the main command's resolved context.
+ *
+ * Pre-commands are always hidden from menus, help, and completions, but are
+ * directly invokable as `mycli pre:<command>`.
+ *
+ * @example
+ * ```ts
+ * // commands/deploy.ts
+ * export const pre = definePreCommand({
+ *   label: 'Prepare deploy',
+ *   run: async (r) => {
+ *     await r.exec('terraform plan');
+ *     return { planned: true };  // merged into deploy's context
+ *   },
+ * });
+ * ```
+ */
+export function definePreCommand<C extends ContextDef>(
+  config: PreCommandConfig<C>
+): PreCommandConfig<C> {
+  return config;
+}
+
+/**
+ * Define a post-command: a lifecycle command exported as `post` from the same
+ * route file as its main command.
+ *
+ * Runs after the main command succeeds (never on failure), receiving the main
+ * command's return value as `ctx.input`, typed by the `input` schema.
+ * Also directly invokable as `mycli post:<command>`, in which case
+ * `ctx.input` is undefined and the post-command must recompute what it needs.
+ *
+ * @example
+ * ```ts
+ * // commands/publish.ts
+ * export const post = definePostCommand({
+ *   label: 'Post-publish bookkeeping',
+ *   input: PublishResult,
+ *   run: async (r, ctx) => {
+ *     await reconcile(r, { waitFor: ctx.input?.published });
+ *   },
+ * });
+ * ```
+ */
+export function definePostCommand<C extends ContextDef, I extends z.ZodType>(
+  config: PostCommandConfig<C, I> & { input: I }
+): PostCommandConfig<C, I>;
+export function definePostCommand<C extends ContextDef>(
+  config: PostCommandConfig<C>
+): PostCommandConfig<C>;
+export function definePostCommand<C extends ContextDef, I extends z.ZodType>(
+  config: PostCommandConfig<C, I>
+): PostCommandConfig<C, I> {
   return config;
 }
 
