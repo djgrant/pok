@@ -13,4 +13,8 @@ export default defineConfig({
   commandsDir: './commands',
   appName: 'pok',
   pmScripts: ['quick-check'],
+  // Dogfood the minimal theme preset. The installed @pokit/terminal (>=0.6.0)
+  // supports it; the theme flows through once the pokit launcher >=0.3.2 is
+  // installed (earlier launchers ignore it harmlessly).
+  theme: { preset: 'minimal' },
 });
