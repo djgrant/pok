@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   computeAheadVersion,
+  computeReconcileBump,
   computeRepins,
   findBrokenInvariant,
   isPokitPackage,
@@ -157,6 +158,26 @@ describe('computeAheadVersion', () => {
 
   test('throws on garbage', () => {
     expect(() => computeAheadVersion('not-a-version')).toThrow();
+  });
+});
+
+describe('computeReconcileBump', () => {
+  test('returns null when the workspace is already strictly ahead (idempotent)', () => {
+    expect(computeReconcileBump('0.4.1-dev.0', '0.4.0')).toBeNull();
+    expect(computeReconcileBump('0.5.0', '0.4.0')).toBeNull();
+  });
+
+  test('opens the next dev version when workspace equals published', () => {
+    expect(computeReconcileBump('0.4.0', '0.4.0')).toBe('0.4.1-dev.0');
+  });
+
+  test('advances past published when workspace lags behind', () => {
+    expect(computeReconcileBump('0.3.1', '0.4.0')).toBe('0.4.1-dev.0');
+  });
+
+  test('throws on garbage', () => {
+    expect(() => computeReconcileBump('nope', '0.4.0')).toThrow();
+    expect(() => computeReconcileBump('0.4.0', 'nope')).toThrow();
   });
 });
 

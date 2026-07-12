@@ -119,6 +119,24 @@ export function computeAheadVersion(published: string): string {
   return next;
 }
 
+/**
+ * Reconcile bump: given a workspace version and the latest *published* version,
+ * return the version the workspace should be bumped to, or null if it is already
+ * strictly ahead. This is what makes `pok post publish` idempotent — once the
+ * workspace sits ahead of the registry, re-running is a no-op.
+ */
+export function computeReconcileBump(
+  workspaceVersion: string,
+  publishedVersion: string,
+): string | null {
+  const w = semver.valid(workspaceVersion);
+  const p = semver.valid(publishedVersion);
+  if (!w) throw new Error(`Invalid workspace version: "${workspaceVersion}"`);
+  if (!p) throw new Error(`Invalid published version: "${publishedVersion}"`);
+  if (semver.gt(w, p)) return null;
+  return computeAheadVersion(p);
+}
+
 export interface InvariantViolation {
   name: string;
   version: string;

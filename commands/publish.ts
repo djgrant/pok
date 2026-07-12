@@ -1,21 +1,19 @@
-import { readdirSync, existsSync, realpathSync } from 'node:fs';
+import { readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { defineCommand } from '@pokit/core';
 import { $ } from 'bun';
 import {
-  applyRepins,
   computeAheadVersion,
   computeRepins,
   findBrokenInvariant,
   isPokitPackage,
-  isWorkspaceLinked,
   readPackageJson,
   readRootDeps,
   readRootPins,
-  setPackageVersion,
   type Repin,
 } from './lib/release';
+import { reconcilePostPublish } from './lib/post-publish';
 
 const SCOPED_PACKAGES = [
   '@pokit/core',
@@ -160,101 +158,13 @@ export const command = defineCommand({
     }
 
     // --- Post-publish bookkeeping (keeps the dogfooding invariant) ---------
-    await r.group('Post-publish bookkeeping', { layout: 'sequence' }, async (g) => {
-      await g.activity('Repin root deps to published versions', async (a) => {
-        applyRepins(rootPackageJsonPath, repins);
-        if (repins.length === 0) a.info('No root deps needed repinning.');
-        for (const repin of repins) a.info(`${repin.key}: ${repin.from} -> ${repin.to}`);
-      });
-
-      await g.activity('Advance workspace versions past published', async (a) => {
-        for (const [name, version] of toPublish) {
-          const pkg = workspacePackages.get(name);
-          if (!pkg) continue;
-          const next = computeAheadVersion(version);
-          setPackageVersion(join(pkg.dir, 'package.json'), next);
-          a.info(`${name}: ${version} -> ${next}`);
-        }
-      });
-
-      await g.activity('Wait for published versions to land on the registry', async (a) => {
-        // npm is eventually consistent: for a few seconds after publish the
-        // versions we just repinned to are not yet fetchable, so an immediate
-        // `pnpm install` would fail with ERR_PNPM_NO_MATCHING_VERSION even
-        // though the publish succeeded. Poll the registry until every version
-        // is visible before we try to install it.
-        const pending = new Map(toPublish);
-        const maxAttempts = 30;
-        const intervalMs = 2000;
-        for (let attempt = 1; attempt <= maxAttempts && pending.size > 0; attempt++) {
-          for (const [name, version] of [...pending]) {
-            const result = await $`npm view ${name}@${version} version --registry ${registry}`
-              .quiet()
-              .nothrow();
-            if (result.exitCode === 0 && result.stdout.toString().trim() === version) {
-              a.info(`${name}@${version} is live`);
-              pending.delete(name);
-            }
-          }
-          if (pending.size > 0) await Bun.sleep(intervalMs);
-        }
-        if (pending.size > 0) {
-          const stuck = [...pending].map(([name, version]) => `${name}@${version}`).join(', ');
-          throw new Error(
-            `Timed out after ${(maxAttempts * intervalMs) / 1000}s waiting for these versions to appear on ${registry}: ${stuck}`,
-          );
-        }
-      });
-
-      await g.activity('Reinstall to refresh lockfile', async () => {
-        await r.exec('pnpm install');
-      });
-
-      await g.activity('Verify root resolves registry versions', async (a) => {
-        const failures: string[] = [];
-        const pins = readRootPins(rootPackageJsonPath);
-        for (const key of Object.keys(readRootDeps(rootPackageJsonPath))) {
-          const depPath = join(repoRoot, 'node_modules', key);
-          if (!existsSync(depPath)) continue;
-          const real = realpathSync(depPath);
-          const pkg = readPackageJson(join(real, 'package.json'));
-          if (!pkg.name || !isPokitPackage(pkg.name)) continue;
-          const pinned = pins.get(pkg.name);
-          if (isWorkspaceLinked(real, repoRoot)) {
-            failures.push(`${key} resolved to workspace source: ${real}`);
-          } else if (pinned && pkg.version !== pinned) {
-            failures.push(`${key} resolved to ${pkg.version}, expected pinned ${pinned}`);
-          } else {
-            a.info(`${key} -> ${pkg.name}@${pkg.version} (registry)`);
-          }
-        }
-        if (failures.length > 0) {
-          throw new Error(
-            `Root dependencies are NOT resolving to the registry after repin:\n${failures.map((f) => `  - ${f}`).join('\n')}`,
-          );
-        }
-      });
-
-      await g.activity('Commit bookkeeping changes', async () => {
-        const files = [
-          'package.json',
-          'pnpm-lock.yaml',
-          ...[...toPublish.keys()]
-            .map((name) => workspacePackages.get(name))
-            .filter((pkg): pkg is { dir: string; version: string } => pkg !== undefined)
-            .map((pkg) => join(pkg.dir, 'package.json')),
-        ];
-        await r.exec(['git', 'add', ...files]);
-        await r.exec([
-          'git',
-          'commit',
-          '-m',
-          'chore(release): repin root to published versions, open next dev versions',
-        ]);
-        if (!ctx.context.skipPush) {
-          await r.exec('git push');
-        }
-      });
+    // Shared, idempotent reconcile — same path as `pok post-publish`. We pass
+    // the just-published versions as `waitFor` so it polls npm (eventually
+    // consistent) until they are fetchable before repinning/installing.
+    await reconcilePostPublish(r, {
+      registry,
+      skipPush: ctx.context.skipPush ?? false,
+      waitFor: toPublish,
     });
 
     r.reporter.success(`Published ${group.packages.length} packages to ${registry}`);
