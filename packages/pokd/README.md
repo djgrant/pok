@@ -30,3 +30,7 @@ On macOS:
 On other platforms, `pokd` asks `Allow? [y/N]` on its own stdin.
 
 A denial (or any malformed request) responds with `decision: "deny"` — the broker fails closed.
+
+## Approver frontends
+
+A frontend is a separate process that shows each request to a human and returns the decision; when one is registered it becomes the preferred approver, ahead of the local chain above. The wire format between `pokd` and a frontend is the trust-broker protocol, specified in [PROTOCOL.md](./PROTOCOL.md).
