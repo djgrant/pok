@@ -12,8 +12,8 @@ export interface LauncherSkeleton {
   appDir: string;
   /** Working directory for running commands */
   cwd: string;
-  /** Directory containing command files */
-  commandsDir: string;
+  /** Directory containing command files (optional — defaults to './commands' when the directory is present) */
+  commandsDir?: string;
   /** App name for CLI display */
   appName?: string;
   /** Version string */

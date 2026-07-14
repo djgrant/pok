@@ -229,6 +229,9 @@ export const command = defineCommand({
   });
 
   describe('when commands directory does not exist', () => {
+    // A missing commands directory is no longer an error — commands can come
+    // from pmScripts, pmCommands, extraCommands or plugins, so an absent
+    // directory simply mounts nothing.
     let tempDir: string;
 
     beforeAll(() => {
@@ -269,8 +272,8 @@ export default defineConfig({
       fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
-    it('shows error about missing commands directory', async () => {
-      const proc = spawn(['bun', CMD_BIN], {
+    it('does not error about a missing commands directory', async () => {
+      const proc = spawn(['bun', CMD_BIN, '--help'], {
         cwd: tempDir,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -278,8 +281,8 @@ export default defineConfig({
       const exitCode = await proc.exited;
       const stderr = await new Response(proc.stderr).text();
 
-      expect(exitCode).toBe(1);
-      expect(stderr).toContain('Commands directory not found');
+      expect(exitCode).toBe(0);
+      expect(stderr).not.toContain('Commands directory not found');
     });
   });
 });

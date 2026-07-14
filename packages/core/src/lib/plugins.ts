@@ -360,12 +360,12 @@ export function fromConfig(...pathSegments: string[]): Mountable {
     }
 
     const appDir = path.resolve(configDir, resolvedConfig.appDir);
-    const commandsDir = path.resolve(appDir, resolvedConfig.commandsDir);
+    const commandsDir = path.resolve(appDir, resolvedConfig.commandsDir ?? './commands');
     const projectRoot = path.resolve(configDir, resolvedConfig.cwd);
 
-    if (!fs.existsSync(commandsDir)) {
-      throw new Error(`Commands directory not found: ${commandsDir}`);
-    }
+    // A missing commands directory is not an error: commands can come from
+    // pmScripts, pmCommands or plugins. fromDirectory tolerates an absent
+    // directory and mounts nothing.
 
     const subConfig = {
       ...context.config,

@@ -157,17 +157,12 @@ Run \`pok init\` to create a pok.config.ts file.
   // Step 4: Resolve paths relative to config file location
   // appDir is relative to configDir, commandsDir is relative to appDir
   const appDir = path.resolve(configDir, config.appDir);
-  const commandsDir = path.resolve(appDir, config.commandsDir);
+  const commandsDir = path.resolve(appDir, config.commandsDir ?? './commands');
   const cwd = path.resolve(configDir, config.cwd);
 
-  // Verify commands directory exists
-  if (!fs.existsSync(commandsDir)) {
-    console.error(`Error: Commands directory not found: ${commandsDir}\n`);
-    console.error(
-      `The commandsDir path in ${configPath} resolves to a directory that doesn't exist.`
-    );
-    process.exit(1);
-  }
+  // A missing commands directory is not an error: commands can come from
+  // pmScripts, pmCommands, extraCommands or plugins. fromDirectory tolerates
+  // an absent directory and mounts nothing.
 
   // Step 5: Resolve default terminal UI for any UI surface the config omitted.
   const ui = await resolveTerminalDefaults(configDir, config, configModule);

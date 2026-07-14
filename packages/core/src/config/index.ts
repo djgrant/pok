@@ -138,7 +138,7 @@ export const PokConfigSchema = z.object({
 export interface ResolvedPokConfig extends LauncherSkeleton {
   appDir: string;
   cwd: string;
-  commandsDir: string;
+  commandsDir?: string;
   appName?: string;
   version?: string;
   reporter?: ReporterAdapter;
@@ -204,10 +204,12 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
 
   const cfg = result.data;
 
+  // commandsDir has no hard default: it is fully optional. When omitted, the
+  // launcher still auto-discovers a './commands' directory if one is present,
+  // but its absence is never an error.
   return {
     appDir: '.',
     cwd: '.',
-    commandsDir: './commands',
     ...cfg,
   } as ResolvedPokConfig;
 }
