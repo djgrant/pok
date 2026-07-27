@@ -1,4 +1,4 @@
-import type { DocCategory } from "../../../packages/templates/docs";
+import type { DocCategory } from "@notation/docs/config";
 
 export const categories: DocCategory[] = [
   {
@@ -82,7 +82,6 @@ export const categories: DocCategory[] = [
         links: [
           { label: "Prompter", slug: "api/prompter" },
           { label: "Navigator", slug: "api/navigator" },
-          { label: "Completion", slug: "api/completion" },
         ],
       },
       {
