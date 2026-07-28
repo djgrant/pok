@@ -1,4 +1,5 @@
 import { defineConfig } from '@pokit/core';
+import { docs } from 'pok-plugins';
 
 // DOGFOOD NOTE: this config tracks the LAST PUBLISHED release (v0.3.0) so the
 // repo's own `pok` tooling can never be broken by in-progress workspace changes.
@@ -17,4 +18,5 @@ export default defineConfig({
   // supports it; the theme flows through once the pokit launcher >=0.3.2 is
   // installed (earlier launchers ignore it harmlessly).
   theme: { preset: 'minimal' },
+  plugins: [docs({ name: 'pok-docs' })],
 });
