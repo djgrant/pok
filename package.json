@@ -25,8 +25,8 @@
     "build": "pnpm -r --if-present run build"
   },
   "devDependencies": {
-    "@pokit/core": "npm:@pokit/core@0.6.0",
-    "@pokit/terminal": "npm:@pokit/terminal@0.6.0",
+    "@pokit/core": "npm:@pokit/core@0.8.3",
+    "@pokit/terminal": "npm:@pokit/terminal@0.8.3",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "pok-plugins": "github:djgrant/pok-plugins",
