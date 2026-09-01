@@ -227,23 +227,50 @@ function applyProjectRoot(
   }
 }
 
+export type FromDirectoryOptions = {
+  /**
+   * When the directory does not exist. `'warn'` (default) is for an explicit
+   * path (typos, percent-encoded footguns). `'silent'` is for the implicit
+   * `./commands` default so other mountables can fill the tree without noise.
+   */
+  missing?: 'warn' | 'silent';
+};
+
+function peelDirectoryArgs(
+  args: Array<string | FromDirectoryOptions>
+): { pathSegments: string[]; options: FromDirectoryOptions } {
+  const last = args[args.length - 1];
+  if (last && typeof last === 'object') {
+    return { pathSegments: args.slice(0, -1) as string[], options: last };
+  }
+  return { pathSegments: args as string[], options: {} };
+}
+
+function resolveDirectoryPath(pathSegments: string[]): string {
+  if (pathSegments.length === 0) {
+    throw new Error('fromDirectory() requires a path to a commands directory');
+  }
+  if (pathSegments[0]!.includes('://')) {
+    const [baseUrl, ...rest] = pathSegments;
+    const basePath = path.dirname(fileURLToPath(baseUrl!));
+    return rest.length > 0 ? path.resolve(basePath, ...rest) : basePath;
+  }
+  return path.resolve(...pathSegments);
+}
+
 /**
  * Mount commands from a directory
  * @example fromDirectory('/absolute/path/to/commands')
  * @example fromDirectory(import.meta.url, './admin')
  * @example fromDirectory(import.meta.url, '..', 'shared', 'commands')
+ * @example fromDirectory(import.meta.url, './commands', { missing: 'silent' })
  */
-export function fromDirectory(...pathSegments: string[]): Mountable {
-  // If first segment looks like a URL (starts with file:// or contains ://), treat it as ESM import.meta.url
-  let dir: string;
-  if (pathSegments.length > 0 && pathSegments[0]!.includes('://')) {
-    const [baseUrl, ...rest] = pathSegments;
-    const basePath = path.dirname(fileURLToPath(baseUrl!));
-    dir = rest.length > 0 ? path.resolve(basePath, ...rest) : basePath;
-  } else {
-    // Just path segments, join them
-    dir = path.resolve(...pathSegments);
-  }
+export function fromDirectory(
+  ...args: [...string[], FromDirectoryOptions] | string[]
+): Mountable {
+  const { pathSegments, options } = peelDirectoryArgs(args);
+  const dir = resolveDirectoryPath(pathSegments);
+  const missing = options.missing ?? 'warn';
 
   return async (context: MountContext) => {
     const runtime = await getRuntime();
@@ -309,9 +336,10 @@ export function fromDirectory(...pathSegments: string[]): Mountable {
           );
         }
       }
-    } else {
-      // The directory doesn't exist at all — surface it instead of returning an
-      // empty tree. This is the classic percent-encoded-path footgun.
+    } else if (missing === 'warn') {
+      // Explicit path that does not exist — the classic percent-encoded-path
+      // footgun. An implicit default (missing: 'silent') stays quiet; emptiness
+      // is checked after all mountables compose.
       context.reporter.warn(`Commands directory does not exist: ${dir}`);
     }
 
@@ -363,10 +391,6 @@ export function fromConfig(...pathSegments: string[]): Mountable {
     const commandsDir = path.resolve(appDir, resolvedConfig.commandsDir ?? './commands');
     const projectRoot = path.resolve(configDir, resolvedConfig.cwd);
 
-    // A missing commands directory is not an error: commands can come from
-    // pmScripts, pmCommands or plugins. fromDirectory tolerates an absent
-    // directory and mounts nothing.
-
     const subConfig = {
       ...context.config,
       commandsDir,
@@ -383,7 +407,9 @@ export function fromConfig(...pathSegments: string[]): Mountable {
         ? fromPackageCommands(resolvedConfig.pmCommands, projectRoot)
         : noop(),
       ...(resolvedConfig.plugins || []),
-      fromDirectory(commandsDir)
+      fromDirectory(commandsDir, {
+        missing: resolvedConfig.commandsDir ? 'warn' : 'silent',
+      })
     );
 
     const result = await resolveMountable(rootMountable, {

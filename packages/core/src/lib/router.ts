@@ -85,8 +85,17 @@ export class RouterError extends Error {
  * Router configuration
  */
 export type RouterConfig = {
-  /** Directory containing command files (*.ts) */
-  commandsDir: string;
+  /**
+   * Directory containing command files (*.ts).
+   * Omitted: probe `./commands` under `appDir` (or `projectRoot`) and stay
+   * quiet if that directory is missing.
+   */
+  commandsDir?: string;
+  /**
+   * App root used to resolve the implicit `./commands` probe when
+   * `commandsDir` is omitted. Defaults to `projectRoot`.
+   */
+  appDir?: string;
   /** Project root for running shell commands */
   projectRoot: string;
   /** App name for intro message (defaults to directory name) */
@@ -220,14 +229,26 @@ function getNodeProjectRoot(node: CommandNode, ctx: RouterContext): string {
   return node.projectRoot ?? ctx.projectRoot;
 }
 
+function rootCommandsDir(
+  commandsDir: string | undefined,
+  ctx: RouterContext
+): { dir: string; missing: 'warn' | 'silent' } {
+  if (commandsDir) {
+    return { dir: commandsDir, missing: 'warn' };
+  }
+  const base = ctx.config.appDir ?? ctx.projectRoot;
+  return { dir: path.resolve(base, 'commands'), missing: 'silent' };
+}
+
 /**
  * Load all command files and build a command tree
  */
 export async function buildCommandTree(
-  commandsDir: string,
+  commandsDir: string | undefined,
   ctx: RouterContext
 ): Promise<CommandTree> {
   const { config, projectRoot, reporter, prompter } = ctx;
+  const rootDir = rootCommandsDir(commandsDir, ctx);
 
   // Build the root composition
   const rootMountable = compose(
@@ -244,7 +265,7 @@ export async function buildCommandTree(
     ...(config.plugins || []),
 
     // 5. File-based commands (legacy/standard way)
-    fromDirectory(commandsDir)
+    fromDirectory(rootDir.dir, { missing: rootDir.missing })
   );
 
   const mountCtx: MountContext = {
@@ -260,16 +281,25 @@ export async function buildCommandTree(
     // 2. Recursively expand
     await expandTree(tree, mountCtx, new Set([rootResult.mountSourceId]));
 
-    // 3. Validate aliases
+    // 3. Nothing mounted from scripts, plugins, extra commands, or files
+    if (tree.size === 0) {
+      const message =
+        'No commands found. Add command files under the commands directory, or mount commands via plugins, pmScripts, or pmCommands.';
+      reporter.error(message);
+      throw new RouterError(message);
+    }
+
+    // 4. Validate aliases
     validateAliases(tree);
 
-    // 4. Warn on spelling overlap between lifecycle hook nodes and colon-split
+    // 5. Warn on spelling overlap between lifecycle hook nodes and colon-split
     // pm scripts (a script named "pre:publish" mounts at the path
     // "pre publish", so both invocations exist but mean different things)
     warnOnHookSpellingOverlap(tree, reporter);
 
     return tree;
   } catch (error) {
+    if (error instanceof RouterError) throw error;
     reporter.error(`Failed to build command tree: ${error}`);
     throw error;
   }

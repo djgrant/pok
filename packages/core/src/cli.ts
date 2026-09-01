@@ -32,8 +32,17 @@ import type { ContextDef } from './lib/command';
  * Adapters must be instantiated and ready to use.
  */
 export type RunCliConfig = {
-  /** Absolute path to directory containing command files */
-  commandsDir: string;
+  /**
+   * Absolute path to directory containing command files.
+   * Omitted: probe `./commands` under `appDir` (or `projectRoot`) and stay
+   * quiet if that directory is missing.
+   */
+  commandsDir?: string;
+  /**
+   * Absolute app root used for the implicit `./commands` probe when
+   * `commandsDir` is omitted. Defaults to `projectRoot`.
+   */
+  appDir?: string;
   /** Absolute path to project root for running shell commands */
   projectRoot: string;
   /** App name for CLI display */
@@ -199,6 +208,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
   try {
     await run(remainingArgs, {
       commandsDir,
+      appDir: config.appDir,
       projectRoot,
       appName,
       version,

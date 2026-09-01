@@ -228,21 +228,16 @@ export const command = defineCommand({
     });
   });
 
-  describe('when commands directory does not exist', () => {
-    // A missing commands directory is no longer an error — commands can come
-    // from pmScripts, pmCommands, extraCommands or plugins, so an absent
-    // directory simply mounts nothing.
+  describe('when an explicit commands directory does not exist and nothing else mounts', () => {
     let tempDir: string;
 
     beforeAll(() => {
-      // Create a temp directory with config pointing to non-existent commands dir
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-'));
       fs.writeFileSync(
         path.join(tempDir, 'package.json'),
         JSON.stringify({ name: 'test-project', type: 'module' })
       );
 
-      // Link packages first
       const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
       fs.mkdirSync(nodeModulesDir, { recursive: true });
 
@@ -253,7 +248,6 @@ export const command = defineCommand({
         path.join(nodeModulesDir, 'terminal')
       );
 
-      // Create pok.config.ts pointing to non-existent directory
       fs.writeFileSync(
         path.join(tempDir, 'pok.config.ts'),
         `
@@ -272,17 +266,83 @@ export default defineConfig({
       fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
-    it('does not error about a missing commands directory', async () => {
+    it('errors because the composed tree is empty', async () => {
       const proc = spawn(['bun', CMD_BIN, '--help'], {
         cwd: tempDir,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+      const stderr = await new Response(proc.stderr).text();
+      const output = `${stdout}\n${stderr}`;
+
+      expect(exitCode).toBe(1);
+      expect(output).toContain('No commands found');
+    });
+  });
+
+  describe('when commandsDir is omitted and plugins mount commands', () => {
+    let tempDir: string;
+
+    beforeAll(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-test-'));
+      fs.writeFileSync(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({ name: 'test-project', type: 'module' })
+      );
+
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
+      fs.mkdirSync(nodeModulesDir, { recursive: true });
+
+      const packagesDir = path.resolve(import.meta.dir, '../..');
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(
+        path.join(packagesDir, 'terminal'),
+        path.join(nodeModulesDir, 'terminal')
+      );
+
+      fs.writeFileSync(
+        path.join(tempDir, 'pok.config.ts'),
+        `
+import { defineConfig, defineCommand, fromStatic } from '@pokit/core';
+import { createTerminalUI } from '@pokit/terminal';
+
+export default defineConfig({
+  ...createTerminalUI(),
+  plugins: [
+    fromStatic({
+      ping: defineCommand({
+        label: 'Ping',
+        run: async () => {
+          console.log('pong');
+        },
+      }),
+    }),
+  ],
+});
+`
+      );
+    });
+
+    afterAll(() => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('runs without complaining about a missing commands directory', async () => {
+      const proc = spawn(['bun', CMD_BIN, '--help'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
       const stderr = await new Response(proc.stderr).text();
 
       expect(exitCode).toBe(0);
-      expect(stderr).not.toContain('Commands directory not found');
+      expect(stdout).toContain('ping');
+      expect(stderr).not.toContain('Commands directory does not exist');
+      expect(stderr).not.toContain('No commands found');
     });
   });
 });

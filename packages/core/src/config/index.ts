@@ -58,7 +58,12 @@ export type PokConfig = {
   /** Working directory for running commands (defaults to '.') */
   cwd?: string;
 
-  /** Directory containing command files, relative to appDir (defaults to './commands') */
+  /**
+   * Directory containing command files, relative to appDir.
+   * Omitted: still looks for `./commands` when that directory exists. A missing
+   * implicit default is silent if plugins/scripts mount commands; an empty
+   * composed tree is an error. An explicit path that does not exist is warned.
+   */
   commandsDir?: string;
 
   /** App name for CLI display */
@@ -204,9 +209,9 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
 
   const cfg = result.data;
 
-  // commandsDir has no hard default: it is fully optional. When omitted, the
-  // launcher still auto-discovers a './commands' directory if one is present,
-  // but its absence is never an error.
+  // commandsDir has no hard default: omitted still probes './commands' when
+  // present. A missing implicit default is silent if other mountables fill the
+  // tree; emptiness is an error at compose time.
   return {
     appDir: '.',
     cwd: '.',

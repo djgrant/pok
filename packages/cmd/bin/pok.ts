@@ -157,12 +157,10 @@ Run \`pok init\` to create a pok.config.ts file.
   // Step 4: Resolve paths relative to config file location
   // appDir is relative to configDir, commandsDir is relative to appDir
   const appDir = path.resolve(configDir, config.appDir);
-  const commandsDir = path.resolve(appDir, config.commandsDir ?? './commands');
+  const commandsDir = config.commandsDir
+    ? path.resolve(appDir, config.commandsDir)
+    : undefined;
   const cwd = path.resolve(configDir, config.cwd);
-
-  // A missing commands directory is not an error: commands can come from
-  // pmScripts, pmCommands, extraCommands or plugins. fromDirectory tolerates
-  // an absent directory and mounts nothing.
 
   // Step 5: Resolve default terminal UI for any UI surface the config omitted.
   const ui = await resolveTerminalDefaults(configDir, config, configModule);
@@ -173,6 +171,7 @@ Run \`pok init\` to create a pok.config.ts file.
 
   await runCli(process.argv.slice(2), {
     commandsDir,
+    appDir,
     projectRoot: cwd, // core uses projectRoot, config uses cwd
     appName: config.appName,
     version: config.version,
@@ -437,7 +436,6 @@ async function runInFallbackMode(pkgDir: string) {
   const { runInit } = await import('../src/init');
 
   await runCli(process.argv.slice(2), {
-    commandsDir: path.join(pkgDir, 'commands'),
     projectRoot: pkgDir,
     appName: path.basename(pkgDir),
     reporterAdapter: ui.reporter,

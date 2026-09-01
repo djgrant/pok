@@ -328,6 +328,7 @@ export {
   compose,
   fromConfig,
   fromDirectory,
+  type FromDirectoryOptions,
   fromStatic,
   fromPackageScripts,
   fromPackageCommands,

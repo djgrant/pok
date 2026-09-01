@@ -325,4 +325,87 @@ describe('Plugin System', () => {
     expect(tree.has('plugin-cmd')).toBe(true);
     expect(tree.get('plugin-cmd')?.config).toBe(pluginCmd);
   });
+
+  it('stays quiet when an implicit commands dir is missing and plugins mount', async () => {
+    const pluginCmd = defineCommand({ label: 'Plugin Cmd', run: () => {} });
+    const warns: string[] = [];
+
+    const ctx = {
+      config: {
+        projectRoot: '/tmp/pok-no-such-app',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        plugins: [fromStatic({ 'plugin-cmd': pluginCmd })],
+      },
+      projectRoot: '/tmp/pok-no-such-app',
+      reporter: {
+        error: () => {},
+        warn: (message: string) => warns.push(message),
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    const tree = await buildCommandTree(undefined, ctx as any);
+
+    expect(tree.has('plugin-cmd')).toBe(true);
+    expect(warns.some((w) => w.includes('does not exist'))).toBe(false);
+  });
+
+  it('warns when an explicit commands dir is missing even if plugins mount', async () => {
+    const pluginCmd = defineCommand({ label: 'Plugin Cmd', run: () => {} });
+    const warns: string[] = [];
+
+    const ctx = {
+      config: {
+        commandsDir: '/tmp/pok-no-such-commands',
+        projectRoot: '/tmp',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+        plugins: [fromStatic({ 'plugin-cmd': pluginCmd })],
+      },
+      projectRoot: '/tmp',
+      reporter: {
+        error: () => {},
+        warn: (message: string) => warns.push(message),
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    const tree = await buildCommandTree('/tmp/pok-no-such-commands', ctx as any);
+
+    expect(tree.has('plugin-cmd')).toBe(true);
+    expect(warns.some((w) => w.includes('Commands directory does not exist'))).toBe(true);
+  });
+
+  it('errors when the composed tree is empty', async () => {
+    const errors: string[] = [];
+
+    const ctx = {
+      config: {
+        projectRoot: '/tmp/pok-no-such-app',
+        reporterAdapter: createRawReporterAdapter(),
+        prompter: createRawPrompter(),
+      },
+      projectRoot: '/tmp/pok-no-such-app',
+      reporter: {
+        error: (message: string) => errors.push(message),
+        warn: () => {},
+      } as any,
+      prompter: {} as any,
+      adapterController: { stop: () => {} } as any,
+      appName: 'test-app',
+      eventBus: { emit: () => {}, on: () => () => {} } as any,
+    };
+
+    await expect(buildCommandTree(undefined, ctx as any)).rejects.toThrow(
+      /No commands found/
+    );
+    expect(errors.some((e) => e.includes('No commands found'))).toBe(true);
+  });
 });

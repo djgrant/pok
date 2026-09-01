@@ -12,7 +12,11 @@ export interface LauncherSkeleton {
   appDir: string;
   /** Working directory for running commands */
   cwd: string;
-  /** Directory containing command files (optional — defaults to './commands' when the directory is present) */
+  /**
+   * Directory containing command files.
+   * Optional — defaults to './commands' when that directory is present. A
+   * missing implicit default is not an error if other mountables produce commands.
+   */
   commandsDir?: string;
   /** App name for CLI display */
   appName?: string;
