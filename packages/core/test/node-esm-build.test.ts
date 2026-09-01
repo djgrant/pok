@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'bun:test'
+import fs from 'node:fs'
 import path from 'node:path'
 
 describe('@pokit/core dist Node ESM compatibility', () => {
   it('loads the built package entrypoint with Node', async () => {
     const packageRoot = path.resolve(import.meta.dir, '..')
+    const entry = path.join(packageRoot, 'dist/index.js')
+    if (!fs.existsSync(entry)) {
+      throw new Error('dist/index.js is missing; run pnpm --filter @pokit/core run build')
+    }
+
     const process = Bun.spawn(
       ['node', '--input-type=module', '--eval', "await import('./dist/index.js')"],
       {

@@ -28,6 +28,14 @@ const WORKSPACE_ROOT = path.resolve(__dirname, '../../..');
 
 // Test projects are created inside the workspace so they can use workspace:* protocol
 const TEST_PROJECTS_DIR = path.join(WORKSPACE_ROOT, '.test-projects');
+const LOCKFILE = path.join(WORKSPACE_ROOT, 'pnpm-lock.yaml');
+let lockfileSnapshot: string | undefined;
+
+function restoreLockfile(): void {
+  if (lockfileSnapshot !== undefined) {
+    fs.writeFileSync(LOCKFILE, lockfileSnapshot);
+  }
+}
 
 /**
  * Scaffold a project manually (simulates what init.ts does without spawning)
@@ -72,11 +80,14 @@ function patchPackageJsonForWorkspace(projectPath: string): void {
  */
 async function pnpmInstall(projectPath: string): Promise<{ success: boolean; output: string }> {
   try {
-    // Explicitly opt out of frozen-lockfile: pnpm auto-enables it when CI=true,
-    // but this test scaffolds a fresh project whose lockfile must be (re)built,
-    // so a frozen install would (correctly) refuse. --no-frozen-lockfile makes
-    // the test behave identically in CI and locally.
-    const result = await $`pnpm install --no-frozen-lockfile`.cwd(projectPath).nothrow();
+    // Run from the workspace root with the same docs-site exclusion CI uses on
+    // `pnpm install`. A nested install from `.test-projects/*` (a workspace
+    // member) would otherwise try to fetch @notation/docs via git+ssh and fail
+    // without a GitHub key.
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
+    const result = await $`pnpm install --no-frozen-lockfile --filter ${pkg.name}... --filter '!@pokit/docs-site'`
+      .cwd(WORKSPACE_ROOT)
+      .nothrow();
     const output = result.stdout.toString() + '\n' + result.stderr.toString();
     return {
       success: result.exitCode === 0,
@@ -104,12 +115,14 @@ function cleanupDir(dir: string): void {
 describe('create-pokit end-to-end', () => {
   // Ensure test directory exists before each test and cleanup after all
   beforeAll(() => {
+    lockfileSnapshot ??= fs.readFileSync(LOCKFILE, 'utf-8');
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
   });
 
   afterAll(() => {
     // Clean up all test projects
     cleanupDir(TEST_PROJECTS_DIR);
+    restoreLockfile();
   });
 
   describe('project scaffolding', () => {
@@ -200,6 +213,9 @@ describe('create-pokit end-to-end', () => {
         patchPackageJsonForWorkspace(projectPath);
 
         const installResult = await pnpmInstall(projectPath);
+        if (!installResult.success) {
+          throw new Error(installResult.output);
+        }
         expect(installResult.success).toBe(true);
 
         // Verify node_modules was created with linked packages
@@ -234,11 +250,13 @@ describe('create-pokit end-to-end', () => {
 
 describe('create-pokit workspace integration', () => {
   beforeAll(() => {
+    lockfileSnapshot ??= fs.readFileSync(LOCKFILE, 'utf-8');
     fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
   });
 
   afterAll(() => {
     cleanupDir(TEST_PROJECTS_DIR);
+    restoreLockfile();
   });
 
   it('workspace packages can be installed via pnpm', async () => {
@@ -253,6 +271,9 @@ describe('create-pokit workspace integration', () => {
       patchPackageJsonForWorkspace(projectPath);
 
       const installResult = await pnpmInstall(projectPath);
+      if (!installResult.success) {
+        throw new Error(installResult.output);
+      }
       expect(installResult.success).toBe(true);
 
       // Verify all workspace packages are installed
