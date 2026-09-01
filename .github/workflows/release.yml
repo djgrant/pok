@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+      - 'cli-v*'
+      - 'all-v*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -74,7 +76,13 @@ jobs:
         run: pnpm run build
 
       - name: Publish to npm
-        run: pnpm -r publish --access public --no-git-checks
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            all-v*) pnpm -r publish --access public --no-git-checks ;;
+            cli-v*) pnpm --filter pokit --filter create-pokit publish --access public --no-git-checks ;;
+            v*) pnpm --filter "@pokit/*" publish --access public --no-git-checks ;;
+            *) echo "Unexpected ref ${GITHUB_REF_NAME}" >&2; exit 1 ;;
+          esac
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

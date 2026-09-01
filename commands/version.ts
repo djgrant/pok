@@ -33,8 +33,8 @@ const PACKAGE_GROUPS = {
   all: {
     label: 'All packages',
     files: [...SCOPED_FILES, ...CLI_FILES],
-    tag: 'v%s',
-    commit: 'release: v%s',
+    tag: 'all-v%s',
+    commit: 'release: all v%s',
   },
 } as const;
 

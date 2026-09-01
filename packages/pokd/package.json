@@ -1,6 +1,7 @@
 {
   "name": "@pokit/pokd",
   "version": "0.3.2-dev.0",
+  "private": true,
   "description": "Trust-broker daemon for pok - approves secret access via Touch ID / dialog / prompt",
   "keywords": [
     "cli",
