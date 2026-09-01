@@ -2,7 +2,6 @@ packages:
   - packages/*
   - test/utils
   - test
-  - .test-projects/*
   - demo
   - docs
 allowBuilds:

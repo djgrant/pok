@@ -6,7 +6,6 @@
     "packages/*",
     "test/utils",
     "test",
-    ".test-projects/*",
     "demo"
   ],
   "license": "MIT",

@@ -3,8 +3,8 @@
  *
  * These tests verify that scaffolded projects work correctly by:
  * 1. Manually scaffolding projects (simulating what init.ts does)
- * 2. Creating projects within the workspace to leverage workspace resolution
- * 3. Actually running the scaffolded commands
+ * 2. Linking local packages via file: (outside the monorepo workspace)
+ * 3. Installing with pnpm as a standalone project
  *
  * Note: We don't run the actual init command directly in tests because
  * it spawns child processes that can hang in test environments. Instead,
@@ -13,6 +13,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { $ } from 'bun';
 import {
@@ -23,29 +24,22 @@ import {
   generateGitignore,
 } from '../src/templates';
 
-// Path to workspace root (where packages/ is located)
 const WORKSPACE_ROOT = path.resolve(__dirname, '../../..');
+const LOCAL_PACKAGES: Record<string, string> = {
+  '@pokit/core': path.join(WORKSPACE_ROOT, 'packages/core'),
+  '@pokit/terminal': path.join(WORKSPACE_ROOT, 'packages/terminal'),
+};
 
-// Test projects are created inside the workspace so they can use workspace:* protocol
-const TEST_PROJECTS_DIR = path.join(WORKSPACE_ROOT, '.test-projects');
-const LOCKFILE = path.join(WORKSPACE_ROOT, 'pnpm-lock.yaml');
-let lockfileSnapshot: string | undefined;
+let TEST_PROJECTS_DIR: string;
 
-function restoreLockfile(): void {
-  if (lockfileSnapshot !== undefined) {
-    fs.writeFileSync(LOCKFILE, lockfileSnapshot);
-  }
+function fileDep(pkgName: string): string {
+  return `file:${LOCAL_PACKAGES[pkgName]}`;
 }
 
-/**
- * Scaffold a project manually (simulates what init.ts does without spawning)
- */
 function scaffoldProject(projectPath: string, options: { name: string; plugins: string[] }): void {
-  // Create directories
   fs.mkdirSync(projectPath, { recursive: true });
   fs.mkdirSync(path.join(projectPath, 'commands'), { recursive: true });
 
-  // Generate files
   fs.writeFileSync(path.join(projectPath, 'package.json'), generatePackageJson(options));
   fs.writeFileSync(path.join(projectPath, 'tsconfig.json'), generateTsConfig());
   fs.writeFileSync(path.join(projectPath, '.gitignore'), generateGitignore());
@@ -53,41 +47,25 @@ function scaffoldProject(projectPath: string, options: { name: string; plugins: 
   fs.writeFileSync(path.join(projectPath, 'commands', 'build.ts'), generateBuildCommand());
 }
 
-/**
- * Modify package.json to use workspace:* for local packages.
- * Since test projects are created inside the workspace, this will work.
- */
-function patchPackageJsonForWorkspace(projectPath: string): void {
+function patchPackageJsonForLocalPackages(projectPath: string): void {
   const pkgPath = path.join(projectPath, 'package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
-  // Replace 'latest' with workspace:* for local packages
-  const localPackages = ['@pokit/core', '@pokit/terminal'];
-
-  for (const pkgName of localPackages) {
+  for (const pkgName of Object.keys(LOCAL_PACKAGES)) {
     if (pkg.dependencies?.[pkgName]) {
-      pkg.dependencies[pkgName] = `workspace:*`;
+      pkg.dependencies[pkgName] = fileDep(pkgName);
     }
   }
 
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 }
 
-/**
- * Run pnpm install in a project directory.
- * Uses pnpm because it properly respects workspace configuration
- * from the parent directory.
- */
 async function pnpmInstall(projectPath: string): Promise<{ success: boolean; output: string }> {
   try {
-    // Run from the workspace root with the same docs-site exclusion CI uses on
-    // `pnpm install`. A nested install from `.test-projects/*` (a workspace
-    // member) would otherwise try to fetch @notation/docs via git+ssh and fail
-    // without a GitHub key.
-    const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
-    const result = await $`pnpm install --no-frozen-lockfile --filter ${pkg.name}... --filter '!@pokit/docs-site'`
-      .cwd(WORKSPACE_ROOT)
-      .nothrow();
+    // Standalone install: these projects live outside the pok workspace so
+    // pnpm must not walk up to the repo lockfile (which pulls @notation/docs
+    // over git+ssh, unavailable in CI).
+    const result = await $`pnpm install --ignore-workspace`.cwd(projectPath).nothrow();
     const output = result.stdout.toString() + '\n' + result.stderr.toString();
     return {
       success: result.exitCode === 0,
@@ -101,9 +79,6 @@ async function pnpmInstall(projectPath: string): Promise<{ success: boolean; out
   }
 }
 
-/**
- * Clean up a directory, ignoring errors
- */
 function cleanupDir(dir: string): void {
   try {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -113,16 +88,12 @@ function cleanupDir(dir: string): void {
 }
 
 describe('create-pokit end-to-end', () => {
-  // Ensure test directory exists before each test and cleanup after all
   beforeAll(() => {
-    lockfileSnapshot ??= fs.readFileSync(LOCKFILE, 'utf-8');
-    fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
+    TEST_PROJECTS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-create-e2e-'));
   });
 
   afterAll(() => {
-    // Clean up all test projects
     cleanupDir(TEST_PROJECTS_DIR);
-    restoreLockfile();
   });
 
   describe('project scaffolding', () => {
@@ -143,13 +114,11 @@ describe('create-pokit end-to-end', () => {
         expect(fs.existsSync(path.join(projectPath, 'commands/hello.ts'))).toBe(true);
         expect(fs.existsSync(path.join(projectPath, 'commands/build.ts'))).toBe(true);
 
-        // Verify package.json has plugins
         const pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.name).toBe(projectName);
         expect(pkg.dependencies['@pokit/core']).toBeDefined();
         expect(pkg.dependencies['@pokit/terminal']).toBeDefined();
       } finally {
-        // Clean up - important to avoid polluting workspace for other tests
         cleanupDir(projectPath);
       }
     });
@@ -172,7 +141,7 @@ describe('create-pokit end-to-end', () => {
       }
     });
 
-    it('workspace patching replaces versions correctly', () => {
+    it('local package patching replaces versions correctly', () => {
       const projectName = 'test-workspace-patch';
       const projectPath = path.join(TEST_PROJECTS_DIR, projectName);
 
@@ -182,15 +151,13 @@ describe('create-pokit end-to-end', () => {
           plugins: ['@pokit/terminal'],
         });
 
-        // Before patching
         let pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
         expect(pkg.dependencies['@pokit/core']).toBe('latest');
 
-        // After patching
-        patchPackageJsonForWorkspace(projectPath);
+        patchPackageJsonForLocalPackages(projectPath);
         pkg = JSON.parse(fs.readFileSync(path.join(projectPath, 'package.json'), 'utf-8'));
-        expect(pkg.dependencies['@pokit/core']).toBe('workspace:*');
-        expect(pkg.dependencies['@pokit/terminal']).toBe('workspace:*');
+        expect(pkg.dependencies['@pokit/core']).toBe(fileDep('@pokit/core'));
+        expect(pkg.dependencies['@pokit/terminal']).toBe(fileDep('@pokit/terminal'));
       } finally {
         cleanupDir(projectPath);
       }
@@ -203,14 +170,12 @@ describe('create-pokit end-to-end', () => {
       const projectPath = path.join(TEST_PROJECTS_DIR, projectName);
 
       try {
-        // Scaffold project with both plugins
         scaffoldProject(projectPath, {
           name: projectName,
           plugins: ['@pokit/terminal'],
         });
 
-        // Patch for workspace linking and install
-        patchPackageJsonForWorkspace(projectPath);
+        patchPackageJsonForLocalPackages(projectPath);
 
         const installResult = await pnpmInstall(projectPath);
         if (!installResult.success) {
@@ -218,7 +183,6 @@ describe('create-pokit end-to-end', () => {
         }
         expect(installResult.success).toBe(true);
 
-        // Verify node_modules was created with linked packages
         expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/core'))).toBe(true);
       } finally {
         cleanupDir(projectPath);
@@ -234,7 +198,6 @@ describe('create-pokit end-to-end', () => {
     it('hello command uses correct reporter API', () => {
       const content = generateExampleCommand();
 
-      // Should use r.reporter.info, not r.log.info
       expect(content).toContain('r.reporter.info');
       expect(content).not.toContain('r.log.info');
     });
@@ -250,13 +213,11 @@ describe('create-pokit end-to-end', () => {
 
 describe('create-pokit workspace integration', () => {
   beforeAll(() => {
-    lockfileSnapshot ??= fs.readFileSync(LOCKFILE, 'utf-8');
-    fs.mkdirSync(TEST_PROJECTS_DIR, { recursive: true });
+    TEST_PROJECTS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-create-e2e-'));
   });
 
   afterAll(() => {
     cleanupDir(TEST_PROJECTS_DIR);
-    restoreLockfile();
   });
 
   it('workspace packages can be installed via pnpm', async () => {
@@ -268,7 +229,7 @@ describe('create-pokit workspace integration', () => {
         plugins: ['@pokit/terminal'],
       });
 
-      patchPackageJsonForWorkspace(projectPath);
+      patchPackageJsonForLocalPackages(projectPath);
 
       const installResult = await pnpmInstall(projectPath);
       if (!installResult.success) {
@@ -276,7 +237,6 @@ describe('create-pokit workspace integration', () => {
       }
       expect(installResult.success).toBe(true);
 
-      // Verify all workspace packages are installed
       expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/core'))).toBe(true);
       expect(fs.existsSync(path.join(projectPath, 'node_modules/@pokit/terminal'))).toBe(
         true
