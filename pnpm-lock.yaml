@@ -31,8 +31,8 @@ importers:
         specifier: github:djgrant/pok-plugins
         version: https://codeload.github.com/djgrant/pok-plugins/tar.gz/23cd5811e6b6339ef97d8e0072be3164567c92ba(@pokit/core@0.8.3(zod@4.3.6))
       pokit:
-        specifier: 0.3.2
-        version: 0.3.2
+        specifier: 0.4.0
+        version: 0.4.0
       semver:
         specifier: ^7.7.0
         version: 7.7.3
@@ -3099,8 +3099,8 @@ packages:
     peerDependencies:
       '@pokit/core': '>=0.6.0'
 
-  pokit@0.3.2:
-    resolution: {integrity: sha512-x5oitfBVlyVPSDLTRTDxU0nU6o2tv0NOGwnq/SkEbLpA0cH2j/2tds/RhnGlQf4V5F7lhF/Aw5ZZY//RfL+7tg==}
+  pokit@0.4.0:
+    resolution: {integrity: sha512-mWYJ9jPc7rx/rP7UrhdXk1DAkYkcfXtOhfLfYrPD+8cKexA+KBA/qn282ConY/Wm0z4wpMOoljuQEhAeVYgqkg==}
     engines: {bun: '>=1.0.0'}
     hasBin: true
 
@@ -6185,7 +6185,7 @@ snapshots:
     transitivePeerDependencies:
       - magicast
 
-  pokit@0.3.2: {}
+  pokit@0.4.0: {}
 
   postcss-selector-parser@6.0.10:
     dependencies:

@@ -30,7 +30,7 @@
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "pok-plugins": "github:djgrant/pok-plugins",
-    "pokit": "0.3.2",
+    "pokit": "0.4.0",
     "semver": "^7.7.0",
     "@types/semver": "^7.7.0",
     "typescript": "^5.8.3",
