@@ -120,7 +120,12 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
     });
 
     await g.activity('Reinstall to refresh lockfile', async () => {
-      await r.exec('pnpm install --reporter=silent');
+      // Same filter as CI: the docs site's @notation/docs git dep is not
+      // available in every environment. Retry in case the registry is still
+      // catching up after the publish wait loop.
+      await r.exec(['pnpm', 'install', '--filter', '!@pokit/docs-site'], {
+        retry: { maxAttempts: 4, delay: 3000 },
+      });
     });
 
     await g.activity('Verify root resolves registry versions', async (a) => {
