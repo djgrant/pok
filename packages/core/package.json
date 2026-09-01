@@ -18,12 +18,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/notation-dev/openpok.git",
+    "url": "git+https://github.com/djgrant/pok.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/notation-dev/openpok#readme",
+  "homepage": "https://github.com/djgrant/pok#readme",
   "bugs": {
-    "url": "https://github.com/notation-dev/openpok/issues"
+    "url": "https://github.com/djgrant/pok/issues"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

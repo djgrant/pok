@@ -67,7 +67,6 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter '!@pokit/docs-site'
@@ -83,8 +82,6 @@ jobs:
             v*) pnpm --filter "@pokit/*" publish --access public --no-git-checks ;;
             *) echo "Unexpected ref ${GITHUB_REF_NAME}" >&2; exit 1 ;;
           esac
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
