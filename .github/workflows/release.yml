@@ -36,11 +36,11 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
-      - name: Run tests
-        run: pnpm run test
-
       - name: Build
         run: pnpm run build
+
+      - name: Run tests
+        run: pnpm run test
 
   publish:
     name: Publish to npm
