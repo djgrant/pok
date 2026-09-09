@@ -20,12 +20,14 @@ async function main() {
 
   let appName: string;
   let configDir: string;
+  let config: any;
 
   if (configResult) {
     configDir = configResult.configDir;
     try {
       const rawConfig = await import(configResult.configPath);
-      appName = rawConfig.default?.appName ?? path.basename(configDir);
+      config = rawConfig.default;
+      appName = config?.appName ?? path.basename(configDir);
     } catch {
       appName = path.basename(configDir);
     }
@@ -55,16 +57,15 @@ async function main() {
     return;
   }
 
-  const reporter = await resolveModule('@pokit/reporter-clack', configDir);
-  const prompter = await resolveModule('@pokit/prompter-clack', configDir);
-
-  if (!reporter || !prompter) {
-    console.error('Error: @pokit/reporter-clack and @pokit/prompter-clack are required.');
-    process.exit(1);
+  let p = config?.prompter;
+  if (!p) {
+    const terminal = await resolveModule('@pokit/terminal', configDir);
+    if (!terminal || typeof terminal.createTerminalUI !== 'function') {
+      console.error('Error: @pokit/terminal is required to select a command from history.');
+      process.exit(1);
+    }
+    p = terminal.createTerminalUI({ theme: config?.theme }).prompter;
   }
-
-  const { createPrompter } = prompter;
-  const p = createPrompter();
 
   const options = entries.map((entry: any) => ({
     value: entry,
@@ -84,14 +85,18 @@ async function main() {
 
   const rerunArgs = [...selected.commandPath, ...selected.args];
 
-  const { execSync } = await import('child_process');
-  try {
-    execSync(`pok ${rerunArgs.join(' ')}`, {
-      stdio: 'inherit',
-      cwd: processCwd,
-    });
-  } catch (err: any) {
-    process.exit(err?.status ?? 1);
+  const { spawnSync } = await import('child_process');
+  const result = spawnSync('pok', rerunArgs, {
+    stdio: 'inherit',
+    cwd: processCwd,
+  });
+
+  if (result.error) {
+    console.error(`Error: Failed to run pok: ${result.error.message}`);
+    process.exit(1);
+  }
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
   }
 }
 
