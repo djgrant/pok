@@ -1,7 +1,6 @@
 ---
 name: pok
 description: Build TypeScript CLI applications with pok. Use to create type-safe and re-discoverable project commands and workflows.
-license: MIT
 ---
 
 # pok
@@ -12,19 +11,7 @@ pok is a file-based CLI framework for TypeScript. Files define the command tree,
 
 A pok application is defined by its config and command directory.
 
-Use to:
-
-- create the application config
-- choose the command directory and CLI name
-
 ### Minimal application
-
-```ts
-// pok.config.ts
-import { defineConfig } from '@pokit/core';
-
-export default defineConfig({});
-```
 
 Create `commands/hello.ts`, then run `pok` or `pok hello`.
 
@@ -41,18 +28,13 @@ export default defineConfig({
 });
 ```
 
-Run `pok init` to generate the minimal config in an existing project.
+You can run `pok init` to generate a minimal config.
 
 **Full docs:** [Quick start](https://raw.githubusercontent.com/djgrant/pok/main/docs/manual/quickstart.md) · [Application configuration](https://raw.githubusercontent.com/djgrant/pok/main/docs/manual/installation.md) · [Standalone CLI](https://raw.githubusercontent.com/djgrant/pok/main/docs/manual/standalone-cli.md)
 
 ## Routing
 
-Routing builds a nested command tree from file names and mounted command directories.
-
-Use to:
-
-- map files to command paths
-- compose commands from multiple directories
+Routing builds a nested command tree from file names and mounted plugins.
 
 ### File-based routes
 
@@ -63,7 +45,7 @@ commands/
 └── db.migrate.up.ts  → pok db migrate up
 ```
 
-Dots create route levels. Parent routes are inferred from child files.
+Dots create route levels.
 
 ### Mounted routes
 
@@ -88,7 +70,6 @@ A sub-app is a complete pok command tree loaded from another `pok.config.ts` fil
 Use to:
 
 - mount one pok application beneath a route in another
-- reuse an independently configured command tree
 - compose a larger CLI from smaller applications
 
 ### Mount beneath a command
