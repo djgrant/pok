@@ -19,8 +19,9 @@ argv (guarded by the `POK_DELEGATED` env flag; set `POK_DEBUG` to trace the
 decision) so the project runs entirely on the version it pinned. Otherwise it
 loads `pok.config.ts` — or, in a plain `package.json` repo with no config, runs
 in **fallback mode**, surfacing the `commands/` directory and package scripts.
-Either way it fills in any omitted reporter/prompter/navigator from
-`@pokit/terminal`.
+It also contributes overridable `init` and `skill` default commands; project
+command names and aliases take precedence. Either way it fills in any omitted
+reporter/prompter/navigator from `@pokit/terminal`.
 
 ## Runtime graph
 
@@ -96,7 +97,7 @@ Either way it fills in any omitted reporter/prompter/navigator from
 pokit                       # Global launcher / trampoline
 ├── Config discovery + delegation to local pokit
 ├── Fallback mode (package.json, no config)
-└── pok init
+└── Overridable defaults: pok init, pok skill
 
 create-pokit                # Scaffolding
 └── bun create pokit

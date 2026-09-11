@@ -94,8 +94,10 @@ The root of your CLI is composed of multiple mountables. The default composition
 3. Static extra commands (if `extraCommands` is configured)
 4. Root plugins (if `plugins` is configured)
 5. File-based commands (from `commandsDir`)
+6. Default commands (if `defaultCommands` is configured), only when no user
+   command name or alias already claims that spelling
 
-This order ensures file-based commands can override package manager scripts if needed.
+This order ensures file-based commands can override package manager scripts if needed. Launcher defaults (`init`, `skill`) use step 6 so a project command or alias always wins.
 
 ### Root Plugins
 

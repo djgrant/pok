@@ -36,8 +36,13 @@ function runCli(args: string[], config: RunCliConfig): Promise<void>;
 | `navigator`       | `Navigator`                     | Optional menu presentation policy (defaults to the built-in menu navigator) |
 | `pmScripts`       | `boolean \| string[]`           | Include package manager scripts (e.g., npm scripts) |
 | `pmCommands`      | `boolean \| string[]`           | Include package manager commands                   |
-| `extraCommands`   | `Record<string, CommandConfig>` | Manual command overrides                           |
+| `extraCommands`   | `Record<string, CommandConfig>` | Manually injected commands                         |
+| `defaultCommands` | `Record<string, CommandConfig>` | Commands added when no user name or alias claims their spelling |
 | `plugins`         | `MountableLike[]`               | Dynamic command sources to mount at root           |
+
+`defaultCommands` supports launcher-level fallback commands while preserving
+project ownership of the command namespace. A user command name or alias takes
+precedence over a default with the same spelling.
 
 ## MountableLike
 

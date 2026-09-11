@@ -311,7 +311,7 @@ export { levenshtein, findClosestMatch } from './lib/string-distance';
 // CLI entry point
 // =============================================================================
 
-export { runCli } from './cli';
+export { runCli, supportsDefaultCommands } from './cli';
 export type { RunCliConfig } from './cli';
 
 // =============================================================================

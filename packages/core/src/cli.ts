@@ -77,6 +77,12 @@ export type RunCliConfig = {
   extraCommands?: Record<string, import('./lib/command').CommandConfig>;
 
   /**
+   * Launcher-provided root commands used when no user command name or alias
+   * claims the same spelling.
+   */
+  defaultCommands?: Record<string, import('./lib/command').CommandConfig>;
+
+  /**
    * Plugins to mount at the root.
    * Allows injecting dynamic command sources.
    */
@@ -100,6 +106,9 @@ export type RunCliConfig = {
    */
   throwOnError?: boolean;
 };
+
+/** Structural capability marker used by the launcher for backwards compatibility. */
+export const supportsDefaultCommands = true;
 
 /** Marks stdin so the teardown error listener is only attached once. */
 const TEARDOWN_GUARD = Symbol.for('pokit.stdin.teardownGuard');
@@ -220,6 +229,7 @@ export async function runCli(args: string[], config: RunCliConfig): Promise<numb
       pmScripts: config.pmScripts,
       pmCommands: config.pmCommands,
       extraCommands: config.extraCommands,
+      defaultCommands: config.defaultCommands,
       plugins: config.plugins,
       globalContext: config.globalContext,
       onGlobalContext: config.onGlobalContext,

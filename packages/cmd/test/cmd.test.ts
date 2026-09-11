@@ -88,6 +88,93 @@ export const command = defineCommand({
       expect(exitCode).toBe(0);
       expect(stdout).toContain('Hello from test!');
     });
+
+    it('prints the built-in agent skill', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'skill'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('name: pok');
+      expect(stdout).toContain('# pok');
+    });
+  });
+
+  describe('when user commands claim built-in spellings', () => {
+    let tempDir: string;
+
+    beforeAll(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pok-cmd-overrides-'));
+      fs.writeFileSync(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({ name: 'override-project', type: 'module' })
+      );
+      fs.writeFileSync(
+        path.join(tempDir, 'pok.config.ts'),
+        `import { defineConfig } from '@pokit/core';\nexport default defineConfig({});\n`
+      );
+
+      const nodeModulesDir = path.join(tempDir, 'node_modules', '@pokit');
+      fs.mkdirSync(nodeModulesDir, { recursive: true });
+      const packagesDir = path.resolve(import.meta.dir, '../..');
+      fs.symlinkSync(path.join(packagesDir, 'core'), path.join(nodeModulesDir, 'core'));
+      fs.symlinkSync(
+        path.join(packagesDir, 'terminal'),
+        path.join(nodeModulesDir, 'terminal')
+      );
+
+      fs.mkdirSync(path.join(tempDir, 'commands'));
+      fs.writeFileSync(
+        path.join(tempDir, 'commands', 'init.ts'),
+        `import { defineCommand } from '@pokit/core';
+export const command = defineCommand({
+  label: 'User init',
+  run: async () => console.log('user init'),
+});\n`
+      );
+      fs.writeFileSync(
+        path.join(tempDir, 'commands', 'agent.ts'),
+        `import { defineCommand } from '@pokit/core';
+export const command = defineCommand({
+  label: 'User agent command',
+  aliases: ['skill'],
+  run: async () => console.log('user skill alias'),
+});\n`
+      );
+    });
+
+    afterAll(() => {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('prefers an exact user command over a built-in', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'init'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('user init');
+    });
+
+    it('prefers a user alias over a built-in', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'skill'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('user skill alias');
+      expect(stdout).not.toContain('name: pok');
+    });
   });
 
   describe('when no config file exists and no package.json exists', () => {
@@ -113,6 +200,33 @@ export const command = defineCommand({
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain('No pok configuration or package.json found');
+    });
+
+    it('prints the skill without a project', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'skill'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toStartWith('---\nname: pok\n');
+    });
+
+    it('runs init without a project', async () => {
+      const proc = spawn(['bun', CMD_BIN, 'init'], {
+        cwd: tempDir,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      const exitCode = await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('Created pok.config.ts');
+      expect(fs.existsSync(path.join(tempDir, 'pok.config.ts'))).toBe(true);
     });
   });
 
@@ -160,6 +274,7 @@ export const command = defineCommand({
       expect(exitCode).toBe(0);
       expect(stdout).toContain('hello');
       expect(stdout).toContain('init');
+      expect(stdout).toContain('skill');
     });
   });
 
@@ -228,7 +343,7 @@ export const command = defineCommand({
     });
   });
 
-  describe('when an explicit commands directory does not exist and nothing else mounts', () => {
+  describe('when an explicit commands directory does not exist', () => {
     let tempDir: string;
 
     beforeAll(() => {
@@ -266,7 +381,7 @@ export default defineConfig({
       fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
-    it('errors because the composed tree is empty', async () => {
+    it('warns and still exposes launcher defaults', async () => {
       const proc = spawn(['bun', CMD_BIN, '--help'], {
         cwd: tempDir,
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -277,8 +392,10 @@ export default defineConfig({
       const stderr = await new Response(proc.stderr).text();
       const output = `${stdout}\n${stderr}`;
 
-      expect(exitCode).toBe(1);
-      expect(output).toContain('No commands found');
+      expect(exitCode).toBe(0);
+      expect(output).toContain('Commands directory does not exist');
+      expect(stdout).toContain('init');
+      expect(stdout).toContain('skill');
     });
   });
 

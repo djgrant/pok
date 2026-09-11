@@ -10,6 +10,9 @@ import {
   createRawReporterAdapter,
   createRawPrompter,
   ScopedReporter,
+  defineCommand,
+  fromStatic,
+  type RouterConfig,
 } from '../src';
 import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
 
@@ -20,7 +23,7 @@ import { COMMANDS_DIR, PROJECT_ROOT } from './utils/paths';
 /**
  * Create a minimal router context for testing
  */
-function createTestRouterContext() {
+function createTestRouterContext(configOverrides: Partial<RouterConfig> = {}) {
   const eventBus = createEventBus();
   const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
   const adapterController = reporterAdapter.start(eventBus);
@@ -33,6 +36,7 @@ function createTestRouterContext() {
       appName: 'test-cli',
       reporterAdapter,
       prompter: createRawPrompter({}),
+      ...configOverrides,
     },
     eventBus,
     reporter,
@@ -82,6 +86,56 @@ describe('buildCommandTree', () => {
 
     expect(tree).toBeInstanceOf(Map);
     expect(tree.size).toBeGreaterThan(0);
+  });
+
+  it('adds a default command when its spelling is unclaimed', async () => {
+    const ctx = createTestRouterContext({
+      defaultCommands: {
+        skill: defineCommand({ label: 'Built-in skill', run: async () => {} }),
+      },
+    });
+
+    const tree = await buildCommandTree(COMMANDS_DIR, ctx);
+
+    expect(tree.get('skill')?.config.label).toBe('Built-in skill');
+    expect(tree.get('skill')?.source).toBe('default');
+  });
+
+  it('lets a user command name override a default command', async () => {
+    const ctx = createTestRouterContext({
+      plugins: [
+        fromStatic({ init: defineCommand({ label: 'User init', run: async () => {} }) }),
+      ],
+      defaultCommands: {
+        init: defineCommand({ label: 'Built-in init', run: async () => {} }),
+      },
+    });
+
+    const tree = await buildCommandTree(COMMANDS_DIR, ctx);
+
+    expect(tree.get('init')?.config.label).toBe('User init');
+  });
+
+  it('lets a user command alias override a default command', async () => {
+    const ctx = createTestRouterContext({
+      plugins: [
+        fromStatic({
+          setup: defineCommand({
+            label: 'User setup',
+            aliases: ['init'],
+            run: async () => {},
+          }),
+        }),
+      ],
+      defaultCommands: {
+        init: defineCommand({ label: 'Built-in init', run: async () => {} }),
+      },
+    });
+
+    const tree = await buildCommandTree(COMMANDS_DIR, ctx);
+
+    expect(tree.has('init')).toBe(false);
+    expect(tree.get('setup')?.config.aliases).toContain('init');
   });
 
   it('loads simple command', async () => {

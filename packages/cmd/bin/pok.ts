@@ -17,6 +17,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { ConfigModule, LauncherSkeleton } from '../src/protocol';
 import {
+  createDefaultCommands,
+  isBuiltinCommand,
+  runBuiltinDirect,
+} from '../src/builtins';
+import {
   DELEGATION_ENV,
   findProjectRoot,
   shouldDelegate,
@@ -31,13 +36,6 @@ const args = process.argv.slice(2);
 // the launcher version it pinned. Guarded against infinite recursion by the
 // POK_DELEGATED env flag plus a same-install path check.
 await maybeDelegate();
-
-// Handle init before config discovery - must work without a config file
-if (args[0] === 'init') {
-  const { runInit } = await import('../src/init');
-  await runInit();
-  process.exit(0);
-}
 
 /**
  * Resolve the local `pokit` launcher entry from a directory, realpath-normalized.
@@ -114,6 +112,8 @@ async function main() {
       return;
     }
 
+    if (await runBuiltinDirect(args[0])) return;
+
     console.error(`Error: No pok configuration or package.json found.
 
 Run \`pok init\` to create a pok.config.ts file.
@@ -167,7 +167,14 @@ Run \`pok init\` to create a pok.config.ts file.
 
   // Step 6: Import core and call runCli with config adapters
   // (In merged architecture, configModule and core are the same package)
-  const { runCli } = configModule as any;
+  const { runCli, defineCommand, supportsDefaultCommands } = configModule as any;
+
+  // Older project cores predate overridable launcher defaults. Keep launcher
+  // commands available there with their historical reserved-name behavior.
+  if (!supportsDefaultCommands && isBuiltinCommand(args[0])) {
+    await runBuiltinDirect(args[0]);
+    return;
+  }
 
   await runCli(process.argv.slice(2), {
     commandsDir,
@@ -180,6 +187,7 @@ Run \`pok init\` to create a pok.config.ts file.
     navigator: config.navigator ?? ui?.navigator,
     pmScripts: config.pmScripts,
     pmCommands: config.pmCommands,
+    defaultCommands: createDefaultCommands(defineCommand),
     plugins: config.plugins,
   });
 }
@@ -407,6 +415,11 @@ async function runInFallbackMode(pkgDir: string) {
   let core = await resolveModule('@pokit/core', pkgDir);
   let terminal = await resolveModule('@pokit/terminal', pkgDir);
 
+  if ((!core || !terminal) && isBuiltinCommand(args[0])) {
+    await runBuiltinDirect(args[0]);
+    return;
+  }
+
   if (!core || !terminal) {
     const missing = [];
     if (!core) missing.push('@pokit/core');
@@ -430,10 +443,14 @@ async function runInFallbackMode(pkgDir: string) {
     process.exit(1);
   }
 
-  const { runCli, defineCommand } = core;
+  const { runCli, defineCommand, supportsDefaultCommands } = core;
   const { createTerminalUI } = terminal;
   const ui = createTerminalUI();
-  const { runInit } = await import('../src/init');
+
+  if (!supportsDefaultCommands && isBuiltinCommand(args[0])) {
+    await runBuiltinDirect(args[0]);
+    return;
+  }
 
   await runCli(process.argv.slice(2), {
     projectRoot: pkgDir,
@@ -443,14 +460,6 @@ async function runInFallbackMode(pkgDir: string) {
     navigator: ui.navigator,
     pmScripts: true,
     pmCommands: true,
-    extraCommands: {
-      init: defineCommand({
-        label: 'init',
-        description: 'Initialize pok config in this repo',
-        run: async () => {
-          await runInit();
-        },
-      }),
-    },
+    defaultCommands: createDefaultCommands(defineCommand),
   });
 }

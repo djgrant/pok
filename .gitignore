@@ -8,6 +8,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 .pok-bundle/
+packages/cmd/SKILL.md
 
 # VitePress cache
 **/.vitepress/cache/

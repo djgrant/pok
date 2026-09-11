@@ -57,6 +57,18 @@ When `reporter`, `prompter`, and `navigator` are omitted, the launcher wires in
 entirely: in any repo with a `package.json`, running `pok` starts in fallback
 mode and surfaces your `commands/` directory plus package scripts.
 
+## Launcher commands
+
+The launcher adds `init` and `skill` as default commands:
+
+```bash
+pok init          # Create pok.config.ts
+pok skill         # Print the pok agent skill to stdout
+```
+
+A project command name or alias with the same spelling takes precedence over a
+default launcher command.
+
 ## Project structure
 
 ```

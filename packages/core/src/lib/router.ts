@@ -135,6 +135,12 @@ export type RouterConfig = {
   extraCommands?: Record<string, import('./command').CommandConfig>;
 
   /**
+   * Root commands inserted when their names are not claimed by a user command
+   * or alias. Intended for launcher-provided commands.
+   */
+  defaultCommands?: Record<string, import('./command').CommandConfig>;
+
+  /**
    * Plugins to mount at the root.
    * Allows injecting dynamic command sources (e.g. from other packages).
    */
@@ -225,6 +231,36 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
   }
 }
 
+function applyDefaultCommands(
+  tree: CommandTree,
+  commands: Record<string, CommandConfig> | undefined
+): void {
+  if (!commands) return;
+
+  const claimed = new Set(tree.keys());
+  for (const node of tree.values()) {
+    for (const alias of node.config.aliases ?? []) {
+      claimed.add(alias);
+    }
+  }
+
+  for (const [name, config] of Object.entries(commands)) {
+    if (claimed.has(name)) continue;
+
+    tree.set(name, {
+      path: [name],
+      segment: name,
+      config,
+      children: new Map(),
+      source: 'default',
+    });
+    claimed.add(name);
+    for (const alias of config.aliases ?? []) {
+      claimed.add(alias);
+    }
+  }
+}
+
 function getNodeProjectRoot(node: CommandNode, ctx: RouterContext): string {
   return node.projectRoot ?? ctx.projectRoot;
 }
@@ -278,10 +314,13 @@ export async function buildCommandTree(
     const rootResult = await resolveMountable(rootMountable, mountCtx);
     const tree = rootResult.tree;
 
-    // 2. Recursively expand
+    // 2. Add launcher defaults after all user-owned root names and aliases are known.
+    applyDefaultCommands(tree, config.defaultCommands);
+
+    // 3. Recursively expand
     await expandTree(tree, mountCtx, new Set([rootResult.mountSourceId]));
 
-    // 3. Nothing mounted from scripts, plugins, extra commands, or files
+    // 4. Nothing mounted from scripts, plugins, extra commands, defaults, or files
     if (tree.size === 0) {
       const message =
         'No commands found. Add command files under the commands directory, or mount commands via plugins, pmScripts, or pmCommands.';
@@ -289,10 +328,10 @@ export async function buildCommandTree(
       throw new RouterError(message);
     }
 
-    // 4. Validate aliases
+    // 5. Validate aliases
     validateAliases(tree);
 
-    // 5. Warn on spelling overlap between lifecycle hook nodes and colon-split
+    // 6. Warn on spelling overlap between lifecycle hook nodes and colon-split
     // pm scripts (a script named "pre:publish" mounts at the path
     // "pre publish", so both invocations exist but mean different things)
     warnOnHookSpellingOverlap(tree, reporter);

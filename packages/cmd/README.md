@@ -19,6 +19,19 @@ pok dev          # Run specific command
 pok --help       # Show help
 ```
 
+## Launcher commands
+
+The launcher supplies two default commands:
+
+```bash
+pok init          # Create pok.config.ts
+pok skill         # Print the pok agent skill to stdout
+```
+
+Project commands take precedence over these defaults. A command named `init` or
+`skill`, or a command with either spelling as an alias, handles that invocation
+instead.
+
 ## How It Works
 
 The global `pok` command acts as a thin launcher that:

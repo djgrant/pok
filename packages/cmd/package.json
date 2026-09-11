@@ -25,8 +25,13 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "SKILL.md"
   ],
+  "scripts": {
+    "prepack": "bun scripts/package-skill.ts",
+    "postpack": "bun scripts/package-skill.ts clean"
+  },
   "publishConfig": {
     "access": "public"
   },
