@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   ContextDef,
   ContextFieldDef,
+  ContextSource,
   InferContext,
   ResolveOption,
   ResolveOptionsPage,
@@ -281,6 +282,63 @@ function createError(message: string, contextDef: ContextDef, errorContext?: Err
   return new Error(message);
 }
 
+const NUMERIC_STRING = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+
+/**
+ * Parse a CLI token into a schema value.
+ *
+ * Accepts the string itself, then a boolean or finite number when the schema
+ * accepts that value. Interactive prompts can store real booleans and numbers;
+ * replaying them has to come back through argv strings.
+ */
+function parseSchemaString(
+  schema: z.ZodType,
+  value: string
+): { ok: true; data: unknown } | { ok: false } {
+  const direct = schema.safeParse(value);
+  if (direct.success) return { ok: true, data: direct.data };
+
+  if (value === 'true' || value === 'false') {
+    const asBoolean = schema.safeParse(value === 'true');
+    if (asBoolean.success) return { ok: true, data: asBoolean.data };
+  }
+
+  if (NUMERIC_STRING.test(value)) {
+    const asNumber = schema.safeParse(Number(value));
+    if (asNumber.success) return { ok: true, data: asNumber.data };
+  }
+
+  return { ok: false };
+}
+
+function parseSchemaStrings(
+  schema: z.ZodType,
+  values: string[]
+): { ok: true; data: unknown } | { ok: false } {
+  const direct = schema.safeParse(values);
+  if (direct.success) return { ok: true, data: direct.data };
+
+  let coerced = false;
+  const next = values.map((value) => {
+    if (value === 'true' || value === 'false') {
+      coerced = true;
+      return value === 'true';
+    }
+    if (NUMERIC_STRING.test(value)) {
+      coerced = true;
+      return Number(value);
+    }
+    return value;
+  });
+
+  if (coerced) {
+    const retry = schema.safeParse(next);
+    if (retry.success) return { ok: true, data: retry.data };
+  }
+
+  return { ok: false };
+}
+
 /**
  * Parse command line arguments against context definitions
  *
@@ -309,6 +367,7 @@ export function parseContext<C extends ContextDef>(
   const knownFlags: string[] = [];
   const flagToField = new Map<string, string>();
   const explicitlySetValues = new Map<string, { value: unknown; sourceFlag: string }>();
+  const arrayFlagValues = new Map<string, string[]>();
 
   const registerFlagName = (ownerField: string, candidate: string): void => {
     const normalized = normalizeFlagName(candidate);
@@ -492,7 +551,7 @@ export function parseContext<C extends ContextDef>(
         setExplicitValue(resolvedFieldName, !isNegated, rawFlagName);
         i++;
       } else {
-        // String/enum flag - use inline value (--flag=value) or next arg (--flag value)
+        // String/enum/array flag - use inline value (--flag=value) or next arg (--flag value)
         let value: string | undefined;
         let advance: number;
 
@@ -512,9 +571,16 @@ export function parseContext<C extends ContextDef>(
           );
         }
 
-        // Validate the value against the schema
-        const result = fieldDef.schema.safeParse(value);
-        if (!result.success) {
+        if (isArraySchema(fieldDef.schema)) {
+          const bucket = arrayFlagValues.get(resolvedFieldName) ?? [];
+          bucket.push(value);
+          arrayFlagValues.set(resolvedFieldName, bucket);
+          i += advance;
+          continue;
+        }
+
+        const parsed = parseSchemaString(fieldDef.schema, value);
+        if (!parsed.ok) {
           const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
           throw createError(
             `Invalid value for --${camelToKebab(resolvedFieldName)}: ${value}.${choicesMsg}`,
@@ -523,7 +589,7 @@ export function parseContext<C extends ContextDef>(
           );
         }
 
-        setExplicitValue(resolvedFieldName, result.data, rawFlagName);
+        setExplicitValue(resolvedFieldName, parsed.data, rawFlagName);
         i += advance;
       }
     } else {
@@ -533,6 +599,19 @@ export function parseContext<C extends ContextDef>(
       rest.push(arg);
       i++;
     }
+  }
+
+  for (const [fieldName, values] of arrayFlagValues) {
+    const fieldDef = contextDef[fieldName] as ContextFieldDef;
+    const parsed = parseSchemaStrings(fieldDef.schema, values);
+    if (!parsed.ok) {
+      throw createError(
+        `Invalid value for --${camelToKebab(fieldName)}: ${values.join(' ')}`,
+        contextDef,
+        errorContext
+      );
+    }
+    context[fieldName] = parsed.data;
   }
 
   // Assign collected positionals to positional fields (from: 'arg' | 'args')
@@ -550,23 +629,23 @@ export function parseContext<C extends ContextDef>(
       // empty invocation keeps a schema default / stays undefined for prompting.
       if (claimed.length > 0 || context[name] === undefined) {
         const values = claimed.map((p) => p.value);
-        const result = fieldDef.schema.safeParse(values);
-        if (!result.success) {
+        const parsed = parseSchemaStrings(fieldDef.schema, values);
+        if (!parsed.ok) {
           throw createError(
             `Invalid value for <${camelToKebab(name)}...>: ${values.join(' ')}`,
             contextDef,
             errorContext
           );
         }
-        context[name] = result.data;
+        context[name] = parsed.data;
       }
       for (const p of claimed) consumed.add(p.restIndex);
     } else {
       const entry = positionals[cursor];
       if (entry !== undefined) {
         cursor++;
-        const result = fieldDef.schema.safeParse(entry.value);
-        if (!result.success) {
+        const parsed = parseSchemaString(fieldDef.schema, entry.value);
+        if (!parsed.ok) {
           const info = schemaInfoCache.get(name)!;
           const choicesMsg = info.choices ? ` Valid: ${info.choices.join(', ')}` : '';
           throw createError(
@@ -575,7 +654,7 @@ export function parseContext<C extends ContextDef>(
             errorContext
           );
         }
-        context[name] = result.data;
+        context[name] = parsed.data;
         consumed.add(entry.restIndex);
       }
     }
@@ -584,6 +663,146 @@ export function parseContext<C extends ContextDef>(
   const finalRest = consumed.size > 0 ? rest.filter((_, idx) => !consumed.has(idx)) : rest;
 
   return { context: context as InferContext<C>, rest: finalRest };
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => sameValue(item, b[index]));
+  }
+  return false;
+}
+
+function scalarToken(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+/**
+ * `--no-foo` is always boolean negation. A field whose kebab name already
+ * starts with `no-` is spelled in camelCase (`--noGitChecks`) so replay does
+ * not flip it off.
+ */
+function cliFlagName(name: string): string {
+  const kebab = camelToKebab(name);
+  return kebab.startsWith('no-') ? name : kebab;
+}
+
+function flagAssignment(name: string, raw: string): string[] {
+  const flag = `--${cliFlagName(name)}`;
+  if (raw.length === 0 || raw.startsWith('-')) return [`${flag}=${raw}`];
+  return [flag, raw];
+}
+
+function serializeFlag(name: string, value: unknown): string[] | null {
+  if (typeof value === 'boolean') {
+    return [value ? `--${cliFlagName(name)}` : `--no-${camelToKebab(name)}`];
+  }
+
+  if (Array.isArray(value)) {
+    const tokens: string[] = [];
+    for (const item of value) {
+      const raw = scalarToken(item);
+      if (raw === null) return null;
+      tokens.push(...flagAssignment(name, raw));
+    }
+    return tokens;
+  }
+
+  const raw = scalarToken(value);
+  if (raw === null) return null;
+  return flagAssignment(name, raw);
+}
+
+function serializePositional(value: unknown): string[] | null {
+  if (Array.isArray(value)) {
+    const tokens: string[] = [];
+    for (const item of value) {
+      const raw = scalarToken(item);
+      if (raw === null) return null;
+      tokens.push(raw);
+    }
+    return tokens;
+  }
+
+  const raw = scalarToken(value);
+  if (raw === null) return null;
+  return [raw];
+}
+
+export type SerializeContextOptions = {
+  /** Which field sources to emit. Defaults to flags and positionals. */
+  sources?: ContextSource[];
+};
+
+/**
+ * Turn a resolved context back into argv.
+ *
+ * Values that an empty invocation would already produce (schema defaults,
+ * required booleans left false) are omitted. Everything else is emitted in
+ * declaration order so a later parse restores the same context.
+ */
+export function serializeContextArgs(
+  context: Record<string, unknown>,
+  contextDef: ContextDef,
+  options?: SerializeContextOptions
+): string[] {
+  const sources = new Set<ContextSource>(options?.sources ?? ['flag', 'arg', 'args']);
+  const baseline = parseContext([], contextDef).context as Record<string, unknown>;
+  const flags: string[] = [];
+  const positionals: string[] = [];
+
+  for (const [name, fieldDef] of Object.entries(contextDef)) {
+    if (!isContextFieldDef(fieldDef) || !sources.has(fieldDef.from)) continue;
+
+    const value = context[name];
+    if (value === undefined || sameValue(value, baseline[name])) continue;
+
+    if (fieldDef.from === 'flag') {
+      const tokens = serializeFlag(name, value);
+      if (tokens && tokens.length > 0) flags.push(...tokens);
+      continue;
+    }
+
+    const tokens = serializePositional(value);
+    if (tokens && tokens.length > 0) positionals.push(...tokens);
+  }
+
+  return [...flags, ...positionals];
+}
+
+function passthroughArgs(extraArgs: string[], contextDef: ContextDef): string[] {
+  if (extraArgs.length === 0) return [];
+
+  const hasPositional = Object.values(contextDef).some(
+    (field) => isContextFieldDef(field) && (field.from === 'arg' || field.from === 'args')
+  );
+  const needsSeparator = hasPositional || extraArgs.some((arg) => arg.startsWith('-'));
+  return needsSeparator ? ['--', ...extraArgs] : [...extraArgs];
+}
+
+/**
+ * Argv of a command as it actually ran.
+ *
+ * Global flags, command flags, and positionals come from the resolved context.
+ * Defaults are left off. Extra arguments that a re-parse would swallow or
+ * treat as flags are placed after `--`.
+ */
+export function buildReplayArgs(input: {
+  context: Record<string, unknown>;
+  contextDef?: ContextDef;
+  globalContext?: Record<string, unknown>;
+  globalContextDef?: ContextDef;
+  extraArgs?: string[];
+}): string[] {
+  const contextDef = input.contextDef ?? {};
+  const globalArgs = input.globalContextDef
+    ? serializeContextArgs(input.globalContext ?? {}, input.globalContextDef, { sources: ['flag'] })
+    : [];
+  const commandArgs = serializeContextArgs(input.context, contextDef);
+  return [...globalArgs, ...commandArgs, ...passthroughArgs(input.extraArgs ?? [], contextDef)];
 }
 
 function isOptionsPage(value: unknown): value is ResolveOptionsPage {

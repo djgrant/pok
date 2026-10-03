@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { loadHistory, appendHistory, clearHistory, formatEntryLabel } from '../src/lib/history';
+import { run, createRawReporterAdapter, createRawPrompter } from '../src';
+import { COMMANDS_DIR, PROJECT_ROOT, withBrokerDisabled } from './utils';
 
 const TEST_APP = `pok-history-test-${process.pid}`;
 const TEST_HISTORY_ROOT = path.join(
@@ -295,5 +297,62 @@ describe('per-app isolation', () => {
 
     expect(loadHistory(TEST_APP)).toEqual([]);
     expect(loadHistory(OTHER_APP)).toHaveLength(1);
+  });
+});
+
+describe('resolved command history', () => {
+  const appName = `pok-history-replay-${process.pid}`;
+
+  afterEach(() => {
+    clearHistory(appName);
+  });
+
+  async function runCommand(
+    args: string[],
+    prompter: {
+      selectResponses?: unknown[];
+      confirmResponses?: boolean[];
+    } = {}
+  ) {
+    const reporterAdapter = createRawReporterAdapter({ onEvent: () => {} });
+    await withBrokerDisabled(() =>
+      run(args, {
+        commandsDir: COMMANDS_DIR,
+        projectRoot: PROJECT_ROOT,
+        appName,
+        reporterAdapter,
+        prompter: createRawPrompter(prompter),
+      })
+    );
+  }
+
+  it('records flags chosen from the interactive menu', async () => {
+    await runCommand([], {
+      selectResponses: ['with-context', 'staging'],
+      confirmResponses: [true],
+    });
+
+    const [entry] = loadHistory(appName);
+    expect(entry?.commandPath).toEqual(['with-context']);
+    expect(entry?.args).toEqual(['--env', 'staging', '--verbose']);
+  });
+
+  it('omits menu answers that match defaults', async () => {
+    await runCommand([], {
+      selectResponses: ['with-context', 'dev'],
+      confirmResponses: [false],
+    });
+
+    const [entry] = loadHistory(appName);
+    expect(entry?.commandPath).toEqual(['with-context']);
+    expect(entry?.args).toEqual([]);
+  });
+
+  it('stores a direct invocation as the resolved command', async () => {
+    await runCommand(['with-context', '--verbose', '--env', 'prod']);
+
+    const [entry] = loadHistory(appName);
+    expect(entry?.commandPath).toEqual(['with-context']);
+    expect(entry?.args).toEqual(['--env', 'prod', '--verbose']);
   });
 });

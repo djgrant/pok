@@ -41,6 +41,7 @@ import {
   resolveInteractiveContext,
   validateRequiredContext,
   extractChoices,
+  buildReplayArgs,
 } from './args';
 import { resolveChecks, runPreChecks, runChecksGroup } from './prechecks';
 import { CLIError, type ErrorContext } from './cli-error';
@@ -834,7 +835,17 @@ async function executeLeaf(
     cwd: projectRoot,
   };
 
-  appendHistory(appName, node.path, args);
+  appendHistory(
+    appName,
+    node.path,
+    buildReplayArgs({
+      context: resolvedContext as Record<string, unknown>,
+      contextDef,
+      globalContext: ctx.globalContext,
+      globalContextDef: ctx.config.globalContext,
+      extraArgs,
+    })
+  );
 
   // Run main execution with runner and context
   let result: unknown;
@@ -1161,7 +1172,17 @@ async function executeLeafWithContext(
     cwd: projectRoot,
   };
 
-  appendHistory(ctx.appName, node.path, finalArgs);
+  appendHistory(
+    ctx.appName,
+    node.path,
+    buildReplayArgs({
+      context: resolvedContext as Record<string, unknown>,
+      contextDef: config.context,
+      globalContext: ctx.globalContext,
+      globalContextDef: ctx.config.globalContext,
+      extraArgs: finalArgs,
+    })
+  );
 
   // Run main execution with runner and context
   if (config.run) {

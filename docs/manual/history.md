@@ -4,13 +4,13 @@ pok records successful command executions in a local history file. The history s
 
 ## Stored data
 
-When a command completes successfully, pok writes the command path and the arguments or flags used to a history file scoped to the configured `appName`.
+When a command completes successfully, pok writes the command path and the arguments it actually used to a history file scoped to the configured `appName`. That includes flags and positionals chosen in the interactive menu or in prompts, not only tokens typed on the command line. Values left at their default are omitted, so a replay does not restate them and does not ask again.
 
 ### Recorded Data
 
 - **Command Path**: The sequence of commands (e.g., `db`, `migrate`, `up`)
-- **Arguments**: All positional arguments
-- **Flags**: All flags provided via the CLI
+- **Arguments**: Positional arguments, plus any extra arguments passed through to the command
+- **Flags**: Flags used for the run, including values chosen in prompts
 - **Timestamp**: When the command was executed
 
 ## The `poks` Binary

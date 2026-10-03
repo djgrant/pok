@@ -7,6 +7,8 @@ import {
   extractChoices,
   extractEnumChoices,
   unwrapSchema,
+  serializeContextArgs,
+  buildReplayArgs,
 } from '../src/lib/args';
 import { CLIError } from '../src/lib/cli-error';
 import type { ContextDef, Prompter } from '../src';
@@ -1671,5 +1673,149 @@ describe('parseContext - `--` passthrough', () => {
     const { context, rest } = parseContext(['--', '--loud'], flagDef);
     expect(context.loud).toBe(false);
     expect(rest).toEqual(['--loud']);
+  });
+});
+
+describe('serializeContextArgs', () => {
+  const menuContextDef = {
+    env: {
+      from: 'flag' as const,
+      schema: z.enum(['dev', 'staging', 'prod']).default('dev'),
+      description: 'Target environment',
+    },
+    verbose: {
+      from: 'flag' as const,
+      schema: z.boolean().default(false),
+      description: 'Enable verbose output',
+    },
+  } satisfies ContextDef;
+
+  it('omits values an empty invocation would already produce', () => {
+    expect(serializeContextArgs({ env: 'dev', verbose: false }, menuContextDef)).toEqual([]);
+  });
+
+  it('emits flags chosen away from their defaults', () => {
+    const args = serializeContextArgs({ env: 'staging', verbose: true }, menuContextDef);
+    expect(args).toEqual(['--env', 'staging', '--verbose']);
+    const { context } = parseContext(args, menuContextDef);
+    expect(context.env).toBe('staging');
+    expect(context.verbose).toBe(true);
+  });
+
+  it('emits --no-flag when an optional boolean was set to false', () => {
+    const contextDef = {
+      ready: {
+        from: 'flag' as const,
+        schema: z.boolean().optional(),
+        description: 'Ready',
+      },
+    } satisfies ContextDef;
+
+    expect(serializeContextArgs({ ready: false }, contextDef)).toEqual(['--no-ready']);
+    expect(parseContext(['--no-ready'], contextDef).context.ready).toBe(false);
+  });
+
+  it('repeats array flags and parses them back', () => {
+    const contextDef = {
+      ids: {
+        from: 'flag' as const,
+        schema: z.array(z.string()),
+        description: 'Ids',
+      },
+    } satisfies ContextDef;
+
+    const args = serializeContextArgs({ ids: ['a', 'b'] }, contextDef);
+    expect(args).toEqual(['--ids', 'a', '--ids', 'b']);
+    expect(parseContext(args, contextDef).context.ids).toEqual(['a', 'b']);
+  });
+
+  it('round-trips numeric flags selected as numbers', () => {
+    const contextDef = {
+      count: {
+        from: 'flag' as const,
+        schema: z.number().int(),
+        description: 'Count',
+      },
+    } satisfies ContextDef;
+
+    const args = serializeContextArgs({ count: 2 }, contextDef);
+    expect(args).toEqual(['--count', '2']);
+    expect(parseContext(args, contextDef).context.count).toBe(2);
+  });
+
+  it('round-trips a boolean whose name starts with no', () => {
+    const contextDef = {
+      noGitChecks: {
+        from: 'flag' as const,
+        schema: z.boolean().default(false),
+        description: 'Skip git checks',
+      },
+    } satisfies ContextDef;
+
+    const args = serializeContextArgs({ noGitChecks: true }, contextDef);
+    expect(args).toEqual(['--noGitChecks']);
+    expect(parseContext(args, contextDef).context.noGitChecks).toBe(true);
+  });
+
+  it('uses equals form for values that look like flags', () => {
+    const contextDef = {
+      tag: { from: 'flag' as const, schema: z.string(), description: 'Tag' },
+    } satisfies ContextDef;
+
+    expect(serializeContextArgs({ tag: '--weird' }, contextDef)).toEqual(['--tag=--weird']);
+    expect(parseContext(['--tag=--weird'], contextDef).context.tag).toBe('--weird');
+  });
+
+  it('serializes positional fields', () => {
+    const contextDef = {
+      name: { from: 'arg' as const, schema: z.string(), description: 'Name' },
+    } satisfies ContextDef;
+
+    expect(serializeContextArgs({ name: 'alice' }, contextDef)).toEqual(['alice']);
+    expect(parseContext(['alice'], contextDef).context.name).toBe('alice');
+  });
+});
+
+describe('buildReplayArgs', () => {
+  it('puts global flags ahead of command flags', () => {
+    const args = buildReplayArgs({
+      context: { env: 'prod' },
+      contextDef: {
+        env: { from: 'flag' as const, schema: z.enum(['dev', 'prod']), description: 'Env' },
+      },
+      globalContext: { dir: '/tmp/board' },
+      globalContextDef: {
+        dir: { from: 'flag' as const, schema: z.string(), description: 'Directory' },
+      },
+    });
+
+    expect(args).toEqual(['--dir', '/tmp/board', '--env', 'prod']);
+  });
+
+  it('keeps extra arguments behind -- when a re-parse would claim them', () => {
+    const contextDef = {
+      name: { from: 'arg' as const, schema: z.string(), description: 'Name' },
+    } satisfies ContextDef;
+
+    const args = buildReplayArgs({
+      context: { name: 'alice' },
+      contextDef,
+      extraArgs: ['--filter', 'app'],
+    });
+
+    expect(args).toEqual(['alice', '--', '--filter', 'app']);
+    const parsed = parseContext(args, contextDef);
+    expect(parsed.context.name).toBe('alice');
+    expect(parsed.rest).toEqual(['--filter', 'app']);
+  });
+
+  it('leaves plain extra arguments unseparated when nothing would claim them', () => {
+    expect(
+      buildReplayArgs({
+        context: {},
+        contextDef: {},
+        extraArgs: ['hello', 'world'],
+      })
+    ).toEqual(['hello', 'world']);
   });
 });
