@@ -1337,8 +1337,9 @@ async function selectFromMenu(
   ctx: RouterContext
 ): Promise<MenuSelectionResult | null> {
   const { reporter, prompter, navigator, appName } = ctx;
+  // Launcher defaults (init, skill) stay invokable but are not menu choices.
   const topLevel = Array.from(tree.values())
-    .filter((node) => !node.config.hidden)
+    .filter((node) => !node.config.hidden && node.source !== 'default')
     .sort((a, b) => a.segment.localeCompare(b.segment));
 
   if (topLevel.length === 0) {
