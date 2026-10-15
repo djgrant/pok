@@ -294,27 +294,30 @@ const NUMERIC_STRING = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 function parseSchemaString(
   schema: z.ZodType,
   value: string
-): { ok: true; data: unknown } | { ok: false } {
+): { ok: true; data: unknown } | { ok: false; error: z.ZodError } {
   const direct = schema.safeParse(value);
   if (direct.success) return { ok: true, data: direct.data };
+  let error = direct.error;
 
   if (value === 'true' || value === 'false') {
     const asBoolean = schema.safeParse(value === 'true');
     if (asBoolean.success) return { ok: true, data: asBoolean.data };
+    error = asBoolean.error;
   }
 
   if (NUMERIC_STRING.test(value)) {
     const asNumber = schema.safeParse(Number(value));
     if (asNumber.success) return { ok: true, data: asNumber.data };
+    error = asNumber.error;
   }
 
-  return { ok: false };
+  return { ok: false, error };
 }
 
 function parseSchemaStrings(
   schema: z.ZodType,
   values: string[]
-): { ok: true; data: unknown } | { ok: false } {
+): { ok: true; data: unknown } | { ok: false; error: z.ZodError } {
   const direct = schema.safeParse(values);
   if (direct.success) return { ok: true, data: direct.data };
 
@@ -334,9 +337,60 @@ function parseSchemaStrings(
   if (coerced) {
     const retry = schema.safeParse(next);
     if (retry.success) return { ok: true, data: retry.data };
+    return { ok: false, error: retry.error };
   }
 
-  return { ok: false };
+  return { ok: false, error: direct.error };
+}
+
+/**
+ * Parse text-prompt input against a field schema.
+ *
+ * Empty input stands for "no value": optional fields resolve to the schema's
+ * undefined result (so defaults apply), required fields fail. On failure the
+ * message is the schema's own issue message, ready to show beside the prompt.
+ */
+function parsePromptedInput(
+  schema: z.ZodType,
+  input: string | string[]
+): { ok: true; data: unknown } | { ok: false; message: string } {
+  const isEmpty = Array.isArray(input) ? input.length === 0 : input === '';
+  if (isEmpty) {
+    const absent = schema.safeParse(undefined);
+    return absent.success ? { ok: true, data: absent.data } : { ok: false, message: 'Required' };
+  }
+
+  const result = Array.isArray(input)
+    ? parseSchemaStrings(schema, input)
+    : parseSchemaString(schema, input);
+  if (result.ok) return result;
+
+  return { ok: false, message: result.error.issues[0]?.message ?? 'Invalid value' };
+}
+
+/**
+ * Prompt for text until it parses against the field schema.
+ *
+ * Prompters that honour `validate` re-prompt with the schema message; for any
+ * that don't, an unparseable answer throws instead of reaching `run()`.
+ */
+async function promptParsedText(
+  prompter: Prompter,
+  name: string,
+  schema: z.ZodType,
+  options: { message: string; initialValue?: string },
+  toInput: (text: string) => string | string[]
+): Promise<unknown> {
+  const validate = (text: string) => {
+    const parsed = parsePromptedInput(schema, toInput(text));
+    return parsed.ok ? undefined : parsed.message;
+  };
+  const text = await prompter.text({ ...options, validate });
+  const parsed = parsePromptedInput(schema, toInput(text));
+  if (!parsed.ok) {
+    throw new Error(`Invalid value for --${name}: ${parsed.message}`);
+  }
+  return parsed.data;
 }
 
 /**
@@ -1201,13 +1255,13 @@ export async function resolveInteractiveContext<C extends ContextDef>(
         // Variadic positional (or array flag) with no resolver: accept a
         // whitespace-separated list via a single text prompt.
         const initialValue = Array.isArray(currentValue) ? currentValue.join(' ') : undefined;
-        const text = await prompter.text({
-          message: fieldDef.description || `Enter ${name} (space-separated):`,
-          initialValue,
-        });
-        const values = text.trim() === '' ? [] : text.trim().split(/\s+/);
-        const parsed = fieldDef.schema.safeParse(values);
-        (resolved as Record<string, unknown>)[name] = parsed.success ? parsed.data : values;
+        (resolved as Record<string, unknown>)[name] = await promptParsedText(
+          prompter,
+          name,
+          fieldDef.schema,
+          { message: fieldDef.description || `Enter ${name} (space-separated):`, initialValue },
+          (text) => (text.trim() === '' ? [] : text.trim().split(/\s+/))
+        );
       } else {
         // Text input with current/default as initial value
         const initialValue =
@@ -1216,11 +1270,13 @@ export async function resolveInteractiveContext<C extends ContextDef>(
             : info.default !== undefined
               ? String(info.default)
               : undefined;
-        const text = await prompter.text({
-          message: fieldDef.description || `Enter ${name}:`,
-          initialValue,
-        });
-        (resolved as Record<string, unknown>)[name] = text;
+        (resolved as Record<string, unknown>)[name] = await promptParsedText(
+          prompter,
+          name,
+          fieldDef.schema,
+          { message: fieldDef.description || `Enter ${name}:`, initialValue },
+          (text) => text
+        );
       }
     }
   }

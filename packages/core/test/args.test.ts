@@ -1290,6 +1290,132 @@ describe('resolveInteractiveContext', () => {
       ).rejects.toThrow('Circular dependsOn in context: env -> db -> env');
     });
   });
+
+  describe('text prompts parse against the schema', () => {
+    // Behaves like a real terminal prompter: a validate error re-prompts with
+    // the next queued answer and records the message shown.
+    function createValidatingPrompter(answers: string[]) {
+      const errors: string[] = [];
+      const prompter: Prompter = {
+        ...createMockPrompter({}),
+        async text({ validate }) {
+          let answer: string | undefined;
+          while ((answer = answers.shift()) !== undefined) {
+            const error = validate?.(answer);
+            if (!error) return answer;
+            errors.push(error);
+          }
+          throw new Error('ran out of answers');
+        },
+      };
+      return { prompter, errors };
+    }
+
+    const issueContextDef = {
+      issue: {
+        from: 'arg' as const,
+        schema: z.coerce.number().int().positive(),
+        description: 'Issue number',
+      },
+    } satisfies ContextDef;
+
+    it('passes the parsed value, not the raw string', async () => {
+      const { prompter } = createValidatingPrompter(['34']);
+      const result = await resolveInteractiveContext(
+        { issue: undefined } as any,
+        issueContextDef,
+        new Map(),
+        prompter
+      );
+      expect(result.issue).toBe(34);
+    });
+
+    it('re-prompts with the zod message until the input parses', async () => {
+      const contextDef = {
+        repo: {
+          from: 'arg' as const,
+          schema: z.string().regex(/^([\w.-]+\/)?[\w.-]+$/, 'Expected owner/repo or repo'),
+        },
+      } satisfies ContextDef;
+      const { prompter, errors } = createValidatingPrompter(['not a repo', 'acme/app']);
+      const result = await resolveInteractiveContext(
+        { repo: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter
+      );
+      expect(errors).toEqual(['Expected owner/repo or repo']);
+      expect(result.repo).toBe('acme/app');
+    });
+
+    it('shows the message from the coerced attempt, not the raw string', async () => {
+      const contextDef = {
+        count: { from: 'arg' as const, schema: z.number().int() },
+      } satisfies ContextDef;
+      const { prompter, errors } = createValidatingPrompter(['1.5', '2']);
+      const result = await resolveInteractiveContext(
+        { count: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatch(/int/);
+      expect(errors[0]).not.toMatch(/received string/);
+      expect(result.count).toBe(2);
+    });
+
+    it('rejects empty input for required fields', async () => {
+      const { prompter, errors } = createValidatingPrompter(['', '7']);
+      const result = await resolveInteractiveContext(
+        { issue: undefined } as any,
+        issueContextDef,
+        new Map(),
+        prompter
+      );
+      expect(errors).toEqual(['Required']);
+      expect(result.issue).toBe(7);
+    });
+
+    it('resolves empty input for optional fields through the schema', async () => {
+      const contextDef = {
+        tag: { from: 'flag' as const, schema: z.string().url().optional() },
+        port: { from: 'flag' as const, schema: z.coerce.number().default(3000) },
+      } satisfies ContextDef;
+      const { prompter } = createValidatingPrompter(['', '']);
+      const result = await resolveInteractiveContext(
+        { tag: undefined, port: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter,
+        true
+      );
+      expect(result.tag).toBeUndefined();
+      expect(result.port).toBe(3000);
+    });
+
+    it('parses space-separated input for array fields', async () => {
+      const contextDef = {
+        ids: { from: 'arg' as const, schema: z.array(z.coerce.number().int()).min(1) },
+      } satisfies ContextDef;
+      const { prompter, errors } = createValidatingPrompter(['1 x', '1 2']);
+      const result = await resolveInteractiveContext(
+        { ids: undefined } as any,
+        contextDef,
+        new Map(),
+        prompter
+      );
+      expect(errors).toHaveLength(1);
+      expect(result.ids).toEqual([1, 2]);
+    });
+
+    it('throws when a prompter ignores validate and returns invalid input', async () => {
+      const prompter = createMockPrompter({ text: ['abc'] });
+      await expect(
+        resolveInteractiveContext({ issue: undefined } as any, issueContextDef, new Map(), prompter)
+      ).rejects.toThrow('Invalid value for --issue:');
+    });
+  });
 });
 
 // =============================================================================
