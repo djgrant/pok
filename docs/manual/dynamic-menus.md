@@ -1,7 +1,7 @@
 # Dynamic Menus
 
 This guide shows practical patterns for driving pok dynamic menus from a data
-source. The examples use [piq](https://piq.danielgrant.co/), a query engine for
+source. The examples use [piq](https://notation.dev/piq/), a query engine for
 markdown collections, but the provider contract is the same for any async
 source — a database, an HTTP API, or the filesystem.
 
@@ -29,7 +29,7 @@ type SelectOption<T> = {
 ## Prerequisites
 
 - pok dynamic menus (`provider` on `prompter.select()`)
-- a [piq](https://piq.danielgrant.co/) collection/resolver configured in your
+- a [piq](https://notation.dev/piq/) collection/resolver configured in your
   app (for the examples below; piq queries select fields via the `params.*`,
   `frontmatter.*`, and `body.*` namespaces)
 
@@ -222,4 +222,4 @@ or an async iterator of pages. See [defineCommand](../api/define-command.md).
 ## Related
 
 - [Prompter API](../api/prompter.md)
-- [piq documentation](https://piq.danielgrant.co/)
+- [piq documentation](https://notation.dev/piq/)
