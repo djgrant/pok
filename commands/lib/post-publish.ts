@@ -69,7 +69,7 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
         const intervalMs = 2000;
         for (let attempt = 1; attempt <= maxAttempts && pending.size > 0; attempt++) {
           for (const [name, version] of [...pending]) {
-            const result = await $`npm view ${name}@${version} version --registry ${registry}`
+            const result = await $`npm view ${name}@${version} version --prefer-online --registry ${registry}`
               .quiet()
               .nothrow();
             if (result.exitCode === 0 && result.stdout.toString().trim() === version) {
@@ -92,7 +92,7 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
     // publishable package (or the just-published versions we waited for above).
     const published = new Map<string, string>();
     for (const name of PUBLISHABLE) {
-      const result = await $`npm view ${name} version --registry ${registry}`.quiet().nothrow();
+      const result = await $`npm view ${name} version --prefer-online --registry ${registry}`.quiet().nothrow();
       const version = result.stdout.toString().trim();
       if (result.exitCode === 0 && version) published.set(name, version);
     }
