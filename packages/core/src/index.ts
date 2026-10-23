@@ -241,6 +241,7 @@ export type {
   CommandReporter,
   UpdatePayload,
   GroupOptions,
+  MarkdownOptions,
   // Reporter Adapter (output rendering interface)
   ReporterAdapter,
   ReporterAdapterController,

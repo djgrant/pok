@@ -88,6 +88,9 @@ export type CLIEvent =
       type: 'markdown';
       activityId?: ActivityId;
       content: string;
+      // Max line width in columns. Omitted -> the adapter's readable default;
+      // null -> no cap (fill the available width).
+      maxWidth?: number | null;
     };
 
 /**

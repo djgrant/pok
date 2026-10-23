@@ -674,4 +674,41 @@ describe('ClackReporterAdapter', () => {
       expect(allOutput).toContain('https://docs.docker.com/get-started/');
     });
   });
+
+  describe('markdown', () => {
+    const paragraph = Array.from({ length: 60 }, (_, i) => `word${i}`).join(' ');
+    const originalColumns = process.stdout.columns;
+
+    afterEach(() => {
+      process.stdout.columns = originalColumns;
+    });
+
+    async function widestLine(maxWidth?: number | null): Promise<number> {
+      process.stdout.columns = 200;
+      vt = createVirtualTerminal(200);
+      const bus = createEventBus();
+      const adapter = createReporterAdapter({
+        output: { color: true, unicode: true, verbose: false },
+      });
+      const controller = adapter.start(bus);
+      bus.emit({ type: 'markdown', content: paragraph, maxWidth });
+      controller.stop();
+      const lines = await vt.screenshot();
+      return Math.max(...lines.map((line) => line.length));
+    }
+
+    it('wraps at a readable width by default', async () => {
+      const widest = await widestLine();
+      expect(widest).toBeLessThanOrEqual(80);
+      expect(widest).toBeGreaterThan(60);
+    });
+
+    it('wraps at a custom maxWidth', async () => {
+      expect(await widestLine(40)).toBeLessThanOrEqual(40);
+    });
+
+    it('fills the terminal width when maxWidth is null', async () => {
+      expect(await widestLine(null)).toBeGreaterThan(80);
+    });
+  });
 });

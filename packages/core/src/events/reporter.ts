@@ -27,6 +27,17 @@ export type GroupOptions = {
 };
 
 /**
+ * Options for rendering a markdown document
+ */
+export type MarkdownOptions = {
+  /**
+   * Max line width in columns. Defaults to a readable width chosen by the
+   * adapter (80 in the terminal); pass `null` to fill the available width.
+   */
+  maxWidth?: number | null;
+};
+
+/**
  * Basic logging capabilities
  */
 type LogReporter = {
@@ -55,7 +66,7 @@ type LogReporter = {
    * The raw markdown is passed through the event bus unrendered; the terminal
    * adapter renders it to ANSI, the web adapter to HTML, and so on.
    */
-  markdown(content: string): void;
+  markdown(content: string, options?: MarkdownOptions): void;
 };
 
 /**
@@ -204,11 +215,12 @@ export class ScopedReporter implements Reporter {
     this.log('step', message);
   }
 
-  markdown(content: string): void {
+  markdown(content: string, options?: MarkdownOptions): void {
     this.bus.emit({
       type: 'markdown',
       activityId: this.scopeType === 'activity' ? (this.scopeId as ActivityId) : undefined,
       content,
+      maxWidth: options?.maxWidth,
     });
   }
 

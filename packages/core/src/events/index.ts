@@ -28,6 +28,7 @@ export type {
   CommandReporter,
   UpdatePayload,
   GroupOptions,
+  MarkdownOptions,
 } from './reporter';
 export { ScopedReporter, createRootReporter, emitRootEnd } from './reporter';
 
