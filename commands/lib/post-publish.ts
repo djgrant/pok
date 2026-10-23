@@ -28,7 +28,7 @@ export interface ReconcileOptions {
   /**
    * Versions that were just published this run. npm is eventually consistent,
    * so `pok publish` passes these to poll the registry until they are fetchable
-   * before repinning/installing. The standalone `pok post-publish` command omits
+   * before repinning/installing. The standalone `pok post:publish` command omits
    * it and just reads whatever is currently latest.
    */
   waitFor?: Map<string, string>;
@@ -53,7 +53,7 @@ function readWorkspacePackages(repoRoot: string): Map<string, { dir: string; ver
  * working tree, so it is safe to run any number of times: repin root deps to the
  * latest published versions, advance workspace packages to stay strictly ahead,
  * refresh the lockfile, verify resolution, and commit. Backs both `pok publish`
- * (via `waitFor`) and the standalone `pok post-publish` recovery command.
+ * (via `waitFor`) and the standalone `pok post:publish` recovery command.
  */
 export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): Promise<void> {
   const { registry, skipPush, waitFor } = opts;
