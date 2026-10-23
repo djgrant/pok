@@ -710,5 +710,21 @@ describe('ClackReporterAdapter', () => {
     it('fills the terminal width when maxWidth is null', async () => {
       expect(await widestLine(null)).toBeGreaterThan(80);
     });
+
+    it('renders inline markdown in list items and wraps them under the marker', async () => {
+      process.stdout.columns = 200;
+      vt = createVirtualTerminal(200);
+      const bus = createEventBus();
+      const adapter = createReporterAdapter({
+        output: { color: true, unicode: true, verbose: false },
+      });
+      const controller = adapter.start(bus);
+      bus.emit({ type: 'markdown', content: `- **Label:** ${paragraph}`, maxWidth: 40 });
+      controller.stop();
+      const lines = (await vt.screenshot()).filter((line) => line.trim());
+      expect(lines[0]).toStartWith('  • Label: word0');
+      expect(lines.slice(1).every((line) => line.startsWith('    word'))).toBe(true);
+      expect(Math.max(...lines.map((line) => line.length))).toBeLessThanOrEqual(40);
+    });
   });
 });

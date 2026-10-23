@@ -38,6 +38,7 @@ import { markedTerminal } from 'marked-terminal';
 import { createTheme, type LineKind } from './renderer/theme';
 import { Frame } from './renderer/frame';
 import { LiveRegion } from './renderer/live-region';
+import { markdownLists } from './renderer/markdown-lists';
 
 /** Default markdown line width: a comfortable measure for prose. */
 const DEFAULT_MARKDOWN_MAX_WIDTH = 80;
@@ -62,7 +63,10 @@ function renderMarkdown(
   const columns = process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : 80;
   const cap = maxWidth === undefined ? DEFAULT_MARKDOWN_MAX_WIDTH : maxWidth;
   const width = cap === null ? columns : Math.min(columns, cap);
-  const marked = new Marked(markedTerminal({ width, reflowText: true }) as never);
+  const marked = new Marked(
+    markedTerminal({ width, reflowText: true }) as never,
+    markdownLists(width, outputConfig.unicode ? '•' : '-')
+  );
   return String(marked.parse(content)).replace(/\n+$/, '');
 }
 
