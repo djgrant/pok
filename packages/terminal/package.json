@@ -1,6 +1,6 @@
 {
   "name": "@pokit/terminal",
-  "version": "0.9.8-dev.0",
+  "version": "0.9.8",
   "description": "Terminal UI (reporter + prompter + navigator) for pok CLI applications",
   "keywords": [
     "cli",
