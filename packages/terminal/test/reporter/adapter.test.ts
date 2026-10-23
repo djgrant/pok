@@ -699,8 +699,8 @@ describe('ClackReporterAdapter', () => {
 
     it('wraps at a readable width by default', async () => {
       const widest = await widestLine();
-      expect(widest).toBeLessThanOrEqual(80);
-      expect(widest).toBeGreaterThan(60);
+      expect(widest).toBeLessThanOrEqual(120);
+      expect(widest).toBeGreaterThan(100);
     });
 
     it('wraps at a custom maxWidth', async () => {
@@ -708,7 +708,7 @@ describe('ClackReporterAdapter', () => {
     });
 
     it('fills the terminal width when maxWidth is null', async () => {
-      expect(await widestLine(null)).toBeGreaterThan(80);
+      expect(await widestLine(null)).toBeGreaterThan(120);
     });
 
     it('renders inline markdown in list items and wraps them under the marker', async () => {

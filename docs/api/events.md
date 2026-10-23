@@ -152,7 +152,7 @@ type Reporter = {
 type UpdatePayload = string | { progress?: number; message?: string; [key: string]: unknown };
 type GroupOptions = { layout: GroupLayout };
 
-// maxWidth caps line width: omitted -> readable default (80), null -> no cap.
+// maxWidth caps line width: omitted -> readable default (120), null -> no cap.
 type MarkdownOptions = { maxWidth?: number | null };
 ```
 

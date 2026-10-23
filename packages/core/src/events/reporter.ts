@@ -32,7 +32,7 @@ export type GroupOptions = {
 export type MarkdownOptions = {
   /**
    * Max line width in columns. Defaults to a readable width chosen by the
-   * adapter (80 in the terminal); pass `null` to fill the available width.
+   * adapter (120 in the terminal); pass `null` to fill the available width.
    */
   maxWidth?: number | null;
 };

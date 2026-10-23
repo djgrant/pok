@@ -41,7 +41,7 @@ import { LiveRegion } from './renderer/live-region';
 import { markdownLists } from './renderer/markdown-lists';
 
 /** Default markdown line width: a comfortable measure for prose. */
-const DEFAULT_MARKDOWN_MAX_WIDTH = 80;
+const DEFAULT_MARKDOWN_MAX_WIDTH = 120;
 
 /**
  * Render a markdown document for terminal output.
