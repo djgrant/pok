@@ -37,6 +37,8 @@ export type { WithDryRun, DryRunReporter } from './lib/dry-run';
 export type {
   CommandConfig,
   CommandConfigWithOutput,
+  CommandLabel,
+  MaxLabelLength,
   ContextDef,
   ContextFieldDef,
   ContextSource,

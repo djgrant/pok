@@ -105,6 +105,8 @@ Commands from `shared-tools` join the root command tree.
 
 A command defines a route's label, typed inputs, checks, and execution function.
 
+Keep `label` to one line of at most 60 characters; `defineCommand` rejects longer string literals at type-check time. Put longer explanations in `description`.
+
 Use to:
 
 - expose an operation through a route

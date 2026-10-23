@@ -378,11 +378,45 @@ export type FormatFn<O extends z.ZodType = z.ZodType> = (
  */
 export type RunAllMode = 'sequential' | 'parallel';
 
+// =============================================================================
+// Label Length
+// =============================================================================
+
+/**
+ * Maximum length of a command label.
+ *
+ * Labels are shown alongside command names in help listings and menus, so they
+ * should fit on one line. Enforced by `defineCommand` at the type level only
+ * (for string literals); there is no runtime check.
+ */
+export type MaxLabelLength = 60;
+
+type ExceedsLength<S extends string, Max extends number, Acc extends unknown[] = []> =
+  Acc['length'] extends Max
+    ? S extends ''
+      ? false
+      : true
+    : S extends `${infer _}${infer Rest}`
+      ? ExceedsLength<Rest, Max, [...Acc, unknown]>
+      : false;
+
+/**
+ * Resolves to `L` if it fits within {@link MaxLabelLength}, otherwise to an
+ * error message type so the offending label fails to type check.
+ */
+export type CommandLabel<L extends string> =
+  ExceedsLength<L, MaxLabelLength> extends true
+    ? `Command label must be ${MaxLabelLength} characters or fewer`
+    : L;
+
 /**
  * Command configuration
  */
 export type CommandConfig<C extends ContextDef = ContextDef> = {
-  /** Human-readable label for menus and help */
+  /**
+   * Short, one-line label for menus and help listings.
+   * Must be at most {@link MaxLabelLength} characters (checked by `defineCommand`).
+   */
   label: string;
 
   /**
@@ -588,8 +622,9 @@ export type CommandConfigWithOutput<C extends ContextDef, O extends z.ZodType> =
 /**
  * Define a command with output schema - run must return typed data
  */
-export function defineCommand<C extends ContextDef, O extends z.ZodType>(
-  config: Omit<CommandConfig<C>, 'run' | 'format'> & {
+export function defineCommand<C extends ContextDef, O extends z.ZodType, L extends string>(
+  config: Omit<CommandConfig<C>, 'label' | 'run' | 'format'> & {
+    label: CommandLabel<L>;
     output: O;
     format?: FormatFn<O>;
     run?: OutputRunFn<C, O>;
@@ -599,8 +634,8 @@ export function defineCommand<C extends ContextDef, O extends z.ZodType>(
 /**
  * Define a command without output schema - run returns void
  */
-export function defineCommand<C extends ContextDef>(
-  config: CommandConfig<C>
+export function defineCommand<C extends ContextDef, L extends string>(
+  config: Omit<CommandConfig<C>, 'label'> & { label: CommandLabel<L> }
 ): CommandConfig<C>;
 
 /**

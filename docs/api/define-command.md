@@ -18,7 +18,7 @@ function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandC
 
 | Property               | Type                                     | Description                                             |
 | ---------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| `label`                | `string`                                 | Human-readable label for menus and help                 |
+| `label`                | `string`                                 | One-line label for menus and help (max 60 characters)   |
 | `aliases`              | `string[]`                               | Alternative names to invoke this command                |
 | `context`              | `ContextDef`                             | Context field definitions (flags)                       |
 | `pre`                  | `CheckConfig \| CheckConfig[] \| HookFn` | Pre-execution checks                                    |
