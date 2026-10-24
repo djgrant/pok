@@ -3,5 +3,6 @@ export { SelectPrompt, type SelectItem, type SelectPromptOptions } from './selec
 export { MultiselectPrompt, type MultiselectPromptOptions } from './multiselect';
 export { ConfirmPrompt, type ConfirmPromptOptions } from './confirm';
 export { TextPrompt, type TextPromptOptions } from './text';
+export { PasswordPrompt, type PasswordPromptOptions } from './password';
 export { AutocompletePrompt, type AutocompletePromptOptions } from './autocomplete';
 export { createPromptTheme, defaultPromptTheme, type PromptTheme } from './render';

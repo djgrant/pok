@@ -141,6 +141,30 @@ export type TextOptions = {
 };
 
 /**
+ * Options for the password (masked input) prompt.
+ *
+ * Implementations MUST NOT display the typed value — neither while typing nor
+ * in any closing/summary output.
+ */
+export type PasswordOptions = {
+  /** The prompt message displayed to the user */
+  message: string;
+  /**
+   * Character echoed in place of each typed character.
+   * An empty string echoes nothing.
+   * @default "*"
+   */
+  mask?: string;
+  /**
+   * Optional validation function.
+   *
+   * @param value - The current input value
+   * @returns undefined if valid, or an error message string if invalid
+   */
+  validate?: (value: string) => string | undefined;
+};
+
+/**
  * A single option in a multiselect prompt.
  *
  * @template T - The type of the option's value
@@ -229,6 +253,11 @@ export interface Prompter {
    * Display a text input prompt.
    */
   text(options: TextOptions): Promise<string>;
+
+  /**
+   * Display a masked input prompt for secrets. The typed value is never shown.
+   */
+  password(options: PasswordOptions): Promise<string>;
 
   /**
    * Display a single-select prompt with type-ahead search filtering.

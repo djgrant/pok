@@ -18,6 +18,7 @@ export type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  PasswordOptions,
   AutocompleteOptions,
 } from '../prompter';
 

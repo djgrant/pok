@@ -1,6 +1,6 @@
 # Prompter
 
-The `Prompter` interface defines how pok requests interactive input for selects, multiselects, confirms, text fields, and type-ahead autocomplete.
+The `Prompter` interface defines how pok requests interactive input for selects, multiselects, confirms, text fields, masked password fields, and type-ahead autocomplete.
 
 ## Prompt surfaces
 
@@ -10,6 +10,7 @@ pok uses a prompter for:
 - Multiselect (multiple choices)
 - Confirm (yes/no)
 - Text input
+- Password input (masked)
 - Autocomplete (single choice with type-ahead filtering, optional)
 
 ## Interface
@@ -20,6 +21,7 @@ interface Prompter {
   multiselect<T>(options: MultiselectOptions<T>): Promise<T[]>;
   confirm(options: ConfirmOptions): Promise<boolean>;
   text(options: TextOptions): Promise<string>;
+  password(options: PasswordOptions): Promise<string>;
   /**
    * Single-select with type-ahead filtering. Optional — implementations that
    * don't support it can omit it, and callers should fall back to `select`.
@@ -140,6 +142,28 @@ type TextOptions = {
   initialValue?: string;
   validate?: (value: string) => string | undefined;
 };
+```
+
+### PasswordOptions
+
+```typescript
+type PasswordOptions = {
+  message: string;
+  /** Echoed in place of each typed character; "" echoes nothing. @default "*" */
+  mask?: string;
+  validate?: (value: string) => string | undefined;
+};
+```
+
+Implementations must never display the typed value — neither while typing nor
+in the closing summary line. `@pokit/terminal` echoes the mask per character and
+closes with a fixed-length mask so the secret's length isn't revealed either.
+
+```typescript
+const token = await prompter.password({
+  message: 'API token',
+  validate: (v) => (v.length === 0 ? 'Required' : undefined),
+});
 ```
 
 ## Using @pokit/terminal
@@ -287,6 +311,11 @@ const myPrompter: Prompter = {
   async text(options) {
     // Your implementation
     return inputText;
+  },
+
+  async password(options) {
+    // Your implementation — never echo the value
+    return secret;
   },
 };
 ```

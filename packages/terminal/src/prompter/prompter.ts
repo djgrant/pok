@@ -16,6 +16,7 @@ import type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  PasswordOptions,
   AutocompleteOptions,
 } from '@pokit/core';
 import { isDynamicOptions, CancelError } from '@pokit/core';
@@ -27,6 +28,7 @@ import {
   MultiselectPrompt,
   ConfirmPrompt,
   TextPrompt,
+  PasswordPrompt,
   AutocompletePrompt,
 } from './engine';
 import type { Screen } from '../screen.js';
@@ -155,6 +157,17 @@ export function createPrompter(screen: Screen, theme: PromptTheme = defaultPromp
         message: options.message,
         placeholder: options.placeholder,
         initialValue: options.initialValue,
+        validate: options.validate,
+      }).prompt();
+
+      return unwrap(result);
+    },
+
+    async password(options: PasswordOptions): Promise<string> {
+      const result = await new PasswordPrompt({
+        theme,
+        message: options.message,
+        mask: options.mask,
         validate: options.validate,
       }).prompt();
 

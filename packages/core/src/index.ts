@@ -282,6 +282,7 @@ export type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  PasswordOptions,
   AutocompleteOptions,
   // Navigator (menu presentation policy)
   Navigator,

@@ -12,6 +12,7 @@ import type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  PasswordOptions,
   AutocompleteOptions,
 } from './types';
 import { isDynamicOptions } from './types';
@@ -28,6 +29,7 @@ export type PromptCall =
     }
   | { type: 'confirm'; options: ConfirmOptions; response: boolean }
   | { type: 'text'; options: TextOptions; response: string }
+  | { type: 'password'; options: PasswordOptions; response: string }
   | { type: 'autocomplete'; options: AutocompleteOptions<unknown>; response: unknown };
 
 /**
@@ -68,6 +70,14 @@ export type RawPrompterOptions = {
    * Defaults to empty string or initialValue if provided.
    */
   textResponses?: ResponseProvider<string> | ResponseProvider<string>[];
+
+  /**
+   * Responses for password prompts.
+   * Can be a single value (used for all), an array (consumed in order),
+   * or a function that receives the options and returns a value.
+   * Defaults to empty string.
+   */
+  passwordResponses?: ResponseProvider<string> | ResponseProvider<string>[];
 
   /**
    * Called when a prompt is made. Useful for debugging or streaming assertions.
@@ -119,6 +129,7 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
   let multiselectIndex = 0;
   let confirmIndex = 0;
   let textIndex = 0;
+  let passwordIndex = 0;
 
   function getResponse<T>(
     responses: ResponseProvider<T> | ResponseProvider<T>[] | undefined,
@@ -250,6 +261,21 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
       return response;
     },
 
+    async password(passwordOptions: PasswordOptions): Promise<string> {
+      const response = getResponse(
+        options.passwordResponses,
+        passwordIndex++,
+        passwordOptions,
+        ''
+      );
+
+      const call: PromptCall = { type: 'password', options: passwordOptions, response };
+      calls.push(call);
+      options.onPrompt?.(call);
+
+      return response;
+    },
+
     async autocomplete<T>(autocompleteOptions: AutocompleteOptions<T>): Promise<T> {
       const defaultValue = autocompleteOptions.options[0]?.value;
 
@@ -281,6 +307,7 @@ export function createRawPrompter(options: RawPrompterOptions = {}): RawPrompter
       multiselectIndex = 0;
       confirmIndex = 0;
       textIndex = 0;
+      passwordIndex = 0;
     },
   };
 }

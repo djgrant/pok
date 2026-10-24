@@ -17,6 +17,7 @@ export type {
   MultiselectOptions,
   ConfirmOptions,
   TextOptions,
+  PasswordOptions,
   AutocompleteOptions,
 } from './types';
 

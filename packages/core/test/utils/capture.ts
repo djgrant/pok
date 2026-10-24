@@ -52,6 +52,8 @@ export type CaptureOptions = {
   confirmResponses?: boolean[];
   /** Pre-configured responses for text prompts */
   textResponses?: string[];
+  /** Pre-configured responses for password prompts */
+  passwordResponses?: string[];
   /** Output format override (json, table, csv) */
   outputFormat?: 'json' | 'table' | 'csv';
 };
@@ -93,6 +95,7 @@ export async function captureEvents(
     selectResponses: options.selectResponses,
     confirmResponses: options.confirmResponses,
     textResponses: options.textResponses,
+    passwordResponses: options.passwordResponses,
   });
 
   let error: Error | undefined;

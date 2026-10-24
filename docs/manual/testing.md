@@ -45,6 +45,7 @@ expect(calls[0]).toMatchObject({ type: 'select', response: 'option1' });
 | `multiselectResponses` | `T[] \| T[][] \| ((opts) => T[])`             | Responses for multiselect prompts  |
 | `confirmResponses`     | `boolean \| boolean[] \| ((opts) => boolean)` | Responses for confirm prompts      |
 | `textResponses`        | `string \| string[] \| ((opts) => string)`    | Responses for text prompts         |
+| `passwordResponses`    | `string \| string[] \| ((opts) => string)`    | Responses for password prompts     |
 | `strict`               | `boolean`                                     | Throw if no response is configured |
 | `onPrompt`             | `(call) => void`                              | Callback fired for each prompt     |
 

@@ -15,6 +15,7 @@ import {
   MultiselectPrompt,
   ConfirmPrompt,
   TextPrompt,
+  PasswordPrompt,
   AutocompletePrompt,
 } from '../../src/prompter/engine';
 
@@ -215,6 +216,65 @@ describe('TextPrompt', () => {
     const promise = new TextPrompt({ message: 'Name?', initialValue: 'dan', input, output }).prompt();
     await press(input, ENTER);
     expect(await promise).toBe('dan');
+  });
+});
+
+describe('PasswordPrompt', () => {
+  it('echoes the mask and never writes the value', async () => {
+    const { input, output, text } = makeIO();
+    const promise = new PasswordPrompt({ message: 'Token?', input, output }).prompt();
+    await press(input, 's', 'e', 'c', 'r', 'e', 't');
+    expect(text()).toContain('******');
+    await press(input, ENTER);
+    expect(await promise).toBe('secret');
+    expect(text()).not.toMatch(/[secrt]{2,}/);
+  });
+
+  it('erases with backspace', async () => {
+    const { input, output } = makeIO();
+    const promise = new PasswordPrompt({ message: 'Token?', input, output }).prompt();
+    await press(input, 'a', 'b', 'c', '\x7f', ENTER);
+    expect(await promise).toBe('ab');
+  });
+
+  it('uses a custom mask, and an empty mask echoes nothing', async () => {
+    const custom = makeIO();
+    const p1 = new PasswordPrompt({ message: 'Token?', mask: '#', ...custom }).prompt();
+    await press(custom.input, 'x', 'y');
+    expect(custom.text()).toContain('##');
+    await press(custom.input, ENTER);
+    expect(await p1).toBe('xy');
+
+    const silent = makeIO();
+    const p2 = new PasswordPrompt({ message: 'Token?', mask: '', ...silent }).prompt();
+    await press(silent.input, 'x', 'y', ENTER);
+    expect(await p2).toBe('xy');
+    expect(silent.text()).not.toContain('*');
+    expect(silent.text()).not.toMatch(/xy/);
+  });
+
+  it('shows validation errors without revealing the value', async () => {
+    const { input, output, text } = makeIO();
+    const promise = new PasswordPrompt({
+      message: 'Token?',
+      validate: (v) => (v.length < 3 ? 'Too short' : undefined),
+      input,
+      output,
+    }).prompt();
+    await press(input, 'q', 'z', ENTER);
+    expect(text()).toContain('Too short');
+    await press(input, 'w', ENTER);
+    expect(await promise).toBe('qzw');
+    expect(text()).not.toMatch(/qz/);
+  });
+
+  it('cancels on ctrl-c and escape', async () => {
+    for (const key of [CTRL_C, '\x1b']) {
+      const { input, output } = makeIO();
+      const promise = new PasswordPrompt({ message: 'Token?', input, output }).prompt();
+      await press(input, 'a', key);
+      expect(await promise).toBe(CANCEL);
+    }
   });
 });
 
