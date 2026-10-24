@@ -11,7 +11,7 @@ pok uses a prompter for:
 - Confirm (yes/no)
 - Text input
 - Password input (masked)
-- Autocomplete (single choice with type-ahead filtering, optional)
+- Autocomplete (single choice with type-ahead filtering)
 
 ## Interface
 
@@ -22,11 +22,8 @@ interface Prompter {
   confirm(options: ConfirmOptions): Promise<boolean>;
   text(options: TextOptions): Promise<string>;
   password(options: PasswordOptions): Promise<string>;
-  /**
-   * Single-select with type-ahead filtering. Optional — implementations that
-   * don't support it can omit it, and callers should fall back to `select`.
-   */
-  autocomplete?<T>(options: AutocompleteOptions<T>): Promise<T>;
+  /** Single-select with type-ahead filtering. */
+  autocomplete<T>(options: AutocompleteOptions<T>): Promise<T>;
 }
 ```
 
@@ -316,6 +313,11 @@ const myPrompter: Prompter = {
   async password(options) {
     // Your implementation — never echo the value
     return secret;
+  },
+
+  async autocomplete(options) {
+    // Your implementation
+    return selectedValue;
   },
 };
 ```

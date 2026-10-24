@@ -6,7 +6,7 @@
  * as opposed to how the tree itself is structured (which the router owns).
  *
  * Responsibilities:
- * - Choosing a child from a command node (the autocomplete-vs-select fallback)
+ * - Choosing a child from a command node
  * - Rendering the breadcrumb trail for the current path
  * - Mapping cancellation (Esc / Ctrl-C) to up-navigation ('back') rather than
  *   aborting the whole CLI
@@ -82,7 +82,7 @@ export function formatBreadcrumb(appName: string, path: string[]): string {
  * Create the default menu navigator.
  *
  * Presentation policy:
- * - Prefers the prompter's `autocomplete` prompt, falling back to `select`.
+ * - Prompts with the prompter's `autocomplete` (type-ahead) prompt.
  * - Emits a breadcrumb before non-root menus.
  * - Maps a cancelled prompt (CancelError) to `back`, giving up-navigation for
  *   free. The router decides that `back` at the root level means exit, which
@@ -96,12 +96,8 @@ export function createMenuNavigator(prompter: Prompter): Navigator {
         ctx.reporter.info(breadcrumb);
       }
 
-      const choose = prompter.autocomplete
-        ? prompter.autocomplete.bind(prompter)
-        : prompter.select.bind(prompter);
-
       try {
-        const selected = await choose({
+        const selected = await prompter.autocomplete({
           message: ctx.message,
           options: ctx.options.map((o) => ({
             value: o.value,

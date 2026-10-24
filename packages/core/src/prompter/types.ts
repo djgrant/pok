@@ -261,8 +261,6 @@ export interface Prompter {
 
   /**
    * Display a single-select prompt with type-ahead search filtering.
-   * Optional — implementations that don't support it can omit this method.
-   * Callers should fall back to `select` when unavailable.
    */
-  autocomplete?<T>(options: AutocompleteOptions<T>): Promise<T>;
+  autocomplete<T>(options: AutocompleteOptions<T>): Promise<T>;
 }

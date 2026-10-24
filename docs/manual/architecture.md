@@ -170,7 +170,7 @@ export const command = defineCommand({
 
 When the router reaches a parent node with no matching argument, it asks the
 `Navigator` to present the node's children. The navigator emits a breadcrumb
-(`app > db`), then prompts (autocomplete when available, otherwise select). A
+(`app > db`), then prompts with type-ahead autocomplete. A
 selection descends or executes; a cancelled prompt (**Esc** / **Ctrl-C**) is
 mapped to `back`, popping up one level. At the **root**, `back` means **exit**,
 so Esc/Ctrl-C at the top-level menu quits the CLI.

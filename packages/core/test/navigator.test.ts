@@ -28,6 +28,12 @@ const basePrompter = (): Prompter => ({
   async text() {
     return '';
   },
+  async password() {
+    return '';
+  },
+  async autocomplete() {
+    throw new Error('unused');
+  },
 });
 
 describe('createMenuNavigator', () => {
@@ -96,24 +102,4 @@ describe('createMenuNavigator', () => {
     expect(breadcrumb && breadcrumb.type === 'log' && breadcrumb.message).toBe('app > parent');
   });
 
-  it('falls back to select when autocomplete is unavailable', async () => {
-    const prompter = basePrompter();
-    let usedSelect = false;
-    prompter.select = async () => {
-      usedSelect = true;
-      return 'only';
-    };
-    const nav = createMenuNavigator(prompter);
-
-    const result = await nav.choose({
-      appName: 'app',
-      path: [],
-      message: 'pick',
-      options: [{ value: 'only', label: 'Only' }],
-      reporter: makeReporter([]),
-    });
-
-    expect(usedSelect).toBe(true);
-    expect(result).toEqual({ type: 'select', value: 'only' });
-  });
 });

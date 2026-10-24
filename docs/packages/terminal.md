@@ -69,7 +69,7 @@ export default defineConfig({
 | Surface | Type | Role |
 | --- | --- | --- |
 | `reporter` | `ReporterAdapter` | Subscribes to the event bus and renders spinners, groups, and logs. |
-| `prompter` | `Prompter` | Interactive `select`, `multiselect`, `confirm`, `text`, and `autocomplete`. |
+| `prompter` | `Prompter` | Interactive `select`, `multiselect`, `confirm`, `text`, `password`, and `autocomplete`. |
 | `navigator` | `Navigator` | Menu presentation policy: breadcrumbs, choose/back/exit, up-navigation on cancel. |
 
 ## Related

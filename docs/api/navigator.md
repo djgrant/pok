@@ -4,7 +4,7 @@ The `Navigator` owns interactive **menu presentation policy** — the parts of c
 
 Responsibilities:
 
-- Choosing a child from a command node (the autocomplete-vs-select fallback).
+- Choosing a child from a command node.
 - Rendering the breadcrumb trail for the current path.
 - Mapping cancellation (Esc / Ctrl-C) to up-navigation (`back`) rather than aborting the whole CLI.
 
@@ -68,7 +68,7 @@ const navigator = createMenuNavigator(prompter);
 
 Presentation policy:
 
-- Prefers the prompter's `autocomplete` prompt, falling back to `select`.
+- Prompts with the prompter's `autocomplete` (type-ahead) prompt.
 - Emits a breadcrumb (`appName > a > b`) before non-root menus.
 - Maps a cancelled prompt to `back`.
 
