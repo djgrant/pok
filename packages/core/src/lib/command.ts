@@ -590,8 +590,8 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
 
   /**
    * @internal
-   * Lifecycle hooks discovered alongside this command (the `pre` / `post`
-   * exports of its route file). Attached by the directory loader.
+   * Lifecycle hooks attached to this command. Bound by the router from
+   * `pre:<path>` / `post:<path>` nodes once the whole tree is built.
    */
   hooks?: CommandHooks;
 };
@@ -669,6 +669,26 @@ export function defineCommand<C extends ContextDef>(config: CommandConfig<C>): C
 }
 
 /**
+ * Marks a config as a lifecycle command. Set by {@link definePreCommand} /
+ * {@link definePostCommand} (and the directory loader for route-file
+ * exports) so the router can tell `pre:` / `post:` nodes from commands.
+ * `Symbol.for` so the tag survives duplicate copies of @pokit/core.
+ */
+const LIFECYCLE = Symbol.for('@pokit/core/lifecycle');
+
+type LifecycleKind = 'pre' | 'post';
+
+/** @internal Tag a pre/post config as a lifecycle command. */
+export function asLifecycle<T extends object>(kind: LifecycleKind, config: T): T {
+  return Object.assign(config, { [LIFECYCLE]: kind });
+}
+
+/** @internal The lifecycle kind of a config, if it is a pre/post command. */
+export function lifecycleKind(config: object): LifecycleKind | undefined {
+  return (config as { [LIFECYCLE]?: LifecycleKind })[LIFECYCLE];
+}
+
+/**
  * Fields a lifecycle command shares with a regular command.
  * Hooks cannot have children, output schemas, aliases, or mounts.
  */
@@ -736,6 +756,11 @@ export type PostCommandConfig<
  * Pre-commands are always hidden from menus, help, and completions, but are
  * directly invokable as `mycli pre:<command>`.
  *
+ * Outside route files, mount it under its invocation name and it attaches to
+ * the command at that path, wherever that command was mounted:
+ * `fromStatic({ 'pre:publish': definePreCommand({ ... }) })`. A route file
+ * that exports only `pre` / `post` does the same for the command at its path.
+ *
  * @example
  * ```ts
  * // commands/deploy.ts
@@ -751,7 +776,7 @@ export type PostCommandConfig<
 export function definePreCommand<C extends ContextDef>(
   config: PreCommandConfig<C>
 ): PreCommandConfig<C> {
-  return config;
+  return asLifecycle('pre', config);
 }
 
 /**
@@ -762,6 +787,10 @@ export function definePreCommand<C extends ContextDef>(
  * command's return value as `ctx.input`, typed by the `input` schema.
  * Also directly invokable as `mycli post:<command>`, in which case
  * `ctx.input` is undefined and the post-command must recompute what it needs.
+ *
+ * Like pre-commands, it can be mounted as `post:<command>` by any mountable
+ * (e.g. `fromStatic({ 'post:publish': definePostCommand({ ... }) })`), or
+ * exported alone from a route file, to hook a command mounted elsewhere.
  *
  * @example
  * ```ts
@@ -784,7 +813,7 @@ export function definePostCommand<C extends ContextDef>(
 export function definePostCommand<C extends ContextDef, I extends z.ZodType>(
   config: PostCommandConfig<C, I>
 ): PostCommandConfig<C, I> {
-  return config;
+  return asLifecycle('post', config);
 }
 
 /**

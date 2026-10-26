@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { validateConfig } from '../config';
 import type {
   CommandConfig,
+  CommandNode,
   CommandTree,
   MountContext,
   MountResult,
@@ -13,6 +14,7 @@ import type {
   PostCommandConfig,
   RunFn,
 } from './command';
+import { asLifecycle, lifecycleKind } from './command';
 import { getRuntime } from '../runtime';
 import { parsePmCommand, resolveWorkspaceTarget, createPmAction, type ScriptInfo } from './pm';
 import picomatch from 'picomatch';
@@ -120,6 +122,64 @@ function toHookNodeConfig(hook: PreCommandConfig | PostCommandConfig): CommandCo
     run: run as RunFn,
     hidden: true,
   };
+}
+
+/**
+ * Attach every `pre:<path>` / `post:<path>` lifecycle node to the command at
+ * `<path>` (relative to the node's level), then turn the node into its
+ * hidden, directly invokable command. Runs once the whole tree is built, so a
+ * lifecycle command may target a command from any mountable: a plugin can
+ * hook its own commands, and a route file can hook a plugin's.
+ */
+export function bindHooks(tree: CommandTree, reporter: MountContext['reporter']): void {
+  for (const [name, node] of [...tree]) {
+    const kind = lifecycleKind(node.config);
+    if (!kind) continue;
+
+    const where = node.path.slice(0, -1);
+    if (!name.startsWith(`${kind}:`)) {
+      throw new Error(
+        `"${[...where, name].join(' ')}" is a ${kind}-command; mount it as "${kind}:<command>"`
+      );
+    }
+
+    const targetPath = name.slice(kind.length + 1).split('.');
+    const target = findExact(tree, targetPath);
+    if (!target?.config.run) {
+      reporter.warn(
+        `"${[...where, name].join(' ')}" is a lifecycle command for ` +
+          `"${[...where, ...targetPath].join(' ')}", but no runnable command exists there; ignoring it`
+      );
+      tree.delete(name);
+      continue;
+    }
+    if (target.config.hooks?.[kind]) {
+      throw new Error(
+        `Lifecycle collision: "${target.path.join(' ')}" already has a ${kind}-command`
+      );
+    }
+
+    const hook = node.config as unknown as PreCommandConfig & PostCommandConfig;
+    // Copy rather than mutate: plugin configs are shared objects that may be
+    // mounted into more than one tree.
+    target.config = { ...target.config, hooks: { ...target.config.hooks, [kind]: hook } };
+    node.config = toHookNodeConfig(hook);
+  }
+
+  for (const node of tree.values()) {
+    if (node.children.size > 0) bindHooks(node.children, reporter);
+  }
+}
+
+function findExact(tree: CommandTree, segments: string[]): CommandNode | undefined {
+  let level = tree;
+  let node: CommandNode | undefined;
+  for (const segment of segments) {
+    node = level.get(segment);
+    if (!node) return undefined;
+    level = node.children;
+  }
+  return node;
 }
 
 /**
@@ -299,36 +359,20 @@ export function fromDirectory(
           const module = await import(filePath);
           const commandPath = file.replace(/\.[jt]sx?$/, '');
 
-          if (!module.command) {
-            if (module.pre || module.post) {
-              context.reporter.warn(
-                `Command file "${file}" exports pre/post lifecycle commands but no main command; ignoring it`
-              );
-            }
-            continue;
+          if (module.command) {
+            insertIntoTree(tree, commandPath.split('.'), module.command as CommandConfig, filePath);
           }
 
-          const segments = commandPath.split('.');
-          const config = module.command as CommandConfig;
-          const pre = module.pre as PreCommandConfig | undefined;
-          const post = module.post as PostCommandConfig | undefined;
-
-          if (pre || post) {
-            config.hooks = { pre, post };
-          }
-
-          insertIntoTree(tree, segments, config, filePath);
-
-          // Lifecycle commands mount as hidden top-level nodes with literal
-          // colon names (`pre:deploy`, `post:generate.types`). The colon keeps
-          // them out of the segment namespace: argv matching is literal
-          // per-token, so these can never collide with real command paths or
-          // colon-split pm scripts.
-          if (pre) {
-            insertIntoTree(tree, [`pre:${commandPath}`], toHookNodeConfig(pre), filePath);
-          }
-          if (post) {
-            insertIntoTree(tree, [`post:${commandPath}`], toHookNodeConfig(post), filePath);
+          // Lifecycle commands mount as top-level nodes with literal colon
+          // names (`pre:deploy`, `post:generate.types`) and are bound to the
+          // command at that path by the router, whichever mountable provides
+          // it. The colon keeps them out of the segment namespace: argv
+          // matching is literal per-token, so these can never collide with
+          // real command paths or colon-split pm scripts.
+          for (const kind of ['pre', 'post'] as const) {
+            if (!module[kind]) continue;
+            const hook = asLifecycle(kind, { ...(module[kind] as object) }) as CommandConfig;
+            insertIntoTree(tree, [`${kind}:${commandPath}`], hook, filePath);
           }
         } catch (e) {
           context.reporter.warn(
@@ -430,11 +474,18 @@ export function fromConfig(...pathSegments: string[]): Mountable {
 /**
  * Mount a static set of commands
  */
-export function fromStatic(commands: Record<string, CommandConfig>): Mountable {
+export function fromStatic(
+  commands: Record<string, CommandConfig | PreCommandConfig<any> | PostCommandConfig<any, any>>
+): Mountable {
   return async () => {
     const tree: CommandTree = new Map();
     for (const [name, config] of Object.entries(commands)) {
-      insertIntoTree(tree, name.split('.'), config);
+      // Lifecycle commands keep their literal name (`post:docs.build`)
+      insertIntoTree(
+        tree,
+        lifecycleKind(config) ? [name] : name.split('.'),
+        config as CommandConfig
+      );
     }
     return {
       tree,

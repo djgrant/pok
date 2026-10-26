@@ -27,6 +27,7 @@ import type {
 import {
   compose,
   fromDirectory,
+  bindHooks,
   fromPackageScripts,
   fromPackageCommands,
   fromStatic,
@@ -321,7 +322,11 @@ export async function buildCommandTree(
     // 3. Recursively expand
     await expandTree(tree, mountCtx, new Set([rootResult.mountSourceId]));
 
-    // 4. Nothing mounted from scripts, plugins, extra commands, defaults, or files
+    // 4. Attach `pre:` / `post:` lifecycle commands to their targets, now
+    // that commands from every mountable are in the tree
+    bindHooks(tree, reporter);
+
+    // 5. Nothing mounted from scripts, plugins, extra commands, defaults, or files
     if (tree.size === 0) {
       const message =
         'No commands found. Add command files under the commands directory, or mount commands via plugins, pmScripts, or pmCommands.';
@@ -329,10 +334,10 @@ export async function buildCommandTree(
       throw new RouterError(message);
     }
 
-    // 5. Validate aliases
+    // 6. Validate aliases
     validateAliases(tree);
 
-    // 6. Warn on spelling overlap between lifecycle hook nodes and colon-split
+    // 7. Warn on spelling overlap between lifecycle hook nodes and colon-split
     // pm scripts (a script named "pre:publish" mounts at the path
     // "pre publish", so both invocations exist but mean different things)
     warnOnHookSpellingOverlap(tree, reporter);

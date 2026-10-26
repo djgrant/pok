@@ -5,7 +5,13 @@
  * emitted events for assertions.
  */
 
-import { run, createRawReporterAdapter, createRawPrompter, type CLIEvent } from '../../src';
+import {
+  run,
+  createRawReporterAdapter,
+  createRawPrompter,
+  type CLIEvent,
+  type MountableLike,
+} from '../../src';
 import { normalizeEvents } from '@pokit/test-utils';
 import { COMMANDS_DIR, PROJECT_ROOT } from './paths';
 
@@ -56,6 +62,10 @@ export type CaptureOptions = {
   passwordResponses?: string[];
   /** Output format override (json, table, csv) */
   outputFormat?: 'json' | 'table' | 'csv';
+  /** Commands directory override (defaults to the shared test cases) */
+  commandsDir?: string;
+  /** Plugins mounted at the root */
+  plugins?: MountableLike[];
 };
 
 /**
@@ -110,12 +120,13 @@ export async function captureEvents(
   try {
     await withBrokerDisabled(() =>
       run(args, {
-        commandsDir: COMMANDS_DIR,
+        commandsDir: options.commandsDir ?? COMMANDS_DIR,
         projectRoot: PROJECT_ROOT,
         appName: 'cli-test',
         reporterAdapter,
         prompter,
         outputFormat: options.outputFormat,
+        plugins: options.plugins,
       })
     );
   } catch (e) {
