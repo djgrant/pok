@@ -1,5 +1,6 @@
 import { readdirSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import type { Runner } from '@pokit/core';
 import { $ } from 'bun';
 import {
@@ -170,5 +171,16 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       ]);
       if (!skipPush) await r.exec('git push');
     });
+
+    // Dogfood the shipped CLI: same as pok-plugins' default post:publish,
+    // inlined so pok's release path never depends on pok-plugins.
+    const cli = waitFor?.get('pokit');
+    if (cli && registry === 'https://registry.npmjs.org/') {
+      await g.activity(`Install pokit@${cli} into ~/npmbin`, async () => {
+        await r.exec(['pnpm', 'add', '--dir', join(homedir(), 'npmbin'), `pokit@${cli}`], {
+          retry: { maxAttempts: 4, delay: 3000 },
+        });
+      });
+    }
   });
 }
