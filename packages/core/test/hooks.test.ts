@@ -206,14 +206,77 @@ describe('Lifecycle hooks on commands mounted by plugins', () => {
     expect(error?.message).toContain('"after-deploy" is a post-command; mount it as "post:<command>"');
   });
 
-  it('rejects a second post-command for the same command', async () => {
-    const twice = fromStatic({
-      'post:publish': definePostCommand({ label: 'Plugin post', run: () => {} }),
+  it("replaces a plugin's post-command with the user's", async () => {
+    const pluginPost = fromStatic({
+      'post:publish': definePostCommand({
+        label: 'Plugin post',
+        run: () => void pluginCalls.push('plugin.post'),
+      }),
     });
     const { error } = await captureEvents(['publish'], {
       commandsDir,
-      plugins: [plugin(), twice],
+      plugins: [plugin(), pluginPost],
+    });
+    expect(error).toBeUndefined();
+    expect(pluginCalls).toEqual(['publish.run', 'post.run input=pkg-a@1.0.0']);
+  });
+
+  it('rejects two plugins hooking the same command', async () => {
+    const post = () =>
+      fromStatic({ 'post:publish': definePostCommand({ label: 'Plugin post', run: () => {} }) });
+    const { error } = await captureEvents(['publish'], {
+      commandsDir,
+      plugins: [plugin(), post(), post()],
     });
     expect(error?.message).toContain('Command collision: "post:publish"');
+  });
+});
+
+describe('User commands override plugin commands', () => {
+  const commandsDir = path.join(import.meta.dir, 'fixtures/plugin-hooks');
+
+  beforeEach(() => {
+    resetPluginCalls();
+  });
+
+  it("replaces a plugin command with the user's command at the same path", async () => {
+    const plugin = fromStatic({
+      local: defineCommand({ label: 'Plugin local', run: () => void pluginCalls.push('plugin.local') }),
+    });
+    const { error } = await captureEvents(['local'], { commandsDir, plugins: [plugin] });
+    expect(error).toBeUndefined();
+    expect(pluginCalls).toEqual(['local.run']);
+  });
+
+  it("drops the plugin's lifecycle commands for a command the user replaced", async () => {
+    const plugin = fromStatic({
+      local: defineCommand({ label: 'Plugin local', run: () => {} }),
+      'post:local': definePostCommand({
+        label: 'Plugin post',
+        run: () => void pluginCalls.push('plugin.post'),
+      }),
+    });
+    const { error } = await captureEvents(['local'], { commandsDir, plugins: [plugin] });
+    expect(error).toBeUndefined();
+    expect(pluginCalls).toEqual(['local.run']);
+
+    const direct = await captureEvents(['post:local'], { commandsDir, plugins: [plugin] });
+    expect(direct.error).toBeDefined();
+  });
+
+  it('overrides a single command inside a plugin mount, keeping its siblings', async () => {
+    const plugin = fromStatic({
+      docs: defineCommand({
+        label: 'Docs',
+        mount: fromStatic({
+          build: defineCommand({ label: 'Build', run: () => void pluginCalls.push('plugin.build') }),
+          lint: defineCommand({ label: 'Lint', run: () => void pluginCalls.push('plugin.lint') }),
+        }),
+      }),
+    });
+    await captureEvents(['docs', 'lint'], { commandsDir, plugins: [plugin] });
+    // docs.build.ts in the fixture adds a pre-command to the plugin's build
+    await captureEvents(['docs', 'build'], { commandsDir, plugins: [plugin] });
+    expect(pluginCalls).toEqual(['user.lint', 'pre.run', 'plugin.build']);
   });
 });

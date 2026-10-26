@@ -87,17 +87,28 @@ export const command = defineCommand({
 
 ### Composition
 
-The root of your CLI is composed of multiple mountables. The default composition order is:
+The root of your CLI is composed from two layers.
+
+The **base** layer holds commands other sources provide:
 
 1. Package manager scripts (if `pmScripts` is configured)
 2. Package manager commands (if `pmCommands` is configured)
-3. Static extra commands (if `extraCommands` is configured)
-4. Root plugins (if `plugins` is configured)
-5. File-based commands (from `commandsDir`)
-6. Default commands (if `defaultCommands` is configured), only when no user
-   command name or alias already claims that spelling
+3. Root plugins (if `plugins` is configured)
 
-This order ensures file-based commands can override package manager scripts if needed. Launcher defaults (`init`, `skill`) use step 6 so a project command or alias always wins.
+The **user** layer holds commands you define explicitly:
+
+4. Static extra commands (if `extraCommands` is configured)
+5. File-based commands (from `commandsDir`)
+
+A user command always wins: it replaces the base command at the same path,
+including one nested inside a plugin's mount (`commands/docs.lint.ts` replaces
+just `docs lint` and leaves the plugin's other `docs` commands alone). The
+plugin's own `pre:` / `post:` commands for a replaced command are dropped,
+since they were written for the plugin's version. Two sources within the same
+layer that define the same command are an error.
+
+Launcher defaults (`init`, `skill`, from `defaultCommands`) come last, and only
+when no command name or alias already claims that spelling.
 
 ### Root Plugins
 

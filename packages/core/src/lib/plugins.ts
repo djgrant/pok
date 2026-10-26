@@ -125,17 +125,87 @@ function toHookNodeConfig(hook: PreCommandConfig | PostCommandConfig): CommandCo
 }
 
 /**
+ * Which nodes came from commands the user defined explicitly, and which base
+ * (plugin / package-manager) nodes those replaced. Produced by
+ * {@link overlayUserTree}, consumed by {@link bindHooks}.
+ */
+export type Ownership = {
+  user: WeakSet<CommandNode>;
+  overridden: WeakSet<CommandNode>;
+};
+
+/** Configs of groups only implied by a deeper path (`docs` for `docs.build`). */
+const impliedConfigs = new WeakSet<CommandConfig>();
+
+/**
+ * Lay the user's explicit commands (route files, `extraCommands`) over the
+ * base tree (plugins, package-manager sources), path by path. A user command
+ * replaces the base command at its path, absolutely; a group the user only
+ * implied merges into the base's group, so `commands/docs.build.ts` replaces
+ * just `docs build` inside a plugin's `docs`. Both trees must already be
+ * expanded, so overrides reach into nested mounts.
+ */
+export function overlayUserTree(
+  base: CommandTree,
+  user: CommandTree,
+  owners: Ownership = { user: new WeakSet(), overridden: new WeakSet() }
+): Ownership {
+  for (const [key, userNode] of user) {
+    const baseNode = base.get(key);
+    if (!baseNode) {
+      base.set(key, userNode);
+      markUser(userNode, owners);
+      continue;
+    }
+    if (!impliedConfigs.has(userNode.config)) {
+      baseNode.config = userNode.config;
+      baseNode.file = userNode.file;
+      baseNode.source = userNode.source;
+      baseNode.projectRoot = userNode.projectRoot;
+      owners.user.add(baseNode);
+      owners.overridden.add(baseNode);
+    }
+    overlayUserTree(baseNode.children, userNode.children, owners);
+  }
+  return owners;
+}
+
+function markUser(node: CommandNode, owners: Ownership): void {
+  owners.user.add(node);
+  for (const child of node.children.values()) markUser(child, owners);
+}
+
+/**
  * Attach every `pre:<path>` / `post:<path>` lifecycle node to the command at
  * `<path>` (relative to the node's level), then turn the node into its
  * hidden, directly invokable command. Runs once the whole tree is built, so a
  * lifecycle command may target a command from any mountable: a plugin can
  * hook its own commands, and a route file can hook a plugin's.
+ *
+ * The user's lifecycle commands win over plugins'. A plugin's lifecycle
+ * command is also dropped when the user replaced its target command: it was
+ * written against the command that is no longer there.
  */
-export function bindHooks(tree: CommandTree, reporter: MountContext['reporter']): void {
-  for (const [name, node] of [...tree]) {
-    const kind = lifecycleKind(node.config);
-    if (!kind) continue;
+export function bindHooks(
+  tree: CommandTree,
+  reporter: MountContext['reporter'],
+  owners: Ownership = { user: new WeakSet(), overridden: new WeakSet() }
+): void {
+  type Entry = { level: CommandTree; name: string; node: CommandNode; kind: 'pre' | 'post' };
+  const entries: Entry[] = [];
+  const collect = (level: CommandTree): void => {
+    for (const [name, node] of level) {
+      const kind = lifecycleKind(node.config);
+      if (kind) entries.push({ level, name, node, kind });
+      else collect(node.children);
+    }
+  };
+  collect(tree);
+  // Bind the user's first so they claim their slots before plugins do
+  entries.sort((a, b) => Number(owners.user.has(b.node)) - Number(owners.user.has(a.node)));
 
+  const userSlots = new Map<CommandNode, Set<'pre' | 'post'>>();
+  for (const { level, name, node, kind } of entries) {
     const where = node.path.slice(0, -1);
     if (!name.startsWith(`${kind}:`)) {
       throw new Error(
@@ -144,13 +214,19 @@ export function bindHooks(tree: CommandTree, reporter: MountContext['reporter'])
     }
 
     const targetPath = name.slice(kind.length + 1).split('.');
-    const target = findExact(tree, targetPath);
+    const target = findExact(level, targetPath);
     if (!target?.config.run) {
       reporter.warn(
         `"${[...where, name].join(' ')}" is a lifecycle command for ` +
           `"${[...where, ...targetPath].join(' ')}", but no runnable command exists there; ignoring it`
       );
-      tree.delete(name);
+      level.delete(name);
+      continue;
+    }
+
+    const isUser = owners.user.has(node);
+    if (!isUser && (owners.overridden.has(target) || userSlots.get(target)?.has(kind))) {
+      level.delete(name);
       continue;
     }
     if (target.config.hooks?.[kind]) {
@@ -158,16 +234,13 @@ export function bindHooks(tree: CommandTree, reporter: MountContext['reporter'])
         `Lifecycle collision: "${target.path.join(' ')}" already has a ${kind}-command`
       );
     }
+    if (isUser) userSlots.set(target, new Set([...(userSlots.get(target) ?? []), kind]));
 
     const hook = node.config as unknown as PreCommandConfig & PostCommandConfig;
     // Copy rather than mutate: plugin configs are shared objects that may be
     // mounted into more than one tree.
     target.config = { ...target.config, hooks: { ...target.config.hooks, [kind]: hook } };
     node.config = toHookNodeConfig(hook);
-  }
-
-  for (const node of tree.values()) {
-    if (node.children.size > 0) bindHooks(node.children, reporter);
   }
 }
 
@@ -202,10 +275,12 @@ function insertIntoTree(
     let node = currentLevel.get(segment);
 
     if (!node) {
+      const implied = { label: segment };
+      if (!isLast) impliedConfigs.add(implied);
       node = {
         path: currentPath,
         segment,
-        config: isLast ? config : { label: segment },
+        config: isLast ? config : implied,
         children: new Map(),
       };
       currentLevel.set(segment, node);

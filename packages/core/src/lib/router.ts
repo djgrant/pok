@@ -28,6 +28,7 @@ import {
   compose,
   fromDirectory,
   bindHooks,
+  overlayUserTree,
   fromPackageScripts,
   fromPackageCommands,
   fromStatic,
@@ -235,14 +236,18 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
 
 function applyDefaultCommands(
   tree: CommandTree,
-  commands: Record<string, CommandConfig> | undefined
+  commands: Record<string, CommandConfig> | undefined,
+  userTree: CommandTree
 ): void {
   if (!commands) return;
 
-  const claimed = new Set(tree.keys());
-  for (const node of tree.values()) {
-    for (const alias of node.config.aliases ?? []) {
-      claimed.add(alias);
+  const claimed = new Set<string>();
+  for (const level of [tree, userTree]) {
+    for (const [name, node] of level) {
+      claimed.add(name);
+      for (const alias of node.config.aliases ?? []) {
+        claimed.add(alias);
+      }
     }
   }
 
@@ -288,19 +293,22 @@ export async function buildCommandTree(
   const { config, projectRoot, reporter, prompter } = ctx;
   const rootDir = rootCommandsDir(commandsDir, ctx);
 
-  // Build the root composition
-  const rootMountable = compose(
+  // Plugins and package-manager sources form the base tree. Commands the
+  // user defines explicitly (extraCommands, route files) are composed apart
+  // and laid over it: they override base commands at the same path.
+  const baseMountable = compose(
     // 1. Package Manager Scripts
     config.pmScripts ? fromPackageScripts(config.pmScripts, projectRoot) : noop(),
 
     // 2. Package Manager Commands
     config.pmCommands ? fromPackageCommands(config.pmCommands, projectRoot) : noop(),
 
-    // 3. Extra Commands
+    // 3. Plugins (Root Mountables)
+    ...(config.plugins || [])
+  );
+  const userMountable = compose(
+    // 4. Extra Commands
     config.extraCommands ? fromStatic(config.extraCommands) : noop(),
-
-    // 4. Plugins (Root Mountables)
-    ...(config.plugins || []),
 
     // 5. File-based commands (legacy/standard way)
     fromDirectory(rootDir.dir, { missing: rootDir.missing })
@@ -313,18 +321,22 @@ export async function buildCommandTree(
 
   try {
     // 1. Resolve root
-    const rootResult = await resolveMountable(rootMountable, mountCtx);
-    const tree = rootResult.tree;
+    const base = await resolveMountable(baseMountable, mountCtx);
+    const user = await resolveMountable(userMountable, mountCtx);
+    const tree = base.tree;
 
     // 2. Add launcher defaults after all user-owned root names and aliases are known.
-    applyDefaultCommands(tree, config.defaultCommands);
+    applyDefaultCommands(tree, config.defaultCommands, user.tree);
 
-    // 3. Recursively expand
-    await expandTree(tree, mountCtx, new Set([rootResult.mountSourceId]));
+    // 3. Recursively expand both trees, then lay the user's commands over the
+    // base so overrides reach into nested mounts
+    await expandTree(tree, mountCtx, new Set([base.mountSourceId]));
+    await expandTree(user.tree, mountCtx, new Set([user.mountSourceId]));
+    const owners = overlayUserTree(tree, user.tree);
 
     // 4. Attach `pre:` / `post:` lifecycle commands to their targets, now
     // that commands from every mountable are in the tree
-    bindHooks(tree, reporter);
+    bindHooks(tree, reporter, owners);
 
     // 5. Nothing mounted from scripts, plugins, extra commands, defaults, or files
     if (tree.size === 0) {
