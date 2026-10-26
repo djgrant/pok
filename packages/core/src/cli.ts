@@ -74,13 +74,13 @@ export type RunCliConfig = {
    * Extra commands to inject into the tree manually.
    * Useful for dynamically generated commands or internal tooling.
    */
-  extraCommands?: Record<string, import('./lib/command').CommandConfig>;
+  extraCommands?: Record<string, import('./lib/command').AnyCommandConfig>;
 
   /**
    * Launcher-provided root commands used when no user command name or alias
    * claims the same spelling.
    */
-  defaultCommands?: Record<string, import('./lib/command').CommandConfig>;
+  defaultCommands?: Record<string, import('./lib/command').AnyCommandConfig>;
 
   /**
    * Plugins to mount at the root.

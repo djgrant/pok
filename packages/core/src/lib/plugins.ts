@@ -10,6 +10,7 @@ import type {
   MountResult,
   Mountable,
   MountableLike,
+  AnyCommandConfig,
   PreCommandConfig,
   PostCommandConfig,
   RunFn,
@@ -550,7 +551,7 @@ export function fromConfig(...pathSegments: string[]): Mountable {
  * Mount a static set of commands
  */
 export function fromStatic(
-  commands: Record<string, CommandConfig | PreCommandConfig<any> | PostCommandConfig<any, any>>
+  commands: Record<string, AnyCommandConfig | PreCommandConfig<any> | PostCommandConfig<any, any>>
 ): Mountable {
   return async () => {
     const tree: CommandTree = new Map();

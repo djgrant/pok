@@ -620,6 +620,12 @@ export type CommandConfigWithOutput<C extends ContextDef, O extends z.ZodType> =
 };
 
 /**
+ * Any command `defineCommand` can return, whatever its context or
+ * output types. For parameters that take user-built commands.
+ */
+export type AnyCommandConfig = CommandConfig<any> | CommandConfigWithOutput<any, any>;
+
+/**
  * Define a command with output schema - run must return typed data
  */
 export function defineCommand<C extends ContextDef, O extends z.ZodType, L extends string>(

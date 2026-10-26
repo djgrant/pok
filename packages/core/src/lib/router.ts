@@ -16,6 +16,7 @@ import { getRuntime, detectPackageManagerFromLockfile } from '../runtime';
 import { formatTable, formatCsv } from './tabular';
 import { markOperational, markPresented } from './errors';
 import type {
+  AnyCommandConfig,
   CommandConfig,
   ContextDef,
   CommandNode,
@@ -135,13 +136,13 @@ export type RouterConfig = {
    * Extra commands to inject into the tree manually.
    * Useful for dynamically generated commands or internal tooling.
    */
-  extraCommands?: Record<string, import('./command').CommandConfig>;
+  extraCommands?: Record<string, import('./command').AnyCommandConfig>;
 
   /**
    * Root commands inserted when their names are not claimed by a user command
    * or alias. Intended for launcher-provided commands.
    */
-  defaultCommands?: Record<string, import('./command').CommandConfig>;
+  defaultCommands?: Record<string, import('./command').AnyCommandConfig>;
 
   /**
    * Plugins to mount at the root.
@@ -236,7 +237,7 @@ function validateAliases(tree: CommandTree, pathPrefix: string = ''): void {
 
 function applyDefaultCommands(
   tree: CommandTree,
-  commands: Record<string, CommandConfig> | undefined,
+  commands: Record<string, AnyCommandConfig> | undefined,
   userTree: CommandTree
 ): void {
   if (!commands) return;
