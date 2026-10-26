@@ -1,5 +1,6 @@
 import { readdirSync, existsSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import type { Runner } from '@pokit/core';
 import { $ } from 'bun';
 import {
@@ -170,5 +171,22 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       ]);
       if (!skipPush) await r.exec('git push');
     });
+
+    // Dogfood the shipped CLI: install it into this machine's global pnpm
+    // project ($POK_GLOBAL_DIR, whose node_modules/.bin is on PATH). Same
+    // convention as pok-plugins' release(); inlined so pok's release path never
+    // depends on pok-plugins. Exact version, and minimumReleaseAge overridden,
+    // since the version is by definition minutes old.
+    const cli = waitFor?.get('pokit');
+    const globalDir = process.env.POK_GLOBAL_DIR?.replace(/^~(?=\/|$)/, homedir());
+    if (cli && !globalDir) {
+      r.reporter.info(`Set POK_GLOBAL_DIR to install pokit@${cli} locally after publish.`);
+    } else if (cli && globalDir) {
+      await g.activity(`Install pokit@${cli} into ${globalDir}`, async () => {
+        await r.exec(['pnpm', 'add', '--dir', globalDir, '--config.minimum-release-age=0', `pokit@${cli}`], {
+          retry: { maxAttempts: 4, delay: 3000 },
+        });
+      });
+    }
   });
 }
