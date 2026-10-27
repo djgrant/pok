@@ -6,7 +6,6 @@ import {
   validateRequiredContext,
   extractChoices,
   extractEnumChoices,
-  unwrapSchema,
   serializeContextArgs,
   buildReplayArgs,
 } from '../src/lib/args';
@@ -1653,64 +1652,6 @@ describe('extractEnumChoices', () => {
       const choices = extractEnumChoices(z.string().refine((v) => ['a', 'b'].includes(v)));
       expect(choices).toBeUndefined();
     });
-  });
-});
-
-// =============================================================================
-// unwrapSchema Tests
-// =============================================================================
-
-// Helper to get type name from schema (works with both Zod v3 and v4)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getTypeName(schema: any): string {
-  // Zod v3 uses typeName, Zod v4 uses type
-  return schema._def?.typeName || schema._def?.type || 'unknown';
-}
-
-describe('unwrapSchema', () => {
-  it('returns the schema as-is when no wrapper', () => {
-    const schema = z.string();
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
-  });
-
-  it('unwraps optional', () => {
-    const schema = z.string().optional();
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
-  });
-
-  it('unwraps default', () => {
-    const schema = z.string().default('hello');
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
-  });
-
-  it('unwraps nullable', () => {
-    const schema = z.string().nullable();
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
-  });
-
-  it('unwraps multiple layers', () => {
-    const schema = z.string().optional().nullable().default('test');
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodString' || typeName === 'string').toBe(true);
-  });
-
-  it('unwraps to enum', () => {
-    const schema = z.enum(['a', 'b']).optional().default('a');
-    const unwrapped = unwrapSchema(schema);
-    const typeName = getTypeName(unwrapped);
-    expect(typeName === 'ZodEnum' || typeName === 'enum').toBe(true);
-    // Verify we can extract the enum values from the unwrapped schema
-    const choices = extractEnumChoices(unwrapped);
-    expect(choices).toEqual(['a', 'b']);
   });
 });
 

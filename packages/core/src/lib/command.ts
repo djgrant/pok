@@ -9,7 +9,7 @@
  * the command's context satisfies the task's requirements.
  */
 
-import { z } from 'zod';
+import type { StandardSchemaV1 } from './schema';
 import type { CheckConfig } from './check';
 import type { Runner } from './runner';
 import type { Reporter, CommandReporter } from '../events';
@@ -98,7 +98,7 @@ export type MountableLike = Mountable | ((context: MountContext) => Mountable | 
  * - `flag`: parsed from `--name value` (or `--name` for booleans)
  * - `arg`: a single positional argument, consumed in declaration order
  * - `args`: a variadic positional that consumes all remaining positionals
- *   (must be the last positional field; pair with a `z.array(...)` schema)
+ *   (must be the last positional field; pair with an array schema)
  */
 export type ContextSource = 'flag' | 'arg' | 'args';
 
@@ -110,7 +110,7 @@ export type ContextSource = 'flag' | 'arg' | 'args';
 
  * Each field in a command's context specifies where its value comes from
 
- * and a Zod schema for validation/typing.
+ * and a Standard Schema (Zod, Valibot, ArkType, ...) for validation/typing.
 
  */
 
@@ -119,9 +119,9 @@ export type ContextFieldDef = {
 
   from: ContextSource;
 
-  /** Zod schema for validation and type inference */
+  /** Standard Schema for validation and type inference */
 
-  schema: z.ZodType;
+  schema: StandardSchemaV1;
 
   /**
    * Optional dynamic resolver for interactive option loading.
@@ -170,9 +170,9 @@ export type ContextFieldDef = {
 
    *
 
-   * Use this when automatic enum extraction from the schema fails,
+   * Use this when automatic enum extraction from the schema fails, such as
 
-   * such as with custom refinements or complex schema compositions.
+   * with custom refinements or libraries without Standard JSON Schema support.
 
    *
 
@@ -277,19 +277,19 @@ export function isVariadicField(value: unknown): value is ContextFieldDef {
 /**
  * Infer the resolved context type from a context definition
  *
- * Extracts the Zod-inferred type for fields, and the literal type for static values.
+ * Extracts the schema output type for fields, and the literal type for static values.
  */
 export type InferContext<C extends ContextDef> = {
-  [K in keyof C]: C[K] extends ContextFieldDef ? z.infer<C[K]['schema']> : C[K];
+  [K in keyof C]: C[K] extends ContextFieldDef ? StandardSchemaV1.InferOutput<C[K]['schema']> : C[K];
 };
 
 /**
  * Infer the accepted input context type from a context definition.
  *
- * This uses z.input<schema> so transforms/preprocesses accept their input shapes.
+ * This uses the schema input type so transforms accept their input shapes.
  */
 export type InferContextInput<C extends ContextDef> = {
-  [K in keyof C]: C[K] extends ContextFieldDef ? z.input<C[K]['schema']> : C[K];
+  [K in keyof C]: C[K] extends ContextFieldDef ? StandardSchemaV1.InferInput<C[K]['schema']> : C[K];
 };
 
 /** Alias for the resolved (output) context type. */
@@ -356,17 +356,17 @@ export type RunFn<C extends ContextDef = any> = (
  * Run function type for commands with output schemas.
  * Returns typed data matching the output schema.
  */
-export type OutputRunFn<C extends ContextDef = any, O extends z.ZodType = z.ZodType> = (
+export type OutputRunFn<C extends ContextDef = any, O extends StandardSchemaV1 = StandardSchemaV1> = (
   runner: Runner<InferContext<C>>,
   ctx: RunContext<C>
-) => Promise<z.infer<O>> | z.infer<O>;
+) => Promise<StandardSchemaV1.InferOutput<O>> | StandardSchemaV1.InferOutput<O>;
 
 /**
  * Format function type for human-readable output.
  * Receives typed data and a reporter for rendering.
  */
-export type FormatFn<O extends z.ZodType = z.ZodType> = (
-  data: z.infer<O>,
+export type FormatFn<O extends StandardSchemaV1 = StandardSchemaV1> = (
+  data: StandardSchemaV1.InferOutput<O>,
   reporter: CommandReporter
 ) => void;
 
@@ -518,7 +518,7 @@ export type CommandConfig<C extends ContextDef = ContextDef> = {
    * }),
    * ```
    */
-  output?: z.ZodType;
+  output?: StandardSchemaV1;
 
   /**
    * Human-readable format function for structured output.
@@ -610,7 +610,7 @@ export type CommandHooks = {
  *
  * This is primarily used for SDK typing (e.g. CommandReturn<typeof command>).
  */
-export type CommandConfigWithOutput<C extends ContextDef, O extends z.ZodType> = Omit<
+export type CommandConfigWithOutput<C extends ContextDef, O extends StandardSchemaV1> = Omit<
   CommandConfig<C>,
   'output' | 'run' | 'format'
 > & {
@@ -628,7 +628,7 @@ export type AnyCommandConfig = CommandConfig<any> | CommandConfigWithOutput<any,
 /**
  * Define a command with output schema - run must return typed data
  */
-export function defineCommand<C extends ContextDef, O extends z.ZodType, L extends string>(
+export function defineCommand<C extends ContextDef, O extends StandardSchemaV1, L extends string>(
   config: Omit<CommandConfig<C>, 'label' | 'run' | 'format'> & {
     label: CommandLabel<L>;
     output: O;
@@ -738,7 +738,7 @@ export type PostRunContext<C extends ContextDef = any, I = unknown> = RunContext
  */
 export type PostCommandConfig<
   C extends ContextDef = ContextDef,
-  I extends z.ZodType = z.ZodType,
+  I extends StandardSchemaV1 = StandardSchemaV1,
 > = HookCommandBase<C> & {
   /**
    * Schema for the main command's return value, typically the same schema as
@@ -748,7 +748,7 @@ export type PostCommandConfig<
   input?: I;
   run: (
     runner: Runner<InferContext<C>>,
-    ctx: PostRunContext<C, z.infer<I>>
+    ctx: PostRunContext<C, StandardSchemaV1.InferOutput<I>>
   ) => Promise<void> | void;
 };
 
@@ -810,13 +810,13 @@ export function definePreCommand<C extends ContextDef>(
  * });
  * ```
  */
-export function definePostCommand<C extends ContextDef, I extends z.ZodType>(
+export function definePostCommand<C extends ContextDef, I extends StandardSchemaV1>(
   config: PostCommandConfig<C, I> & { input: I }
 ): PostCommandConfig<C, I>;
 export function definePostCommand<C extends ContextDef>(
   config: PostCommandConfig<C>
 ): PostCommandConfig<C>;
-export function definePostCommand<C extends ContextDef, I extends z.ZodType>(
+export function definePostCommand<C extends ContextDef, I extends StandardSchemaV1>(
   config: PostCommandConfig<C, I>
 ): PostCommandConfig<C, I> {
   return asLifecycle('post', config);

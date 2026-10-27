@@ -311,7 +311,7 @@ defineCommand({
 defineTask({
   label: string,
   env?: Env | Env[],
-  params?: ZodSchema,
+  params?: StandardSchemaV1,
   exec: string | ((ctx: TaskContext) => string),
 });
 
@@ -319,7 +319,7 @@ defineTask({
 defineTask({
   label: string,
   env?: Env | Env[],
-  params?: ZodSchema,
+  params?: StandardSchemaV1,
   run: (runner: Runner, ctx: TaskContext) => Promise<T> | T,
 });
 ```
@@ -328,8 +328,8 @@ defineTask({
 
 ```typescript
 defineEnv({
-  requiredVars: ZodObject,
-  requiredContext: ZodObject,
+  requiredVars: StandardSchemaV1,
+  requiredContext: StandardSchemaV1,
   resolve: (keys: string[], context: Context) => Promise<Record<string, string>>,
 });
 ```

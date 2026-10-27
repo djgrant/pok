@@ -32,7 +32,7 @@
  * ```
  */
 
-import { z } from 'zod';
+import { booleanSchema } from './schema';
 import type { ContextFieldDef } from './command';
 import type { CommandReporter } from '../events';
 
@@ -56,7 +56,7 @@ import type { CommandReporter } from '../events';
 export const dryRunContext = {
   dryRun: {
     from: 'flag' as const,
-    schema: z.boolean().default(false),
+    schema: booleanSchema(false),
     description: 'Show what would be done without making changes',
   } satisfies ContextFieldDef,
 };

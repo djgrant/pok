@@ -5,7 +5,7 @@ description: Build TypeScript CLI applications with pok. Use to create type-safe
 
 # pok
 
-pok is a file-based CLI framework for TypeScript. Files define the command tree, Zod schemas define typed inputs, tasks package reusable work, environment resolvers supply typed configuration, and runners execute work through terminal adapters.
+pok is a file-based CLI framework for TypeScript. Files define the command tree, Standard Schema schemas (Zod, Valibot, ArkType, ...) define typed inputs, tasks package reusable work, environment resolvers supply typed configuration, and runners execute work through terminal adapters.
 
 ## Application setup
 

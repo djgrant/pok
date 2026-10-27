@@ -41,7 +41,7 @@ function defineTask<TEnv, TParams, TEnvWriter, TReturn>(config: {
 | `label`      | `string`             | Human-readable label                                  |
 | `shortLabel` | `string`             | Short label for tabs (defaults to first word of exec) |
 | `env`        | `Env \| Env[]`       | Environment(s) to resolve before execution            |
-| `params`     | `z.ZodType`          | Zod schema for task parameters                        |
+| `params`     | `StandardSchemaV1`   | Schema for task parameters                            |
 | `envWriter`  | `Env`                | Environment for writing (enables `ctx.writeEnvs`)     |
 | `retry`      | `RetryConfig`        | Retry configuration for failed executions             |
 | `exec`       | `string \| Function` | Shell command to execute                              |

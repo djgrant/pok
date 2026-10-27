@@ -4,7 +4,7 @@ Commands can define an `output` schema that types the value returned from `run()
 
 ## The output + format API
 
-Define an `output` schema with Zod and return data from `run()`:
+Define an `output` schema (any Standard Schema library; Zod shown here) and return data from `run()`:
 
 ```typescript
 import { z } from 'zod';

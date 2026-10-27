@@ -261,7 +261,7 @@ positionals beyond the declared fields fall through to `extraArgs`.
 
 A lone `--` stops flag parsing; every token after it is forwarded verbatim to
 `extraArgs` and never interpreted as a flag. This is the escape hatch for
-wrapping subprocesses whose own flags you don't want to model in Zod:
+wrapping subprocesses whose own flags you don't want to model in a schema:
 
 ```
 mycli medical build -- --verbose --foo   # --verbose --foo land in extraArgs

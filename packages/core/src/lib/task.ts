@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { StandardSchemaV1 } from './schema';
 import type { Env, InferEnvVars, InferEnvContext } from './env';
 import type { TaskReporter } from '../events';
 
@@ -180,7 +180,7 @@ type InferEnvVarsFromConfig<T> = T extends AnyEnv
 
 export type ExecTaskConfig<
   TEnv extends AnyEnv | readonly AnyEnv[] | undefined = undefined,
-  TParams extends z.ZodType | undefined = undefined,
+  TParams extends StandardSchemaV1 | undefined = undefined,
   TEnvWriter extends AnyEnv | undefined = undefined,
 > = {
   label: string;
@@ -211,7 +211,7 @@ export type ExecTaskConfig<
     | ((
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
-          TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
+          TParams extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TParams> : EmptyObject,
           TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
       ) => ExecInput);
@@ -219,7 +219,7 @@ export type ExecTaskConfig<
 
 export type RunTaskConfig<
   TEnv extends AnyEnv | readonly AnyEnv[] | undefined = undefined,
-  TParams extends z.ZodType | undefined = undefined,
+  TParams extends StandardSchemaV1 | undefined = undefined,
   TEnvWriter extends AnyEnv | undefined = undefined,
   TReturn = void,
 > = {
@@ -244,7 +244,7 @@ export type RunTaskConfig<
     runner: RunnerLike,
     ctx: TaskContext<
       TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
-      TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
+      TParams extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TParams> : EmptyObject,
       TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
     >
   ) => Promise<TReturn> | TReturn;
@@ -253,12 +253,12 @@ export type RunTaskConfig<
 export type AnyTaskConfig =
   | ExecTaskConfig<
       AnyEnv | readonly AnyEnv[] | undefined,
-      z.ZodType | undefined,
+      StandardSchemaV1 | undefined,
       AnyEnv | undefined
     >
   | RunTaskConfig<
       AnyEnv | readonly AnyEnv[] | undefined,
-      z.ZodType | undefined,
+      StandardSchemaV1 | undefined,
       AnyEnv | undefined,
       unknown
     >;
@@ -266,7 +266,7 @@ export type AnyTaskConfig =
 // Single overload for exec tasks
 export function defineTask<
   TEnv extends AnyEnv | readonly AnyEnv[] | undefined = undefined,
-  TParams extends z.ZodType | undefined = undefined,
+  TParams extends StandardSchemaV1 | undefined = undefined,
   TEnvWriter extends AnyEnv | undefined = undefined,
 >(config: {
   label: string;
@@ -280,7 +280,7 @@ export function defineTask<
     | ((
         ctx: TaskContext<
           TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
-          TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
+          TParams extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TParams> : EmptyObject,
           TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
         >
       ) => ExecInput);
@@ -289,7 +289,7 @@ export function defineTask<
 // Single overload for run tasks
 export function defineTask<
   TEnv extends AnyEnv | readonly AnyEnv[] | undefined = undefined,
-  TParams extends z.ZodType | undefined = undefined,
+  TParams extends StandardSchemaV1 | undefined = undefined,
   TEnvWriter extends AnyEnv | undefined = undefined,
   TReturn = void,
 >(config: {
@@ -303,7 +303,7 @@ export function defineTask<
     runner: RunnerLike,
     ctx: TaskContext<
       TEnv extends undefined ? EmptyObject : InferEnvVarsFromConfig<TEnv>,
-      TParams extends z.ZodType ? z.infer<TParams> : EmptyObject,
+      TParams extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TParams> : EmptyObject,
       TEnvWriter extends AnyEnv ? WriteEnvsFn<TEnvWriter['vars'][number]> : undefined
     >
   ) => Promise<TReturn> | TReturn;
@@ -315,7 +315,7 @@ export function defineTask(config: {
   shortLabel?: string;
   env?: AnyEnv | readonly AnyEnv[];
   envWriter?: AnyEnv;
-  params?: z.ZodType;
+  params?: StandardSchemaV1;
   retry?: RetryConfig;
   exec?: ExecInput | ((ctx: TaskContext<any, any, any>) => ExecInput);
   run?: (runner: RunnerLike, ctx: TaskContext<any, any, any>) => Promise<any> | any;
@@ -354,6 +354,12 @@ export type InferTaskEnvs<T> = T extends { env: infer E }
     : InferEnvVarsFromConfig<E>
   : EmptyObject;
 
-export type InferTaskParams<T> = T extends { params: z.ZodType<infer P> } ? P : EmptyObject;
+export type InferTaskParams<T> = T extends { params?: infer S }
+  ? [NonNullable<S>] extends [never]
+    ? EmptyObject
+    : NonNullable<S> extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<NonNullable<S>>
+      : EmptyObject
+  : EmptyObject;
 
 export type InferTaskReturn<T> = T extends { run: (...args: any[]) => infer R } ? Awaited<R> : void;

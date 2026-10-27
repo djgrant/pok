@@ -1,6 +1,10 @@
+import { validateSync, type StandardSchemaV1 } from '../../core/src/lib/schema';
 import { describe, it, expect } from 'bun:test';
 import { defineOpVault } from '../src/vault';
 import { defineOpResolver } from '../src/resolver';
+
+const accepts = (schema: StandardSchemaV1, value: unknown): boolean =>
+  !validateSync(schema, value).issues;
 
 // =============================================================================
 // Note: These tests focus on the resolver structure and validation logic.
@@ -66,12 +70,12 @@ describe('defineOpResolver', () => {
       });
 
       // Valid environments should pass
-      expect(resolver.requiredContext.safeParse({ env: 'dev' }).success).toBe(true);
-      expect(resolver.requiredContext.safeParse({ env: 'staging' }).success).toBe(true);
-      expect(resolver.requiredContext.safeParse({ env: 'prod' }).success).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'dev' })).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'staging' })).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'prod' })).toBe(true);
 
       // Invalid environment should fail
-      expect(resolver.requiredContext.safeParse({ env: 'invalid' }).success).toBe(false);
+      expect(accepts(resolver.requiredContext, { env: 'invalid' })).toBe(false);
     });
   });
 
@@ -85,9 +89,9 @@ describe('defineOpResolver', () => {
       });
 
       // Bypass type checking to test runtime error
-      // Zod validates the context first, so we get a validation error
+      // The context is validated first, so we get a validation error
       await expect(resolver.resolve(['POSTGRES_URL'], { env: 'unknown' } as any)).rejects.toThrow(
-        'Invalid input'
+        'Invalid 1Password resolver context: Expected one of: dev'
       );
     });
 
@@ -128,10 +132,12 @@ describe('defineOpResolver', () => {
       });
 
       // Bypass type checking to test runtime error
-      // Zod validates the context first, so we get a validation error
+      // The context is validated first, so we get a validation error
       await expect(
         resolver.write!({ POSTGRES_URL: 'test' }, { env: 'unknown' } as any)
-      ).rejects.toThrow('Invalid input');
+      ).rejects.toThrow(
+        'Invalid 1Password resolver context: Expected one of: dev'
+      );
     });
 
     it('throws for unknown variable', async () => {
@@ -166,9 +172,9 @@ describe('vault environment mapping', () => {
 
     // The resolver is configured correctly - actual vault access is tested
     // via integration tests
-    expect(resolver.requiredContext.safeParse({ env: 'dev' }).success).toBe(true);
-    expect(resolver.requiredContext.safeParse({ env: 'staging' }).success).toBe(true);
-    expect(resolver.requiredContext.safeParse({ env: 'prod' }).success).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'dev' })).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'staging' })).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'prod' })).toBe(true);
   });
 
   it('supports single environment', () => {
@@ -179,8 +185,8 @@ describe('vault environment mapping', () => {
       },
     });
 
-    expect(resolver.requiredContext.safeParse({ env: 'prod' }).success).toBe(true);
-    expect(resolver.requiredContext.safeParse({ env: 'dev' }).success).toBe(false);
+    expect(accepts(resolver.requiredContext, { env: 'prod' })).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'dev' })).toBe(false);
   });
 
   it('supports custom environment names', () => {
@@ -193,8 +199,8 @@ describe('vault environment mapping', () => {
       },
     });
 
-    expect(resolver.requiredContext.safeParse({ env: 'local' }).success).toBe(true);
-    expect(resolver.requiredContext.safeParse({ env: 'preview' }).success).toBe(true);
-    expect(resolver.requiredContext.safeParse({ env: 'production' }).success).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'local' })).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'preview' })).toBe(true);
+    expect(accepts(resolver.requiredContext, { env: 'production' })).toBe(true);
   });
 });

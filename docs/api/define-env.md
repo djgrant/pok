@@ -23,7 +23,7 @@ Creates a resolver that fetches environment variables based on context.
 
 ```typescript
 function defineEnvResolver<TContext, TAvailableVars extends string>(config: {
-  requiredContext: z.ZodType<TContext>;
+  requiredContext: StandardSchemaV1<TContext>;
   availableVars: readonly TAvailableVars[];
   resolve: (keys: string[], context: TContext) => Promise<Record<string, string>>;
   write?: (values: Record<string, string>, context: TContext) => Promise<void>;
@@ -34,7 +34,7 @@ function defineEnvResolver<TContext, TAvailableVars extends string>(config: {
 
 | Property          | Type                | Description                                      |
 | ----------------- | ------------------- | ------------------------------------------------ |
-| `requiredContext` | `z.ZodType`         | Zod schema for context this resolver needs       |
+| `requiredContext` | `StandardSchemaV1`  | Schema for context this resolver needs           |
 | `availableVars`   | `readonly string[]` | List of variable names this resolver can provide |
 | `resolve`         | `Function`          | Async function to fetch requested variables      |
 | `write`           | `Function`          | Optional function to persist variables           |

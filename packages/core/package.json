@@ -12,7 +12,8 @@
     "pokjs",
     "cli-framework",
     "command-routing",
-    "file-based-routing"
+    "file-based-routing",
+    "standard-schema"
   ],
   "type": "module",
   "license": "MIT",
@@ -51,16 +52,13 @@
   "dependencies": {
     "@folder/xdg": "^4.0.1",
     "fast-glob": "^3.3.2",
-    "picomatch": "^4.0.2",
-    "zod": "^4.3.6"
+    "picomatch": "^4.0.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/picomatch": "^3.0.1",
     "@pokit/test-utils": "workspace:*",
-    "pokit": "workspace:*"
-  },
-  "peerDependencies": {
+    "pokit": "workspace:*",
     "zod": "^4.3.6"
   },
   "engines": {

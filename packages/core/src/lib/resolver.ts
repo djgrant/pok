@@ -1,4 +1,7 @@
-import { z } from 'zod';
+import { objectSchema, parseSync, type StandardSchemaV1 } from './schema';
+
+type InferOutput<S extends StandardSchemaV1> = StandardSchemaV1.InferOutput<S>;
+type EmptyContextSchema = StandardSchemaV1<Record<string, unknown>>;
 
 /**
  * Branded type for environment variable keys.
@@ -24,21 +27,21 @@ export type ResolverResult<TAvailableVars extends string> = {
  * Resolvers can optionally implement a `write` method to persist values.
  */
 export type EnvResolver<
-  TContext extends z.ZodType = z.ZodType,
+  TContext extends StandardSchemaV1 = StandardSchemaV1,
   TAvailableVars extends string = string,
 > = {
   requiredContext: TContext;
   availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
-    context: z.infer<TContext>
+    context: InferOutput<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
 
   /**
    * Optional write capability - persist values to the underlying store.
    * Not all resolvers support writing (e.g., composite resolvers are read-only).
    */
-  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: InferOutput<TContext>) => Promise<void>;
 };
 
 /**
@@ -49,7 +52,7 @@ export type EnvResolver<
  * Individual resolvers validate context against their `requiredContext` schema.
  */
 export type TypedEnvResolver<TAvailableVars extends string = string> = {
-  requiredContext: z.ZodType;
+  requiredContext: StandardSchemaV1;
   availableVars: readonly EnvVarKey<TAvailableVars>[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
@@ -69,7 +72,7 @@ export type AnyEnvResolver = TypedEnvResolver<any>;
 /**
  * Infer the context type required by a resolver
  */
-export type InferResolverContext<T> = T extends EnvResolver<infer C, any> ? z.infer<C> : never;
+export type InferResolverContext<T> = T extends EnvResolver<infer C, any> ? InferOutput<C> : never;
 
 /**
  * Infer the available vars from a resolver
@@ -121,31 +124,31 @@ export function validateResolverKeys<TAvailableVars extends string>(
  * ```
  */
 export function defineEnvResolver<
-  TContext extends z.ZodType = z.ZodObject<{}>,
+  TContext extends StandardSchemaV1 = EmptyContextSchema,
   const TAvailableVars extends string = string,
 >(config: {
   requiredContext?: TContext;
   availableVars: readonly TAvailableVars[];
   resolve: (
     keys: EnvVarKey<TAvailableVars>[],
-    context: z.infer<TContext>
+    context: InferOutput<TContext>
   ) => Promise<ResolverResult<TAvailableVars>> | ResolverResult<TAvailableVars>;
-  write?: (values: ResolverResult<TAvailableVars>, context: z.infer<TContext>) => Promise<void>;
+  write?: (values: ResolverResult<TAvailableVars>, context: InferOutput<TContext>) => Promise<void>;
 }): TypedEnvResolver<TAvailableVars> {
-  const requiredContext = config.requiredContext ?? (z.object({}) as unknown as TContext);
+  const requiredContext = config.requiredContext ?? (objectSchema() as unknown as TContext);
 
   return {
-    requiredContext: requiredContext as z.ZodType,
+    requiredContext,
     availableVars: config.availableVars as readonly EnvVarKey<TAvailableVars>[],
     resolve: (keys, context) => {
       // Validate context against the schema before resolving
-      const validatedContext = requiredContext.parse(context);
+      const validatedContext = parseSync(requiredContext, context);
       return config.resolve(keys, validatedContext);
     },
     write: config.write
       ? (values, context) => {
           // Validate context against the schema before writing
-          const validatedContext = requiredContext.parse(context);
+          const validatedContext = parseSync(requiredContext, context);
           return config.write!(values, validatedContext);
         }
       : undefined,
@@ -167,7 +170,7 @@ export function defineEnvResolver<
  * ```
  */
 export function createStaticEnvResolver<
-  TContext extends z.ZodType = z.ZodObject<{}>,
+  TContext extends StandardSchemaV1 = EmptyContextSchema,
   const TVars extends Record<string, string> = Record<string, string>,
 >(opts: {
   vars: TVars;

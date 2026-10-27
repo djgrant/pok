@@ -1,9 +1,8 @@
 /**
- * ThemeSpec resolution tests: presets, glyph overrides, and spec validation.
+ * ThemeSpec resolution tests: presets and glyph overrides.
  */
 
 import { describe, it, expect } from 'bun:test';
-import { ThemeSpecSchema } from '@pokit/core';
 import { createTheme } from '../../src/reporter/renderer/theme';
 import { createPromptTheme } from '../../src/prompter/engine/render';
 
@@ -49,22 +48,5 @@ describe('createPromptTheme', () => {
     expect(t.item('x')).toBe('  x');
     expect(t.end()).toEqual([]);
     expect(t.heading('active', 'Pick')[0]).toContain('?');
-  });
-});
-
-describe('ThemeSpecSchema', () => {
-  it('accepts a full valid spec', () => {
-    const result = ThemeSpecSchema.safeParse({
-      preset: 'minimal',
-      glyphs: { activityDone: '✓' },
-      colors: { success: 'cyan', frame: 'gray' },
-      spinnerFrames: ['-', '+'],
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects unknown presets and colours', () => {
-    expect(ThemeSpecSchema.safeParse({ preset: 'neon' }).success).toBe(false);
-    expect(ThemeSpecSchema.safeParse({ colors: { success: 'sparkly' } }).success).toBe(false);
   });
 });

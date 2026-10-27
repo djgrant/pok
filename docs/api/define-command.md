@@ -27,7 +27,7 @@ function defineCommand<C extends ContextDef>(config: CommandConfig<C>): CommandC
 | `mount`                | `MountableLike`                          | Mount a dynamic subcommand tree                         |
 | `enableRunAllChildren` | `'sequential' \| 'parallel'`             | Enable "run all" for parent commands                    |
 | `quietRunAll`          | `boolean`                                | Capture output when running all children. Default: true |
-| `output`               | `z.ZodType`                              | Output schema for typed, structured command output      |
+| `output`               | `StandardSchemaV1`                       | Output schema for typed, structured command output      |
 | `format`               | `FormatFn<O>`                            | Human-readable format function for output data          |
 
 ## Context Definition
@@ -37,7 +37,7 @@ Each context field specifies where its value comes from and its schema:
 ```typescript
 type ContextFieldDef = {
   from: 'flag'; // Currently only 'flag' is supported
-  schema: z.ZodType; // Zod schema for validation
+  schema: StandardSchemaV1; // Any Standard Schema (Zod, Valibot, ArkType, ...)
   description?: string; // Help text
   resolve?: (
     request: OptionsRequest,
@@ -321,9 +321,17 @@ type RunContext<C> = {
 };
 ```
 
+## Schemas
+
+Schemas can come from any library that implements [Standard Schema](https://standardschema.dev). The examples use Zod.
+
+- Validation must be synchronous. A schema whose `validate()` returns a Promise (for example an async refinement) is rejected.
+- Enum choices (for help, prompts, and completions), repeatable array flags, and table column order are read from [Standard JSON Schema](https://standardschema.dev/json-schema). Zod 4.2+ and ArkType provide it natively; Valibot provides it through `toStandardJsonSchema()` from `@valibot/to-json-schema`.
+- With a library that has no Standard JSON Schema support, flags still validate, but you need `choices` for select prompts, array flags are not detected, and table columns follow the data.
+
 ## Type Inference
 
-Context types are inferred from Zod schemas:
+Context types are inferred from the schemas' input and output types:
 
 ```typescript
 context: {

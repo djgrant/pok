@@ -8,7 +8,7 @@ pok is a command router, execution runner, event bus, and adapter layer for Type
 2. **UI is a single bundle**: `@pokit/terminal` provides the reporter, prompter, and navigator behind one factory (`createTerminalUI`). It is optional and, when omitted from config, wired in by the launcher.
 3. **Output is event-driven**: commands emit semantic events instead of writing directly to the terminal.
 4. **Menus have a policy**: the `Navigator` owns menu presentation (breadcrumbs, choose/back/exit), separate from the router that owns tree structure.
-5. **Context is typed**: Zod schemas drive TypeScript inference through commands, tasks, and env resolvers.
+5. **Context is typed**: Standard Schema schemas drive TypeScript inference through commands, tasks, and env resolvers.
 6. **Commands are file-backed**: the router builds the command tree from files and mounted sources.
 
 ## The launcher (`pok` / `pokit`)
@@ -43,7 +43,7 @@ reporter/prompter/navigator from `@pokit/terminal`.
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                          Command                                 │
-│  • Defines context (flags) with Zod schemas                     │
+│  • Defines context (flags) with Standard Schema schemas         │
 │  • Pre-flight checks                                            │
 │  • Run function receives Runner + Context                        │
 └─────────────────────────────────────────────────────────────────┘
@@ -180,7 +180,7 @@ so Esc/Ctrl-C at the top-level menu quits the CLI.
 pok uses TypeScript's type inference extensively:
 
 ```
-Context Definition (Zod)
+Context Definition (Standard Schema)
         │
         ▼
     InferContext<C>
@@ -199,7 +199,7 @@ Context Definition (Zod)
 
 This ensures:
 
-- Flags are typed based on their Zod schema
+- Flags are typed based on their schema
 - Tasks can only run if the command's context satisfies requirements
 - Environment variables are typed based on resolver declarations
 

@@ -63,17 +63,11 @@ export type {
 } from './lib/command';
 
 // =============================================================================
-// Args (context parsing)
+// Schemas (Standard Schema interop)
 // =============================================================================
 
-export {
-  getSchemaInfo,
-  getEnumChoicesFromSchema,
-  extractEnumChoices,
-  extractChoices,
-  unwrapSchema,
-} from './lib/args';
-export type { SchemaInfo } from './lib/args';
+export { SchemaError } from './lib/schema';
+export type { StandardSchemaV1, StandardJSONSchemaV1 } from './lib/schema';
 
 // =============================================================================
 // Task types
@@ -350,5 +344,5 @@ export type { HistoryEntry } from './lib/history';
 // Theme spec (for the default terminal UI)
 // =============================================================================
 
-export { ThemeSpecSchema, THEME_COLORS } from './theme-spec';
+export { THEME_COLORS } from './theme-spec';
 export type { ThemeSpec, ThemeColor, ThemeGlyphs, ThemeColors } from './theme-spec';

@@ -10,7 +10,7 @@ const features = [
   {
     title: "Type-safe",
     description:
-      "Full TypeScript support with Zod schema validation for arguments, flags, and context. Get autocompletion and type checking.",
+      "Full TypeScript support with Standard Schema validation (Zod, Valibot, ArkType) for arguments, flags, and context. Get autocompletion and type checking.",
   },
   {
     title: "Interactive Prompts",

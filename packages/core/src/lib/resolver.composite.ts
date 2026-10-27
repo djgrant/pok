@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { objectSchema, validateSync } from './schema';
 import type { TypedEnvResolver, EnvVarKey, ResolverResult } from './resolver';
 
 /**
@@ -59,10 +59,10 @@ export function defineCompositeResolver<const TResolvers extends readonly AnyTyp
   // Merge all requiredContext schemas
   // For now, we'll create a loose schema that accepts any context
   // and let individual resolvers validate what they need
-  const mergedContext = z.object({}).passthrough();
+  const mergedContext = objectSchema();
 
   return {
-    requiredContext: mergedContext as z.ZodType,
+    requiredContext: mergedContext,
     availableVars: [...allVars] as EnvVarKey<CompositeVars>[],
     resolve: async (keys, context): Promise<ResolverResult<CompositeVars>> => {
       const result: ResolverResult<CompositeVars> = {};
@@ -79,8 +79,8 @@ export function defineCompositeResolver<const TResolvers extends readonly AnyTyp
         if (keysForThisResolver.length === 0) continue;
 
         // Check if context satisfies this resolver's requirements
-        const contextResult = resolver.requiredContext.safeParse(context);
-        if (!contextResult.success) continue;
+        const contextResult = validateSync(resolver.requiredContext, context);
+        if (contextResult.issues) continue;
 
         // Try to resolve
         try {

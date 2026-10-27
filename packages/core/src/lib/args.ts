@@ -1,4 +1,9 @@
-import { z } from 'zod';
+import {
+  isArraySchema,
+  schemaChoices,
+  validateSync,
+  type StandardSchemaV1,
+} from './schema';
 import type {
   ContextDef,
   ContextFieldDef,
@@ -38,7 +43,7 @@ export type ParsedArgs<C extends ContextDef> = {
 };
 
 /**
- * Get info about a Zod schema for flag parsing
+ * Schema facts used for flag parsing, help, and prompts
  */
 export type SchemaInfo = {
   type: 'string' | 'boolean' | 'enum';
@@ -48,30 +53,28 @@ export type SchemaInfo = {
 };
 
 /**
- * Unwrap a Zod schema to get its core type and metadata
+ * Describe a schema for flag parsing.
  *
- * Uses safeParse to probe the schema behavior rather than internal APIs.
+ * Optionality, defaults, and booleans are found by validating probe values,
+ * which works with any Standard Schema library. Enum choices come from
+ * Standard JSON Schema when the library provides it.
  */
-export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
-  // Check if it has a default by parsing undefined
-  const undefinedResult = schema.safeParse(undefined);
-  const hasDefault = undefinedResult.success && undefinedResult.data !== undefined;
-  const defaultValue = hasDefault ? undefinedResult.data : undefined;
+export function getSchemaInfo(schema: StandardSchemaV1): SchemaInfo {
+  const undefinedResult = validateSync(schema, undefined);
+  const isOptional = !undefinedResult.issues;
+  const hasDefault = isOptional && undefinedResult.value !== undefined;
+  const defaultValue = hasDefault ? undefinedResult.value : undefined;
 
-  // Check if optional (accepts undefined)
-  const isOptional = undefinedResult.success;
-
-  // Check if boolean by testing true/false
-  const trueResult = schema.safeParse(true);
-  const falseResult = schema.safeParse(false);
-  const stringTrueResult = schema.safeParse('true');
+  const trueResult = validateSync(schema, true);
+  const falseResult = validateSync(schema, false);
+  const stringTrueResult = validateSync(schema, 'true');
 
   if (
-    trueResult.success &&
-    falseResult.success &&
-    trueResult.data === true &&
-    falseResult.data === false &&
-    !stringTrueResult.success
+    !trueResult.issues &&
+    !falseResult.issues &&
+    trueResult.value === true &&
+    falseResult.value === false &&
+    stringTrueResult.issues
   ) {
     return {
       type: 'boolean',
@@ -80,8 +83,6 @@ export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
     };
   }
 
-  // Check for enum by testing a few known patterns
-  // Try to get choices by testing various strings
   const choices = extractEnumChoices(schema);
   if (choices) {
     return {
@@ -92,7 +93,6 @@ export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
     };
   }
 
-  // Default to string type
   return {
     type: 'string',
     default: defaultValue,
@@ -101,167 +101,12 @@ export function getSchemaInfo(schema: z.ZodType): SchemaInfo {
 }
 
 /**
- * Wrapper type names that should be unwrapped when extracting enum values
- * Supports both Zod v3 (typeName) and Zod v4 (type) formats
+ * String choices of an enum-like schema (enum, union of string literals,
+ * optionally wrapped in optional/nullable/default). Undefined when the schema
+ * is not enum-like or its library does not implement Standard JSON Schema.
  */
-const WRAPPER_TYPE_NAMES_V3 = [
-  'ZodOptional',
-  'ZodDefault',
-  'ZodNullable',
-  'ZodBranded',
-  'ZodReadonly',
-  'ZodCatch',
-] as const;
-
-const WRAPPER_TYPE_NAMES_V4 = ['optional', 'default', 'nullable', 'readonly', 'catch'] as const;
-
-/**
- * Unwrap a Zod schema to get its core type
- *
- * Removes wrapper types (optional, default, nullable, branded, readonly, catch)
- * to expose the underlying schema type.
- * Supports both Zod v3 and Zod v4.
- */
-export function unwrapSchema(schema: z.ZodType): z.ZodType {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const def = (schema as any)._def;
-  if (!def) return schema;
-
-  // Zod v3 uses `typeName`, Zod v4 uses `type`
-  const typeName = def.typeName || def.type;
-
-  // Check if this is a wrapper type that should be unwrapped
-  const isWrapperV3 = WRAPPER_TYPE_NAMES_V3.includes(typeName);
-  const isWrapperV4 = WRAPPER_TYPE_NAMES_V4.includes(typeName);
-
-  if ((isWrapperV3 || isWrapperV4) && def.innerType) {
-    return unwrapSchema(def.innerType);
-  }
-
-  return schema;
-}
-
-/**
- * Try to extract enum choices from a schema
- *
- * Uses Zod's internal _def structure to get exact enum values.
- * Supports both Zod v3 and Zod v4.
- * Supports:
- * - z.enum(['a', 'b', 'c'])
- * - z.nativeEnum(SomeEnum)
- * - z.literal('a').or(z.literal('b'))
- * - Wrapped versions (optional, default, nullable, etc.)
- */
-export function extractEnumChoices(schema: z.ZodType): string[] | undefined {
-  const unwrapped = unwrapSchema(schema);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const unwrappedAny = unwrapped as any;
-  const def = unwrappedAny._def;
-  if (!def) return undefined;
-
-  // Zod v3 uses `typeName`, Zod v4 uses `type`
-  const typeName = def.typeName || def.type;
-
-  // Zod v4: Check for `.options` property directly on the schema (enum)
-  // Enum's options are string values, union's options are ZodType objects
-  if (
-    Array.isArray(unwrappedAny.options) &&
-    unwrappedAny.options.length > 0 &&
-    typeof unwrappedAny.options[0] === 'string'
-  ) {
-    return unwrappedAny.options as string[];
-  }
-
-  // Zod v3/v4: Check for ZodEnum: z.enum(['a', 'b', 'c'])
-  if ((typeName === 'ZodEnum' || typeName === 'enum') && Array.isArray(def.values)) {
-    return def.values as string[];
-  }
-
-  // Zod v4: Check for entries (enum as object)
-  if (typeName === 'enum' && def.entries && typeof def.entries === 'object') {
-    return Object.values(def.entries).filter((v): v is string => typeof v === 'string');
-  }
-
-  // Zod v3/v4: Check for ZodNativeEnum: z.nativeEnum(SomeEnum)
-  if ((typeName === 'ZodNativeEnum' || typeName === 'nativeEnum') && def.values) {
-    return Object.values(def.values).filter((v): v is string => typeof v === 'string');
-  }
-
-  // Zod v3/v4: Check for ZodUnion of literals: z.literal('a').or(z.literal('b'))
-  const isUnion = typeName === 'ZodUnion' || typeName === 'union';
-  if (isUnion && Array.isArray(def.options)) {
-    const literals = extractLiteralsFromUnion(def.options);
-    if (literals && literals.length > 0) {
-      return literals;
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Recursively extract string literal values from union options.
- * Handles nested unions like z.literal('a').or(z.literal('b')).or(z.literal('c'))
- */
-function extractLiteralsFromUnion(options: z.ZodType[]): string[] | undefined {
-  const literals: string[] = [];
-
-  for (const option of options) {
-    // Unwrap each option in case it's wrapped
-    const unwrappedOption = unwrapSchema(option);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unwrappedOptionAny = unwrappedOption as any;
-    const optDef = unwrappedOptionAny._def;
-    const optTypeName = optDef?.typeName || optDef?.type;
-
-    const isLiteral = optTypeName === 'ZodLiteral' || optTypeName === 'literal';
-    const isNestedUnion = optTypeName === 'ZodUnion' || optTypeName === 'union';
-
-    if (isLiteral) {
-      // Zod v3 uses _def.value, Zod v4 uses _def.values[0] or schema.value
-      let literalValue: unknown;
-      if (typeof optDef.value === 'string') {
-        // Zod v3
-        literalValue = optDef.value;
-      } else if (Array.isArray(optDef.values) && optDef.values.length === 1) {
-        // Zod v4: _def.values is an array
-        literalValue = optDef.values[0];
-      } else if (typeof unwrappedOptionAny.value === 'string') {
-        // Zod v4: direct property on schema
-        literalValue = unwrappedOptionAny.value;
-      }
-
-      if (typeof literalValue === 'string') {
-        literals.push(literalValue);
-      } else {
-        // Non-string literal in union
-        return undefined;
-      }
-    } else if (isNestedUnion && Array.isArray(optDef.options)) {
-      // Recursively extract from nested union
-      const nestedLiterals = extractLiteralsFromUnion(optDef.options);
-      if (nestedLiterals === undefined) {
-        return undefined;
-      }
-      literals.push(...nestedLiterals);
-    } else {
-      // If any option is not a literal or nested union, return undefined
-      // (can't extract reliable choices from mixed unions)
-      return undefined;
-    }
-  }
-
-  return literals;
-}
-
-/**
- * Extract enum choices directly from Zod schema internal structure
- *
- * @deprecated Use extractEnumChoices instead, which handles more schema types.
- * This function is kept for backwards compatibility.
- */
-export function getEnumChoicesFromSchema(schema: z.ZodType): string[] | undefined {
-  return extractEnumChoices(schema);
+export function extractEnumChoices(schema: StandardSchemaV1): string[] | undefined {
+  return schemaChoices(schema);
 }
 
 /**
@@ -284,6 +129,10 @@ function createError(message: string, contextDef: ContextDef, errorContext?: Err
 
 const NUMERIC_STRING = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 
+type ParseOutcome =
+  | { ok: true; data: unknown }
+  | { ok: false; issues: ReadonlyArray<StandardSchemaV1.Issue> };
+
 /**
  * Parse a CLI token into a schema value.
  *
@@ -292,34 +141,34 @@ const NUMERIC_STRING = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
  * replaying them has to come back through argv strings.
  */
 function parseSchemaString(
-  schema: z.ZodType,
+  schema: StandardSchemaV1,
   value: string
-): { ok: true; data: unknown } | { ok: false; error: z.ZodError } {
-  const direct = schema.safeParse(value);
-  if (direct.success) return { ok: true, data: direct.data };
-  let error = direct.error;
+): ParseOutcome {
+  const direct = validateSync(schema, value);
+  if (!direct.issues) return { ok: true, data: direct.value };
+  let issues = direct.issues;
 
   if (value === 'true' || value === 'false') {
-    const asBoolean = schema.safeParse(value === 'true');
-    if (asBoolean.success) return { ok: true, data: asBoolean.data };
-    error = asBoolean.error;
+    const asBoolean = validateSync(schema, value === 'true');
+    if (!asBoolean.issues) return { ok: true, data: asBoolean.value };
+    issues = asBoolean.issues;
   }
 
   if (NUMERIC_STRING.test(value)) {
-    const asNumber = schema.safeParse(Number(value));
-    if (asNumber.success) return { ok: true, data: asNumber.data };
-    error = asNumber.error;
+    const asNumber = validateSync(schema, Number(value));
+    if (!asNumber.issues) return { ok: true, data: asNumber.value };
+    issues = asNumber.issues;
   }
 
-  return { ok: false, error };
+  return { ok: false, issues };
 }
 
 function parseSchemaStrings(
-  schema: z.ZodType,
+  schema: StandardSchemaV1,
   values: string[]
-): { ok: true; data: unknown } | { ok: false; error: z.ZodError } {
-  const direct = schema.safeParse(values);
-  if (direct.success) return { ok: true, data: direct.data };
+): ParseOutcome {
+  const direct = validateSync(schema, values);
+  if (!direct.issues) return { ok: true, data: direct.value };
 
   let coerced = false;
   const next = values.map((value) => {
@@ -335,12 +184,12 @@ function parseSchemaStrings(
   });
 
   if (coerced) {
-    const retry = schema.safeParse(next);
-    if (retry.success) return { ok: true, data: retry.data };
-    return { ok: false, error: retry.error };
+    const retry = validateSync(schema, next);
+    if (!retry.issues) return { ok: true, data: retry.value };
+    return { ok: false, issues: retry.issues };
   }
 
-  return { ok: false, error: direct.error };
+  return { ok: false, issues: direct.issues };
 }
 
 /**
@@ -351,13 +200,13 @@ function parseSchemaStrings(
  * message is the schema's own issue message, ready to show beside the prompt.
  */
 function parsePromptedInput(
-  schema: z.ZodType,
+  schema: StandardSchemaV1,
   input: string | string[]
 ): { ok: true; data: unknown } | { ok: false; message: string } {
   const isEmpty = Array.isArray(input) ? input.length === 0 : input === '';
   if (isEmpty) {
-    const absent = schema.safeParse(undefined);
-    return absent.success ? { ok: true, data: absent.data } : { ok: false, message: 'Required' };
+    const absent = validateSync(schema, undefined);
+    return absent.issues ? { ok: false, message: 'Required' } : { ok: true, data: absent.value };
   }
 
   const result = Array.isArray(input)
@@ -365,7 +214,7 @@ function parsePromptedInput(
     : parseSchemaString(schema, input);
   if (result.ok) return result;
 
-  return { ok: false, message: result.error.issues[0]?.message ?? 'Invalid value' };
+  return { ok: false, message: result.issues[0]?.message ?? 'Invalid value' };
 }
 
 /**
@@ -377,7 +226,7 @@ function parsePromptedInput(
 async function promptParsedText(
   prompter: Prompter,
   name: string,
-  schema: z.ZodType,
+  schema: StandardSchemaV1,
   options: { message: string; initialValue?: string },
   toInput: (text: string) => string | string[]
 ): Promise<unknown> {
@@ -923,14 +772,6 @@ function isAsyncIterable<T>(value: unknown): value is AsyncIterable<T> {
   );
 }
 
-function isArraySchema(schema: z.ZodType): boolean {
-  const unwrapped = unwrapSchema(schema);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const def = (unwrapped as any)._def;
-  const typeName = def?.typeName || def?.type;
-  return typeName === 'ZodArray' || typeName === 'array';
-}
-
 async function loadOptionsFromAsyncIterable(
   iterator: AsyncIterable<ResolveOptionsResult>
 ): Promise<SelectOption<ResolvePrimitive>[]> {
@@ -1184,11 +1025,11 @@ export async function resolveInteractiveContext<C extends ContextDef>(
                 : undefined,
             required: !info.isOptional,
           });
-          const parsed = fieldDef.schema.safeParse(selected);
-          if (!parsed.success) {
+          const parsed = validateSync(fieldDef.schema, selected);
+          if (parsed.issues) {
             throw new Error(`Invalid selected value for --${name}`);
           }
-          (resolved as Record<string, unknown>)[name] = parsed.data;
+          (resolved as Record<string, unknown>)[name] = parsed.value;
         } else {
           const initialValue = isResolvePrimitive(currentValue)
             ? currentValue
@@ -1207,11 +1048,11 @@ export async function resolveInteractiveContext<C extends ContextDef>(
             provider,
             initialValue,
           });
-          const parsed = fieldDef.schema.safeParse(selected);
-          if (!parsed.success) {
+          const parsed = validateSync(fieldDef.schema, selected);
+          if (parsed.issues) {
             throw new Error(`Invalid selected value for --${name}`);
           }
-          (resolved as Record<string, unknown>)[name] = parsed.data;
+          (resolved as Record<string, unknown>)[name] = parsed.value;
         }
       } else if (fieldChoices && fieldChoices.length > 0) {
         // Select from choices, pre-select current/default value
@@ -1344,7 +1185,7 @@ function buildChoiceGroupMap(choiceGroups: Record<string, string[]>): Map<string
  *
  * Priority:
  * 1. Explicit `choices` field in the context definition (escape hatch)
- * 2. Auto-extraction from Zod schema internals
+ * 2. Auto-extraction from the schema's Standard JSON Schema
  */
 export function extractChoices<C extends ContextDef>(contextDef: C): Map<string, string[]> {
   const result = new Map<string, string[]>();

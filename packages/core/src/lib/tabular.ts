@@ -3,7 +3,7 @@
  *
  * Renders a command's returned data as an aligned ASCII table (`--format table`)
  * or RFC-4180-ish CSV (`--format csv`). Both are dependency-free and operate on
- * plain JS values, with optional Zod schema introspection to derive a stable
+ * plain JS values, with optional schema introspection to derive a stable
  * column order.
  *
  * Data shapes handled:
@@ -15,7 +15,7 @@
  * Nested object/array cell values are JSON-stringified.
  */
 
-import type { z } from 'zod';
+import { schemaObjectKeys, type StandardSchemaV1 } from './schema';
 
 /**
  * Format a single cell value for display.
@@ -39,28 +39,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Best-effort extraction of an ordered key list from a Zod schema.
- * Supports object schemas (uses declared shape order) and array-of-object
- * schemas (uses the element object's shape order). Returns null when the schema
- * can't be introspected.
+ * Declared key order of an object or array-of-objects schema, from its
+ * Standard JSON Schema. Null when the schema can't be introspected.
  */
-function schemaKeys(schema: z.ZodType | undefined): string[] | null {
-  if (!schema) return null;
-  try {
-    const anySchema = schema as any;
-    // Array schema: derive columns from element object shape.
-    const element = anySchema.element;
-    if (element && element.shape) {
-      return Object.keys(element.shape);
-    }
-    // Object schema: use its shape directly.
-    if (anySchema.shape) {
-      return Object.keys(anySchema.shape);
-    }
-  } catch {
-    // Introspection is best-effort; fall through to data-derived order.
-  }
-  return null;
+function schemaKeys(schema: StandardSchemaV1 | undefined): string[] | null {
+  return schema ? schemaObjectKeys(schema, 'output') : null;
 }
 
 /**
@@ -70,7 +53,7 @@ function schemaKeys(schema: z.ZodType | undefined): string[] | null {
  */
 function deriveColumns(
   rows: Record<string, unknown>[],
-  schema: z.ZodType | undefined
+  schema: StandardSchemaV1 | undefined
 ): string[] {
   const fromSchema = schemaKeys(schema);
   if (fromSchema && fromSchema.length > 0) return fromSchema;
@@ -129,7 +112,7 @@ function renderMatrix(header: string[], rows: string[][]): string {
  * @returns the table string, or `null` when the data is not tabulatable
  *   (caller should fall back to JSON). An empty array yields an empty string.
  */
-export function formatTable(data: unknown, schema?: z.ZodType): string | null {
+export function formatTable(data: unknown, schema?: StandardSchemaV1): string | null {
   const rows = toRows(data);
 
   if (rows) {
@@ -175,7 +158,7 @@ function escapeCsvField(field: string): string {
  *   (caller should fall back to JSON). An empty array yields an empty string
  *   (or a header row when columns are known from the schema).
  */
-export function formatCsv(data: unknown, schema?: z.ZodType): string | null {
+export function formatCsv(data: unknown, schema?: StandardSchemaV1): string | null {
   const rows = toRows(data);
 
   if (rows) {

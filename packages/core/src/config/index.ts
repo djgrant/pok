@@ -7,12 +7,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { z } from 'zod';
 import type { LauncherSkeleton } from 'pokit';
 import type { EventBus } from '../events';
 import type { Prompter, Navigator } from '../prompter';
 import type { MountableLike } from '../lib/command';
-import { ThemeSpecSchema, type ThemeSpec } from '../theme-spec';
+import { themeSpecIssues, type ThemeSpec } from '../theme-spec';
+import { issuePath, type StandardSchemaV1 } from '../lib/schema';
 
 export * from './prompter';
 export * from './events';
@@ -118,23 +118,36 @@ export type PokConfig = {
   theme?: ThemeSpec;
 };
 
-/**
- * pok configuration schema
- */
-export const PokConfigSchema = z.object({
-  appDir: z.string().optional(),
-  cwd: z.string().optional(),
-  commandsDir: z.string().optional(),
-  appName: z.string().optional(),
-  reporter: z.any().optional(),
-  prompter: z.any().optional(),
-  navigator: z.any().optional(),
-  version: z.string().optional(),
-  pmScripts: z.union([z.boolean(), z.array(z.string())]).optional(),
-  pmCommands: z.union([z.boolean(), z.array(z.string())]).optional(),
-  plugins: z.array(z.any()).optional(),
-  theme: ThemeSpecSchema.optional(),
-});
+const STRING_FIELDS = ['appDir', 'cwd', 'commandsDir', 'appName', 'version'] as const;
+const SCRIPT_FIELDS = ['pmScripts', 'pmCommands'] as const;
+
+function configIssues(config: Record<string, unknown>): StandardSchemaV1.Issue[] {
+  const issues: StandardSchemaV1.Issue[] = [];
+  for (const key of STRING_FIELDS) {
+    if (config[key] !== undefined && typeof config[key] !== 'string') {
+      issues.push({ message: 'Expected string', path: [key] });
+    }
+  }
+  for (const key of SCRIPT_FIELDS) {
+    const v = config[key];
+    if (
+      v !== undefined &&
+      typeof v !== 'boolean' &&
+      !(Array.isArray(v) && v.every((s) => typeof s === 'string'))
+    ) {
+      issues.push({ message: 'Expected boolean or string[]', path: [key] });
+    }
+  }
+  if (config.plugins !== undefined && !Array.isArray(config.plugins)) {
+    issues.push({ message: 'Expected array', path: ['plugins'] });
+  }
+  if (config.theme !== undefined) {
+    for (const issue of themeSpecIssues(config.theme)) {
+      issues.push({ ...issue, path: ['theme', ...(issue.path ?? [])] });
+    }
+  }
+  return issues;
+}
 
 /**
  * Resolved configuration with all defaults applied.
@@ -198,16 +211,14 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
     );
   }
 
-  const result = PokConfigSchema.safeParse(config);
+  const issues = configIssues(config as Record<string, unknown>);
 
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-      .join('\n');
-    throw new Error(`Invalid configuration in ${configPath}:\n${issues}`);
+  if (issues.length > 0) {
+    const lines = issues.map((i) => `  - ${issuePath(i)}: ${i.message}`).join('\n');
+    throw new Error(`Invalid configuration in ${configPath}:\n${lines}`);
   }
 
-  const cfg = result.data;
+  const cfg = config as PokConfig;
 
   // commandsDir has no hard default: omitted still probes './commands' when
   // present. A missing implicit default is silent if other mountables fill the

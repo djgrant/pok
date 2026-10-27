@@ -7,6 +7,7 @@ import {
   type DryRunReporter,
   type CommandReporter,
 } from '../src';
+import { parseSync } from '../src/lib/schema';
 
 describe('Dry Run', () => {
   describe('dryRunContext', () => {
@@ -22,9 +23,10 @@ describe('Dry Run', () => {
       const schema = dryRunContext.dryRun.schema;
 
       // Should default to false
-      expect(schema.parse(undefined)).toBe(false);
-      expect(schema.parse(false)).toBe(false);
-      expect(schema.parse(true)).toBe(true);
+      expect(parseSync(schema, undefined)).toBe(false);
+      expect(parseSync(schema, false)).toBe(false);
+      expect(parseSync(schema, true)).toBe(true);
+      expect(() => parseSync(schema, 'true')).toThrow();
     });
 
     it('can be spread into command context', () => {

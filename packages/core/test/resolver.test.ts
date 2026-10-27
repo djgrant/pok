@@ -1,6 +1,10 @@
+import { validateSync, type StandardSchemaV1 } from '../src/lib/schema';
 import { describe, it, expect } from 'bun:test';
 import { z } from 'zod';
 import { defineEnvResolver, defineCompositeResolver, createStaticEnvResolver } from '../src';
+
+const accepts = (schema: StandardSchemaV1, value: unknown): boolean =>
+  !validateSync(schema, value).issues;
 
 // =============================================================================
 // defineEnvResolver Tests
@@ -65,10 +69,10 @@ describe('defineEnvResolver', () => {
         resolve: async () => ({}),
       });
 
-      expect(resolver.requiredContext.safeParse({ env: 'dev' }).success).toBe(true);
-      expect(resolver.requiredContext.safeParse({ env: 'staging' }).success).toBe(true);
-      expect(resolver.requiredContext.safeParse({ env: 'prod' }).success).toBe(true);
-      expect(resolver.requiredContext.safeParse({ env: 'invalid' }).success).toBe(false);
+      expect(accepts(resolver.requiredContext, { env: 'dev' })).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'staging' })).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'prod' })).toBe(true);
+      expect(accepts(resolver.requiredContext, { env: 'invalid' })).toBe(false);
     });
 
     it('validates context with multiple fields', () => {
@@ -82,17 +86,17 @@ describe('defineEnvResolver', () => {
       });
 
       expect(
-        resolver.requiredContext.safeParse({
+        accepts(resolver.requiredContext, {
           env: 'dev',
           region: 'us',
-        }).success
+        })
       ).toBe(true);
 
       expect(
-        resolver.requiredContext.safeParse({
+        accepts(resolver.requiredContext, {
           env: 'dev',
           // missing region
-        }).success
+        })
       ).toBe(false);
     });
   });
@@ -413,16 +417,16 @@ describe('defineCompositeResolver', () => {
 
       // Composite uses passthrough - accepts any context and lets
       // individual resolvers validate what they need
-      expect(composite.requiredContext.safeParse({ env: 'dev' }).success).toBe(true);
-      expect(composite.requiredContext.safeParse({ region: 'us' }).success).toBe(true);
+      expect(accepts(composite.requiredContext, { env: 'dev' })).toBe(true);
+      expect(accepts(composite.requiredContext, { region: 'us' })).toBe(true);
       expect(
-        composite.requiredContext.safeParse({
+        accepts(composite.requiredContext, {
           env: 'dev',
           region: 'us',
-        }).success
+        })
       ).toBe(true);
       // Even empty context is accepted (validation happens per-resolver)
-      expect(composite.requiredContext.safeParse({}).success).toBe(true);
+      expect(accepts(composite.requiredContext, {})).toBe(true);
     });
 
     it('throws when required context is missing for unresolved keys', async () => {

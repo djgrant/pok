@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import type { TypedEnvResolver, ResolverResult } from '@pokit/core';
+import type { TypedEnvResolver, ResolverResult, StandardSchemaV1 } from '@pokit/core';
 import { type OpVault, type InferOpVaultKeys, parseOpRef } from './vault';
 import * as op from './op';
 
@@ -8,6 +7,49 @@ type KeyMapping = {
   item: string;
   field: string;
 };
+
+type EnvContext<TEnvs extends string> = { env: TEnvs };
+
+function envContextSchema<TEnvs extends string>(
+  envs: readonly TEnvs[]
+): StandardSchemaV1<EnvContext<TEnvs>> {
+  return {
+    '~standard': {
+      version: 1,
+      vendor: 'pok',
+      validate: (value) => {
+        const env = (value as { env?: unknown } | null)?.env;
+        if (typeof env === 'string' && (envs as readonly string[]).includes(env)) {
+          return { value: { env: env as TEnvs } };
+        }
+        return { issues: [{ message: `Expected one of: ${envs.join(', ')}`, path: ['env'] }] };
+      },
+      jsonSchema: {
+        input: () => envJsonSchema(envs),
+        output: () => envJsonSchema(envs),
+      },
+    } as StandardSchemaV1.Props<EnvContext<TEnvs>>,
+  };
+}
+
+function envJsonSchema(envs: readonly string[]): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: { env: { type: 'string', enum: [...envs] } },
+    required: ['env'],
+  };
+}
+
+function parseEnv<TEnvs extends string>(
+  schema: StandardSchemaV1<EnvContext<TEnvs>>,
+  context: unknown
+): EnvContext<TEnvs> {
+  const result = schema['~standard'].validate(context) as StandardSchemaV1.Result<EnvContext<TEnvs>>;
+  if (result.issues) {
+    throw new Error(`Invalid 1Password resolver context: ${result.issues[0]?.message}`);
+  }
+  return result.value;
+}
 
 export type OpResolverConfig<TVault extends OpVault<any>, TEnvs extends string> = {
   vault: TVault;
@@ -41,14 +83,14 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
   const envValues = Object.keys(config.vaults) as TEnvs[];
   const availableVars = Object.keys(config.vault.secrets) as VaultKey[];
 
+  const requiredContext = envContextSchema(envValues);
+
   return {
-    requiredContext: z.object({
-      env: z.enum(envValues as [TEnvs, ...TEnvs[]]),
-    }),
+    requiredContext,
     availableVars,
 
     resolve: async (keys, context) => {
-      const ctx = z.object({ env: z.enum(envValues as [TEnvs, ...TEnvs[]]) }).parse(context);
+      const ctx = parseEnv(requiredContext, context);
       const vaultName = config.vaults[ctx.env as TEnvs];
       if (!vaultName) {
         throw new Error(`No vault configured for environment: ${ctx.env}`);
@@ -108,7 +150,7 @@ export function defineOpResolver<TVault extends OpVault<any>, const TEnvs extend
     },
 
     write: async (values, context) => {
-      const ctx = z.object({ env: z.enum(envValues as [TEnvs, ...TEnvs[]]) }).parse(context);
+      const ctx = parseEnv(requiredContext, context);
       const vaultName = config.vaults[ctx.env as TEnvs];
       if (!vaultName) {
         throw new Error(`No vault configured for environment: ${ctx.env}`);

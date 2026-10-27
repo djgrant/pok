@@ -116,9 +116,6 @@ importers:
       picomatch:
         specifier: ^4.0.2
         version: 4.0.3
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@pokit/test-utils':
         specifier: workspace:*
@@ -132,6 +129,9 @@ importers:
       pokit:
         specifier: workspace:*
         version: link:../cmd
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/create:
     dependencies:
@@ -157,9 +157,6 @@ importers:
       '@pokit/core':
         specifier: workspace:*
         version: link:../core
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@types/bun':
         specifier: latest

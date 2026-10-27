@@ -23,7 +23,7 @@ commands/
 
 ### Type-Safe by Default
 
-Define your command's interface with Zod schemas. TypeScript infers everything:
+Define your command's interface with any [Standard Schema](https://standardschema.dev) library (Zod, Valibot, ArkType). TypeScript infers everything:
 
 ```typescript
 export const command = defineCommand({

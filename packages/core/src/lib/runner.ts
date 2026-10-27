@@ -10,6 +10,7 @@ import {
 } from './task';
 import { type Env, getEnvKeys } from './env';
 import { markOperational } from './errors';
+import { parseSync } from './schema';
 import {
   BrokerDeniedError,
   detectInitiator,
@@ -1156,7 +1157,7 @@ export function createRunner<TContext extends Record<string, unknown>>(
     }
 
     // Validate params
-    const taskParams = task.params ? task.params.parse(params ?? {}) : {};
+    const taskParams = task.params ? parseSync(task.params, params ?? {}) : {};
 
     // Build writeEnvs function
     let writeEnvs: ((values: Partial<Record<string, string>>) => Promise<void>) | undefined;
