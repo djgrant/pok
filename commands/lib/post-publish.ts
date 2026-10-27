@@ -101,6 +101,24 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       if (result.exitCode === 0 && version) published.set(name, version);
     }
 
+    // A machine-local hook (absent on CI and other machines) gets what shipped,
+    // e.g. to update the repos that depend on it. It runs before the
+    // bookkeeping so a failure there doesn't skip it, and on direct invocation
+    // gets the latest versions, so `pok post:publish` re-runs it.
+    const shipped = waitFor ?? published;
+    if (shipped.size > 0 && existsSync(PUBLISHED_HOOK)) {
+      await g.activity(`Run ${PUBLISHED_HOOK}`, async () => {
+        const packages = [...shipped].map(([name, version]) => ({ name, version }));
+        const payload = JSON.stringify({ registry, packages, repo: r.cwd });
+        // The packages are published either way: report a failing hook, don't fail on it.
+        try {
+          await r.exec([PUBLISHED_HOOK, payload]);
+        } catch (error) {
+          r.reporter.warn(`${PUBLISHED_HOOK} failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      });
+    }
+
     await g.activity('Repin root deps to latest published versions', async (a) => {
       const { repins, warnings } = computeRepins(readRootDeps(rootPackageJsonPath), published);
       for (const warning of warnings) a.warn(warning);
@@ -174,18 +192,5 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       ]);
       if (!skipPush) await r.exec('git push');
     });
-
-    if (waitFor && waitFor.size > 0 && existsSync(PUBLISHED_HOOK)) {
-      await g.activity(`Run ${PUBLISHED_HOOK}`, async () => {
-        const packages = [...waitFor].map(([name, version]) => ({ name, version }));
-        const payload = JSON.stringify({ registry, packages, repo: r.cwd });
-        // The packages are published either way: report a failing hook, don't fail on it.
-        try {
-          await r.exec([PUBLISHED_HOOK, payload]);
-        } catch (error) {
-          r.reporter.warn(`${PUBLISHED_HOOK} failed: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      });
-    }
   });
 }
