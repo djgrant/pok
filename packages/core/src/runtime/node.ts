@@ -4,12 +4,13 @@
  * Uses Node.js native APIs and compatible libraries:
  * - node:child_process spawn for process spawning
  * - node:child_process exec for shell commands
- * - fast-glob for file globbing
+ * - node:fs/promises glob for file globbing
  * - node:fs/promises for file reading
  */
 
 import { spawn as nodeSpawn, exec as nodeExec } from 'node:child_process';
-import { readFile as fsReadFile } from 'node:fs/promises';
+import { glob as fsGlob, readFile as fsReadFile } from 'node:fs/promises';
+import { join, relative, sep } from 'node:path';
 import { promisify } from 'node:util';
 import type {
   Runtime,
@@ -119,19 +120,12 @@ export function createNodeRuntime(): Runtime {
   };
 
   async function* glob(pattern: string, options?: GlobOptions): AsyncIterable<string> {
-    // Dynamically import fast-glob to avoid bundling issues
-    const fgModule = await import('fast-glob');
     const cwd = options?.cwd ?? process.cwd();
 
-    // fast-glob returns an array, yield each item
-    const files = await fgModule.glob(pattern, {
-      cwd,
-      dot: false,
-      onlyFiles: true,
-    });
-
-    for (const file of files) {
-      yield file;
+    for await (const entry of fsGlob(pattern, { cwd, withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const file = relative(cwd, join(entry.parentPath, entry.name));
+      yield sep === '/' ? file : file.split(sep).join('/');
     }
   }
 

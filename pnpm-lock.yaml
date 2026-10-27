@@ -107,9 +107,6 @@ importers:
 
   packages/core:
     dependencies:
-      fast-glob:
-        specifier: ^3.3.2
-        version: 3.3.3
       picomatch:
         specifier: ^4.0.2
         version: 4.0.3
