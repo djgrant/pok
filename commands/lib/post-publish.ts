@@ -70,7 +70,7 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       await g.activity('Wait for published versions to land on the registry', async (a) => {
         const pending = new Map(waitFor);
         const maxAttempts = 30;
-        const intervalMs = 2000;
+        const intervalMs = 5000;
         for (let attempt = 1; attempt <= maxAttempts && pending.size > 0; attempt++) {
           for (const [name, version] of [...pending]) {
             const result = await $`npm view ${name}@${version} version --prefer-online --registry ${registry}`
