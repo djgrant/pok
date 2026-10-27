@@ -15,6 +15,9 @@ import {
   setPackageVersion,
 } from './release';
 
+/** Run after a publish lands, if present; same path as pok-plugins' release(). */
+const PUBLISHED_HOOK = join(homedir(), '.config', 'pok', 'hooks', 'published');
+
 const PUBLISHABLE = [
   '@pokit/core',
   '@pokit/op',
@@ -172,14 +175,16 @@ export async function reconcilePostPublish(r: Runner, opts: ReconcileOptions): P
       if (!skipPush) await r.exec('git push');
     });
 
-    // Dogfood the shipped CLI: same as pok-plugins' default post:publish,
-    // inlined so pok's release path never depends on pok-plugins.
-    const cli = waitFor?.get('pokit');
-    if (cli && registry === 'https://registry.npmjs.org/') {
-      await g.activity(`Install pokit@${cli} into ~/npmbin`, async () => {
-        await r.exec(['pnpm', 'add', '--dir', join(homedir(), 'npmbin'), `pokit@${cli}`], {
-          retry: { maxAttempts: 4, delay: 3000 },
-        });
+    if (waitFor && waitFor.size > 0 && existsSync(PUBLISHED_HOOK)) {
+      await g.activity(`Run ${PUBLISHED_HOOK}`, async () => {
+        const packages = [...waitFor].map(([name, version]) => ({ name, version }));
+        const payload = JSON.stringify({ registry, packages, repo: r.cwd });
+        // The packages are published either way: report a failing hook, don't fail on it.
+        try {
+          await r.exec([PUBLISHED_HOOK, payload]);
+        } catch (error) {
+          r.reporter.warn(`${PUBLISHED_HOOK} failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
       });
     }
   });

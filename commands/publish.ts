@@ -191,7 +191,7 @@ export const command = defineCommand({
 // invokable as `pok post:publish` for recovery — in which case `ctx.input` is
 // undefined and the reconcile derives everything from the registry.
 export const post = definePostCommand({
-  label: 'Reconcile post-publish bookkeeping (idempotent)',
+  label: 'Reconcile post-publish bookkeeping',
   input: PublishOutput.optional(),
   context: {
     verdaccio: {
