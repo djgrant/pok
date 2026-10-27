@@ -16,6 +16,7 @@
     "standard-schema"
   ],
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -50,7 +51,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@folder/xdg": "^4.0.1",
     "fast-glob": "^3.3.2",
     "picomatch": "^4.0.2"
   },

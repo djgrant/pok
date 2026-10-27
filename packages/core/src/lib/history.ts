@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import xdg from '@folder/xdg';
 
 const MAX_ENTRIES = 50;
 const HISTORY_DIR_ENV = 'POK_HISTORY_DIR';
@@ -23,11 +22,23 @@ function getHistoryBaseDir(): string {
   }
 
   try {
-    const dirs = xdg();
-    return dirs.data;
+    return userDataDir();
   } catch {
     return path.join(os.tmpdir(), 'pok-data');
   }
+}
+
+/** Per-user data directory: XDG_DATA_HOME, else the platform convention. */
+function userDataDir(): string {
+  const xdgData = process.env.XDG_DATA_HOME;
+  if (xdgData && path.isAbsolute(xdgData)) return xdgData;
+
+  const home = os.homedir();
+  if (process.platform === 'darwin') return path.join(home, 'Library', 'Application Support');
+  if (process.platform === 'win32') {
+    return process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+  }
+  return path.join(home, '.local', 'share');
 }
 
 function getHistoryPath(appName: string): string {

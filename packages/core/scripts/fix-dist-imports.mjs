@@ -1,7 +1,8 @@
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-const packageRoot = path.resolve(import.meta.dirname, '..')
+// Run from the package being built, so every package can share this script.
+const packageRoot = process.cwd()
 const distRoot = path.join(packageRoot, 'dist')
 const textExtensions = new Set(['.js', '.d.ts'])
 

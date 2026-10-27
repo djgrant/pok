@@ -15,6 +15,7 @@
     "helpers"
   ],
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -40,6 +41,9 @@
     "LICENSE",
     "src"
   ],
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../core/scripts/fix-dist-imports.mjs"
+  },
   "publishConfig": {
     "access": "public"
   },
