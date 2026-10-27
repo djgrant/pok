@@ -57,7 +57,7 @@ The event-to-frame mapping, holding the taste decisions:
 | `log` inside an activity | flushed after the activity completes, as today – it reads well – but as a *policy* choice, one line of code, not buffering machinery |
 | `log` outside any group | `block` |
 | remediation / docs link | continuation lines under the failure `line`; for parallel groups, a `block` after `close` |
-| `markdown` | `block`, rendered via marked-terminal as today |
+| `markdown` | `block`, rendered via pok's marked renderer |
 
 Open question for review: whether parallel completions should print in completion order (proposed – it is honest about concurrency) or successes-first (current behaviour).
 

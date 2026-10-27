@@ -33,12 +33,10 @@ import type {
   ThemeSpec,
 } from '@pokit/core';
 import { detectOutputConfig, CommandError, markPresented } from '@pokit/core';
-import { Marked } from 'marked';
-import { markedTerminal } from 'marked-terminal';
 import { createTheme, type LineKind } from './renderer/theme';
 import { Frame } from './renderer/frame';
 import { LiveRegion } from './renderer/live-region';
-import { markdownLists } from './renderer/markdown-lists';
+import { renderTerminalMarkdown } from './renderer/markdown';
 
 /** Default markdown line width: a comfortable measure for prose. */
 const DEFAULT_MARKDOWN_MAX_WIDTH = 120;
@@ -46,8 +44,8 @@ const DEFAULT_MARKDOWN_MAX_WIDTH = 120;
 /**
  * Render a markdown document for terminal output.
  *
- * When color is enabled (a styled TTY), the markdown is rendered to ANSI via
- * marked + marked-terminal, wrapped at the terminal width capped to
+ * When color is enabled (a styled TTY), the markdown is rendered to ANSI,
+ * wrapped at the terminal width capped to
  * `maxWidth` (undefined -> readable default, null -> no cap). Otherwise the
  * raw markdown is passed through unchanged so it composes with pipes
  * (`pok docs README.md | glow`), files, and `--no-color` consumers.
@@ -63,11 +61,10 @@ function renderMarkdown(
   const columns = process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : 80;
   const cap = maxWidth === undefined ? DEFAULT_MARKDOWN_MAX_WIDTH : maxWidth;
   const width = cap === null ? columns : Math.min(columns, cap);
-  const marked = new Marked(
-    markedTerminal({ width, reflowText: true }) as never,
-    markdownLists(width, outputConfig.unicode ? '•' : '-')
+  return renderTerminalMarkdown(content, { width, unicode: outputConfig.unicode }).replace(
+    /\n+$/,
+    ''
   );
-  return String(marked.parse(content)).replace(/\n+$/, '');
 }
 
 /**
