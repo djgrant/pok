@@ -142,8 +142,10 @@ export const command = defineCommand({
 
       await g.activity('Build packages', async () => {
         await r.exec('bun tsc --build');
-        // Give core's dist imports .js/.d.ts extensions so Node ESM consumers resolve them.
-        await r.exec('node packages/core/scripts/fix-dist-imports.mjs');
+        // Give dist imports .js/.d.ts extensions so Node ESM consumers resolve them.
+        await r.exec(
+          'node packages/core/scripts/fix-dist-imports.mjs packages/core packages/terminal packages/op'
+        );
       });
 
       await g.activity(`Publish ${group.packages.length} packages`, async () => {

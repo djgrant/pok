@@ -1,9 +1,9 @@
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-// Run from the package being built, so every package can share this script.
-const packageRoot = process.cwd()
-const distRoot = path.join(packageRoot, 'dist')
+// Usage: fix-dist-imports.mjs [packageDir...]. Defaults to the current
+// directory, so each package's build script can share this file.
+const packageRoots = process.argv.length > 2 ? process.argv.slice(2) : [process.cwd()]
 const textExtensions = new Set(['.js', '.d.ts'])
 
 async function collectFiles(root) {
@@ -90,7 +90,8 @@ async function patchFile(filePath) {
   }
 }
 
-const files = await collectFiles(distRoot)
-await Promise.all(files.map((filePath) => patchFile(filePath)))
-
-console.log(`Patched relative dist imports in ${files.length} files`)
+for (const packageRoot of packageRoots) {
+  const files = await collectFiles(path.join(path.resolve(packageRoot), 'dist'))
+  await Promise.all(files.map((filePath) => patchFile(filePath)))
+  console.log(`Patched relative dist imports in ${files.length} files (${packageRoot})`)
+}
