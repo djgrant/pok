@@ -30,15 +30,17 @@ const PACKAGE_GROUPS = {
     tag: 'cli-v%s',
     commit: 'release: cli v%s',
   },
-  all: {
-    label: 'All packages',
-    files: [...SCOPED_FILES, ...CLI_FILES],
-    tag: 'all-v%s',
-    commit: 'release: all v%s',
-  },
 } as const;
 
 type PackageGroup = keyof typeof PACKAGE_GROUPS;
+
+// The groups version independently, so `all` bumps each group from its own
+// current version instead of writing one version to every package.
+const SELECTIONS: Record<PackageGroup | 'all', PackageGroup[]> = {
+  scoped: ['scoped'],
+  cli: ['cli'],
+  all: ['scoped', 'cli'],
+};
 
 export const command = defineCommand({
   label: 'Bump package versions',
@@ -57,16 +59,19 @@ export const command = defineCommand({
   run: async (_r, ctx) => {
     const release = ctx.extraArgs[0] || 'prompt';
     const skipConfirm = release !== 'prompt';
-    const group = PACKAGE_GROUPS[ctx.context.packages as PackageGroup];
+    const selection = SELECTIONS[ctx.context.packages as PackageGroup | 'all'];
 
-    await versionBump({
-      release,
-      files: [...group.files],
-      push: !ctx.context.skipPush,
-      tag: group.tag,
-      commit: group.commit,
-      preid: 'rc',
-      confirm: !skipConfirm,
-    });
+    for (const name of selection) {
+      const group = PACKAGE_GROUPS[name];
+      await versionBump({
+        release,
+        files: [...group.files],
+        push: !ctx.context.skipPush,
+        tag: group.tag,
+        commit: group.commit,
+        preid: 'rc',
+        confirm: !skipConfirm,
+      });
+    }
   },
 });
