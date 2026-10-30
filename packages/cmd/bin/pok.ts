@@ -15,12 +15,9 @@
 import { resolve } from 'bun';
 import * as fs from 'fs';
 import * as path from 'path';
+import { styleText } from 'node:util';
 import type { ConfigModule, LauncherSkeleton } from '../src/protocol';
-import {
-  createDefaultCommands,
-  isBuiltinCommand,
-  runBuiltinDirect,
-} from '../src/builtins';
+import { createDefaultCommands, isBuiltinCommand, runBuiltinDirect } from '../src/builtins';
 import {
   DELEGATION_ENV,
   findProjectRoot,
@@ -124,12 +121,10 @@ Run \`pok init\` to create a pok.config.ts file.
   const { configPath, configDir } = configResult;
 
   // Step 2: Dynamically resolve @pokit/core from the project directory
-  let configModule = await resolveModule('@pokit/core', configDir);
+  const configModule = await resolveModule('@pokit/core', configDir);
 
   if (!configModule) {
-    if (await ensureModulesInstalled(configDir, ['@pokit/core'])) {
-      configModule = await resolveModule('@pokit/core', configDir);
-    }
+    await ensureModulesInstalled(configDir, ['@pokit/core']);
   }
 
   if (!configModule) {
@@ -157,9 +152,7 @@ Run \`pok init\` to create a pok.config.ts file.
   // Step 4: Resolve paths relative to config file location
   // appDir is relative to configDir, commandsDir is relative to appDir
   const appDir = path.resolve(configDir, config.appDir);
-  const commandsDir = config.commandsDir
-    ? path.resolve(appDir, config.commandsDir)
-    : undefined;
+  const commandsDir = config.commandsDir ? path.resolve(appDir, config.commandsDir) : undefined;
   const cwd = path.resolve(configDir, config.cwd);
 
   // Step 5: Resolve default terminal UI for any UI surface the config omitted.
@@ -214,11 +207,9 @@ async function resolveTerminalDefaults(
     return null;
   }
 
-  let terminal = await resolveModule('@pokit/terminal', configDir);
+  const terminal = await resolveModule('@pokit/terminal', configDir);
   if (!terminal) {
-    if (await ensureModulesInstalled(configDir, ['@pokit/terminal'])) {
-      terminal = await resolveModule('@pokit/terminal', configDir);
-    }
+    await ensureModulesInstalled(configDir, ['@pokit/terminal']);
   }
 
   if (!terminal || typeof terminal.createTerminalUI !== 'function') {
@@ -370,50 +361,76 @@ function getInstallCommand(pkgDir: string, moduleNames: string[]): string {
 async function askYesNo(question: string): Promise<boolean> {
   if (!process.stdout.isTTY) return false;
 
-  process.stdout.write(`${question} (Y/n) `);
+  process.stdout.write(`${question} ${styleText('dim', '(Y/n)')} `);
   for await (const line of console) {
     const input = line.trim().toLowerCase();
     if (input === '' || input === 'y' || input === 'yes') return true;
     if (input === 'n' || input === 'no') return false;
-    process.stdout.write('Please enter y or n: ');
+    process.stdout.write(`${styleText('dim', '│')}  Please enter y or n: `);
   }
   return false;
 }
 
 /**
- * Ensure required pok modules are installed in the project.
+ * Offer to install missing pok modules. A successful install relaunches pok and
+ * does not return. Returns when the user declines or the install fails.
  */
-async function ensureModulesInstalled(pkgDir: string, moduleNames: string[]): Promise<boolean> {
-  const { name: pm } = getPMInfo(pkgDir);
+async function ensureModulesInstalled(pkgDir: string, moduleNames: string[]): Promise<void> {
+  // A relaunched pok that still cannot resolve the modules reports the error
+  // instead of offering the install again.
+  if (process.env[RELAUNCH_ENV] === '1') return;
+
   const installCmd = getInstallCommand(pkgDir, moduleNames);
+  const bar = styleText('dim', '│');
+
+  if (process.stdout.isTTY) {
+    console.log(
+      `\n${styleText('cyan', '◆')}  ${styleText('bold', 'pok needs these packages in this project')}`
+    );
+    for (const name of moduleNames) console.log(`${bar}  ${styleText('cyan', name)}`);
+    console.log(bar);
+  }
 
   const confirmed = await askYesNo(
-    `Required pok modules (${moduleNames.join(', ')}) are missing locally. Install them with ${pm}?`
+    `${styleText('cyan', '◇')}  Install with ${styleText('bold', installCmd)}?`
   );
 
-  if (!confirmed) return false;
+  if (!confirmed) return;
 
-  console.log(`\nInstalling modules: ${installCmd}...\n`);
+  console.log(`${bar}\n`);
 
   try {
     const { $ } = await import('bun');
     await $`${{ raw: installCmd }}`.cwd(pkgDir);
-    console.log('\nModules installed successfully!\n');
-    return true;
+    console.log(`\n${styleText('green', '✔')}  Installed ${moduleNames.join(', ')}\n`);
   } catch (err) {
     console.error(
-      `\nFailed to install modules: ${err instanceof Error ? err.message : String(err)}`
+      `\n${styleText('red', '✖')}  Failed to install modules: ${err instanceof Error ? err.message : String(err)}`
     );
-    return false;
+    return;
   }
+
+  relaunch();
+}
+
+const RELAUNCH_ENV = 'POK_RELAUNCHED';
+
+// Bun caches a failed package lookup for the life of the process, so modules
+// installed by this process only resolve in a new process.
+function relaunch(): never {
+  const proc = Bun.spawnSync([process.execPath, ...process.argv.slice(1)], {
+    stdio: ['inherit', 'inherit', 'inherit'],
+    env: { ...process.env, [RELAUNCH_ENV]: '1' },
+  });
+  process.exit(proc.exitCode ?? 0);
 }
 
 /**
  * Run pok in fallback mode when no config is found but package.json exists.
  */
 async function runInFallbackMode(pkgDir: string) {
-  let core = await resolveModule('@pokit/core', pkgDir);
-  let terminal = await resolveModule('@pokit/terminal', pkgDir);
+  const core = await resolveModule('@pokit/core', pkgDir);
+  const terminal = await resolveModule('@pokit/terminal', pkgDir);
 
   if ((!core || !terminal) && isBuiltinCommand(args[0])) {
     await runBuiltinDirect(args[0]);
@@ -425,11 +442,7 @@ async function runInFallbackMode(pkgDir: string) {
     if (!core) missing.push('@pokit/core');
     if (!terminal) missing.push('@pokit/terminal');
 
-    if (await ensureModulesInstalled(pkgDir, missing)) {
-      // Retry resolution after installation
-      core = await resolveModule('@pokit/core', pkgDir);
-      terminal = await resolveModule('@pokit/terminal', pkgDir);
-    }
+    await ensureModulesInstalled(pkgDir, missing);
   }
 
   if (!core || !terminal) {
