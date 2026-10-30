@@ -25,12 +25,12 @@
     "build": "pnpm -r --if-present run build"
   },
   "devDependencies": {
-    "@pokit/core": "npm:@pokit/core@1.0.0",
-    "@pokit/terminal": "npm:@pokit/terminal@1.0.0",
+    "@pokit/core": "npm:@pokit/core@1.0.1",
+    "@pokit/terminal": "npm:@pokit/terminal@1.0.1",
     "@types/bun": "latest",
     "bumpp": "^10.3.2",
     "pok-plugins": "github:djgrant/pok-plugins",
-    "pokit": "0.5.0",
+    "pokit": "0.5.1",
     "semver": "^7.7.0",
     "@types/semver": "^7.7.0",
     "typescript": "^5.8.3",
