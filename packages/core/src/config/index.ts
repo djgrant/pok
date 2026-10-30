@@ -239,5 +239,7 @@ export function validateConfig(config: unknown, configPath: string): ResolvedPok
  */
 export const CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
 
-export default defineConfig({})
+export default defineConfig({
+  pmScripts: true,
+})
 `;

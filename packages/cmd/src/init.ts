@@ -16,7 +16,9 @@ const CONFIG_FILENAME = 'pok.config.ts';
  */
 const FALLBACK_CONFIG_TEMPLATE = `import { defineConfig } from '@pokit/core'
 
-export default defineConfig({})
+export default defineConfig({
+  pmScripts: true,
+})
 `;
 
 /**

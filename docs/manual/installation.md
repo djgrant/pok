@@ -44,12 +44,14 @@ Then create a config:
 pok init
 ```
 
-which writes a zero-config `pok.config.ts`:
+which writes a `pok.config.ts` that includes your package scripts as commands:
 
 ```typescript
 import { defineConfig } from '@pokit/core';
 
-export default defineConfig({});
+export default defineConfig({
+  pmScripts: true,
+});
 ```
 
 When `reporter`, `prompter`, and `navigator` are omitted, the launcher wires in

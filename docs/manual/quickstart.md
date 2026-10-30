@@ -14,7 +14,7 @@ bun install
 
 ```sh
 bun add @pokit/core @pokit/terminal zod
-pok init            # writes a zero-config pok.config.ts
+pok init            # writes pok.config.ts
 ```
 
 `pok init` scaffolds:
@@ -22,7 +22,9 @@ pok init            # writes a zero-config pok.config.ts
 ```ts [pok.config.ts]
 import { defineConfig } from '@pokit/core';
 
-export default defineConfig({});
+export default defineConfig({
+  pmScripts: true,
+});
 ```
 
 The launcher wires in `@pokit/terminal`'s reporter, prompter, and navigator
